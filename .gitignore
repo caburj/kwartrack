@@ -37,3 +37,5 @@ next-env.d.ts
 # pandacss
 styled-system
 styled-system-static
+
+dbschema/edgeql-js
