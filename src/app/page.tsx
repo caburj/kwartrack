@@ -1,11 +1,16 @@
-import { getUser } from "@/db";
-import { css } from "../../styled-system/css";
+import { login } from "@/db/actions";
 
-export default async function Home() {
-  const user = await getUser("joseph@caburnay.dev");
+export default function Home() {
   return (
-    <div className={css({ fontSize: "2xl", fontWeight: "bold" })}>
-      Hello {user ? user.email : "🐼"}!
-    </div>
+    <form action={login}>
+      <label htmlFor="email">Email</label>
+      <input
+        type="email"
+        id="email"
+        name="email"
+        placeholder="Enter your email"
+      />
+      <input type="submit" value="Submit" />
+    </form>
   );
 }
