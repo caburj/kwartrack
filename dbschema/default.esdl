@@ -7,6 +7,7 @@ module default {
       constraint exclusive;
     }
     required name: str;
+    multi link accounts := .<owner[is ExpensifAccount];
   }
 
   # Represents a bank account.
