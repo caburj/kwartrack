@@ -7,13 +7,13 @@ module default {
       constraint exclusive;
     }
     required name: str;
-    multi link accounts := .<owner[is ExpensifAccount];
+    multi link accounts := .<owners[is ExpensifAccount];
   }
 
   # Represents a bank account.
   type ExpensifAccount {
     required name: str;
-    required owner: ExpensifUser;
+    multi owners: ExpensifUser;
     multi link partitions := .<account[is ExpensifPartition];
   }
 
