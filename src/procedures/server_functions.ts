@@ -1,6 +1,6 @@
 import * as edgedb from "edgedb";
 import e from "../../dbschema/edgeql-js";
-import { type Input, type BaseSchema, object, string } from "valibot";
+import { type Input, type BaseSchema, object, string, array } from "valibot";
 
 function withValidation<S extends BaseSchema, R extends any>(
   paramSchema: S,
@@ -30,7 +30,7 @@ export const findUser = withValidation(
           id: true,
           name: true,
           balance: true,
-        }
+        },
       },
       filter: e.op(user.username, "=", username),
     }));
@@ -56,6 +56,33 @@ export const findUserByEmail = withValidation(
     const result = await query.run(client);
     if (result.length !== 0) {
       return result[0];
+    }
+  }
+);
+
+export const findTransactions = withValidation(
+  object({ partitionIds: array(string()) }),
+  async ({ partitionIds }) => {
+    const query = e.params({ ids: e.array(e.uuid) }, ({ ids }) =>
+      e.select(e.ETransaction, (transaction) => ({
+        id: true,
+        value: true,
+        source_partition: {
+          id: true,
+          name: true,
+        },
+        filter: e.op(
+          transaction.source_partition.id,
+          "in",
+          e.array_unpack(ids)
+        ),
+      }))
+    );
+
+    const client = edgedb.createClient();
+    const result = await query.run(client, { ids: partitionIds });
+    if (result.length !== 0) {
+      return result;
     }
   }
 );
