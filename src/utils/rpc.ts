@@ -32,6 +32,9 @@ export function createRPCHandler(
     }
     const input = await req.json();
     const result = await procedure(input);
+    if (result === undefined) {
+      return NextResponse.json(null);
+    }
     return NextResponse.json(result);
   };
 
