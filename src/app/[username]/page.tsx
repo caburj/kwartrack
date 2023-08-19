@@ -6,7 +6,6 @@ import { rpc } from "../rpc_client";
 import {
   type UseQueryResult,
   useQuery,
-  useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
 import { object, optional, string } from "valibot";
@@ -17,7 +16,6 @@ export default function UserPage(props: { params: { username: string } }) {
   const user = useQuery(["user", username], () => {
     return rpc.post.findUser({ username });
   });
-  const createTransaction = useMutation(rpc.post.createTransaction);
   const [selectedPartitions, toggleSelectedPartitions] = useReducer(
     (state: string[], action: { ids: string[] }) => {
       for (const id of action.ids) {
@@ -121,9 +119,10 @@ export default function UserPage(props: { params: { username: string } }) {
                   description: optional(string()),
                 });
                 const parsedData = dataSchema.parse(formObj);
-                await createTransaction.mutateAsync(parsedData);
+                await rpc.post.createTransaction(parsedData);
                 target.reset();
                 queryClient.invalidateQueries({ queryKey: ["transactions"] });
+                queryClient.invalidateQueries({ queryKey: ["user", username] });
               }}
             >
               <label htmlFor="sourcePartitionId">Source Partition</label>
@@ -187,21 +186,16 @@ function Transactions(props: {
       onLoading={<>Loading transactions...</>}
       onUndefined={<>Select a partition to show transactions</>}
     >
-      {(transactions) => {
-        if (transactions.length === 0) {
-          return <>No transactions found</>;
-        } else {
-          return (
-            <ForEach items={transactions} as="ul">
-              {(transaction) => (
-                <li key={transaction.id}>
-                  {transaction.source_partition.name} | {transaction.value}
-                </li>
-              )}
-            </ForEach>
-          );
-        }
-      }}
+      {(transactions) => (
+        <ForEach items={transactions} as="ul">
+          <IfEmpty>No transactions found</IfEmpty>
+          {(transaction) => (
+            <li key={transaction.id}>
+              {transaction.source_partition.name} | {transaction.value}
+            </li>
+          )}
+        </ForEach>
+      )}
     </QueryResult>
   );
 }
@@ -210,12 +204,32 @@ function ForEach<T>(props: {
   as: keyof ReactHTML;
   className?: string;
   items: T[];
-  children: (item: T) => React.ReactNode;
+  children:
+    | ((item: T) => React.ReactNode)
+    | [React.ReactNode, (item: T) => React.ReactNode];
 }) {
   const { as: Tag } = props;
-  return (
-    <Tag className={props.className}>{props.items.map(props.children)}</Tag>
-  );
+  if (typeof props.children === "function") {
+    return (
+      <Tag className={props.className}>{props.items.map(props.children)}</Tag>
+    );
+  } else {
+    const [onEmpty, renderProp] = props.children;
+    return (
+      <Tag className={props.className}>
+        {props.items.length === 0 ? onEmpty : props.items.map(renderProp)}
+      </Tag>
+    );
+  }
+}
+
+/**
+ * Dummy component to be used inside a ForEach component to render
+ * something when the list is empty. Used to label the first child
+ * to be used as the "onEmpty" element.
+ */
+function IfEmpty(props: { children: React.ReactNode }) {
+  return props.children;
 }
 
 function QueryResult<T>(props: {
