@@ -8,6 +8,7 @@ module default {
     }
     required name: str;
     multi link accounts := .<owners[is EAccount];
+    multi link transactions := .accounts.transactions;
   }
 
   # Represents a bank account.
@@ -16,6 +17,7 @@ module default {
     multi owners: EUser;
     multi link partitions := .<account[is EPartition];
     property balance := sum(.partitions.balance);
+    multi link transactions := .partitions.transactions;
   }
 
   # Represents a partition of an account.

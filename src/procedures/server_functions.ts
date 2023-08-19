@@ -60,6 +60,29 @@ export const findUserByEmail = withValidation(
   }
 );
 
+export const getUserTransactions = withValidation(
+  object({ userId: string() }),
+  async ({ userId }) => {
+    const query = e.select(e.EUser, (user) => ({
+      filter: e.op(user.id, "=", e.uuid(userId)),
+      transactions: {
+        id: true,
+        value: true,
+        source_partition: {
+          id: true,
+          name: true,
+        },
+      },
+    }));
+
+    const client = edgedb.createClient();
+    const result = await query.run(client);
+    if (result.length !== 0) {
+      return result[0].transactions;
+    }
+  }
+);
+
 export const findTransactions = withValidation(
   object({ partitionIds: array(string()) }),
   async ({ partitionIds }) => {

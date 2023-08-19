@@ -1,4 +1,8 @@
-import { findUser, findTransactions } from "./server_functions";
+import {
+  findUser,
+  findTransactions,
+  getUserTransactions,
+} from "./server_functions";
 
 /**
  * Export here the server functions that can be called from the client via rpc.
@@ -6,6 +10,7 @@ import { findUser, findTransactions } from "./server_functions";
 export const procedures = {
   findUser,
   findTransactions,
+  getUserTransactions,
 };
 
 export type Procedures = typeof procedures;

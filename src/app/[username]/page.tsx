@@ -24,18 +24,23 @@ export default function UserPage(props: { params: { username: string } }) {
     []
   );
   return (
-    <div className={css({ display: "flex" })}>
-      <div
-        className={css({ width: "1/3", minWidth: "250px", maxWidth: "300px" })}
-      >
-        <QueryResult
-          result={user}
-          as="div"
-          className={css({ padding: "10px" })}
-          onLoading={<>Loading {`${username}'s accounts`}...</>}
-          onUndefined={<>{`${username}'s data`} not found</>}
-        >
-          {(user) => (
+    <QueryResult
+      query={user}
+      as="div"
+      className={css({ display: "flex" })}
+      onLoading={<>Loading {`${username}'s accounts`}...</>}
+      onUndefined={<>{`${username}'s data`} not found</>}
+    >
+      {(user) => (
+        <>
+          <div
+            className={css({
+              padding: "10px",
+              width: "1/3",
+              minWidth: "250px",
+              maxWidth: "300px",
+            })}
+          >
             <ForEach items={user.accounts} as="ul">
               {(account) => (
                 <li
@@ -93,35 +98,56 @@ export default function UserPage(props: { params: { username: string } }) {
                 </li>
               )}
             </ForEach>
-          )}
-        </QueryResult>
-      </div>
-      <Transactions partitionIds={selectedPartitions} />
-    </div>
+          </div>
+          <Transactions
+            selectedPartitionIds={selectedPartitions}
+            userId={user.id}
+          />
+        </>
+      )}
+    </QueryResult>
   );
 }
 
-function Transactions(props: { partitionIds: string[] }) {
-  const transactions = useQuery(["transactions", props.partitionIds], () => {
-    return rpc.post.findTransactions({ partitionIds: props.partitionIds });
-  });
+function Transactions(props: {
+  selectedPartitionIds: string[];
+  userId: string;
+}) {
+  const { selectedPartitionIds, userId } = props;
+  const transactions = useQuery(
+    ["transactions", selectedPartitionIds, userId],
+    () => {
+      if (selectedPartitionIds.length === 0) {
+        return rpc.post.getUserTransactions({ userId: userId });
+      }
+      return rpc.post.findTransactions({
+        partitionIds: selectedPartitionIds,
+      });
+    }
+  );
   return (
     <QueryResult
-      result={transactions}
+      query={transactions}
       as="div"
       className={css({ padding: "10px" })}
       onLoading={<>Loading transactions...</>}
       onUndefined={<>Select a partition to show transactions</>}
     >
-      {(transactions) => (
-        <ForEach items={transactions} as="ul">
-          {(transaction) => (
-            <li key={transaction.id}>
-              {transaction.source_partition.name} - {transaction.value}
-            </li>
-          )}
-        </ForEach>
-      )}
+      {(transactions) => {
+        if (transactions.length === 0) {
+          return <>No transactions found</>;
+        } else {
+          return (
+            <ForEach items={transactions} as="ul">
+              {(transaction) => (
+                <li key={transaction.id}>
+                  {transaction.source_partition.name} - {transaction.value}
+                </li>
+              )}
+            </ForEach>
+          );
+        }
+      }}
     </QueryResult>
   );
 }
@@ -141,19 +167,19 @@ function ForEach<T>(props: {
 function QueryResult<T>(props: {
   as: keyof ReactHTML;
   className?: string;
-  result: UseQueryResult<T>;
+  query: UseQueryResult<T>;
   children: (data: NonNullable<T>) => React.ReactNode;
   onLoading: React.ReactNode;
   onUndefined: React.ReactNode;
   onError?: (error: Error) => React.ReactNode;
 }) {
-  const { data, isLoading, isError } = props.result;
+  const { data, isLoading, isError } = props.query;
   const { as: Tag } = props;
   let node: React.ReactNode;
   if (isLoading) {
     node = props.onLoading;
   } else if (isError) {
-    node = props.onError ? props.onError(props.result.error as Error) : null;
+    node = props.onError ? props.onError(props.query.error as Error) : null;
   } else if (!data) {
     node = props.onUndefined;
   } else {
