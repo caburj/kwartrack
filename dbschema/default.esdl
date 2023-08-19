@@ -9,6 +9,7 @@ module default {
     required name: str;
     multi link accounts := .<owners[is EAccount];
     multi link transactions := .accounts.transactions;
+    multi link categories := (select ECategory);
   }
 
   # Represents a bank account.
@@ -47,5 +48,6 @@ module default {
     required source_partition: EPartition;
     required category: ECategory;
     required value: decimal;
+    description: str;
   }
 }

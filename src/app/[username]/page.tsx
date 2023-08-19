@@ -3,13 +3,21 @@
 import { ReactHTML, useReducer } from "react";
 import { css } from "../../../styled-system/css";
 import { rpc } from "../rpc_client";
-import { type UseQueryResult, useQuery } from "@tanstack/react-query";
+import {
+  type UseQueryResult,
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { object, optional, string } from "valibot";
 
 export default function UserPage(props: { params: { username: string } }) {
+  const queryClient = useQueryClient();
   const { username } = props.params;
   const user = useQuery(["user", username], () => {
     return rpc.post.findUser({ username });
   });
+  const createTransaction = useMutation(rpc.post.createTransaction);
   const [selectedPartitions, toggleSelectedPartitions] = useReducer(
     (state: string[], action: { ids: string[] }) => {
       for (const id of action.ids) {
@@ -70,7 +78,7 @@ export default function UserPage(props: { params: { username: string } }) {
                   }}
                 >
                   <div>
-                    {account.name} - {account.balance}
+                    {account.name} | {account.balance}
                   </div>
                   <ForEach
                     items={account.partitions}
@@ -91,7 +99,7 @@ export default function UserPage(props: { params: { username: string } }) {
                           toggleSelectedPartitions({ ids: [partition.id] });
                         }}
                       >
-                        {partition.name} - {partition.balance}
+                        {partition.name} | {partition.balance}
                       </li>
                     )}
                   </ForEach>
@@ -99,10 +107,56 @@ export default function UserPage(props: { params: { username: string } }) {
               )}
             </ForEach>
           </div>
-          <Transactions
-            selectedPartitionIds={selectedPartitions}
-            userId={user.id}
-          />
+          <div>
+            <form
+              onSubmit={async (event) => {
+                event.preventDefault();
+                const target = event.target as HTMLFormElement;
+                const formdata = new FormData(target as HTMLFormElement);
+                const formObj = Object.fromEntries(formdata.entries());
+                const dataSchema = object({
+                  sourcePartitionId: string(),
+                  categoryId: string(),
+                  value: string(),
+                  description: optional(string()),
+                });
+                const parsedData = dataSchema.parse(formObj);
+                await createTransaction.mutateAsync(parsedData);
+                target.reset();
+                queryClient.invalidateQueries({ queryKey: ["transactions"] });
+              }}
+            >
+              <label htmlFor="sourcePartitionId">Source Partition</label>
+              <select name="sourcePartitionId">
+                {user.accounts
+                  .flatMap((account) => account.partitions)
+                  .map((p) => {
+                    return (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    );
+                  })}
+              </select>
+              <label htmlFor="value">Value</label>
+              <input type="text" inputMode="numeric" name="value" />
+              <label htmlFor="categoryId">Category</label>
+              <select name="categoryId">
+                {user.categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <label htmlFor="description">Description</label>
+              <input type="text" name="description" />
+              <input type="submit" value="Submit" />
+            </form>
+            <Transactions
+              selectedPartitionIds={selectedPartitions}
+              userId={user.id}
+            />
+          </div>
         </>
       )}
     </QueryResult>
@@ -141,7 +195,7 @@ function Transactions(props: {
             <ForEach items={transactions} as="ul">
               {(transaction) => (
                 <li key={transaction.id}>
-                  {transaction.source_partition.name} - {transaction.value}
+                  {transaction.source_partition.name} | {transaction.value}
                 </li>
               )}
             </ForEach>

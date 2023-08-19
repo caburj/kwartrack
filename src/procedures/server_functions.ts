@@ -1,6 +1,13 @@
 import * as edgedb from "edgedb";
 import e from "../../dbschema/edgeql-js";
-import { type Input, type BaseSchema, object, string, array } from "valibot";
+import {
+  type Input,
+  type BaseSchema,
+  object,
+  string,
+  array,
+  optional,
+} from "valibot";
 
 function withValidation<S extends BaseSchema, R extends any>(
   paramSchema: S,
@@ -18,6 +25,10 @@ export const findUser = withValidation(
     const query = e.select(e.EUser, (user) => ({
       id: true,
       email: true,
+      categories: {
+        id: true,
+        name: true,
+      },
       accounts: {
         id: true,
         name: true,
@@ -107,5 +118,44 @@ export const findTransactions = withValidation(
     if (result.length !== 0) {
       return result;
     }
+  }
+);
+
+export const createTransaction = withValidation(
+  object({
+    value: string(),
+    sourcePartitionId: string(),
+    categoryId: string(),
+    description: optional(string()),
+  }),
+  async ({ value, sourcePartitionId, categoryId, description }) => {
+    const query = e.params(
+      {
+        value: e.decimal,
+        sourcePartitionId: e.uuid,
+        categoryId: e.uuid,
+        description: e.optional(e.str),
+      },
+      ({ value, sourcePartitionId, description, categoryId }) =>
+        e.insert(e.ETransaction, {
+          value,
+          description,
+          category: e.select(e.ECategory, (category) => ({
+            filter_single: e.op(category.id, "=", categoryId),
+          })),
+          source_partition: e.select(e.EPartition, (partition) => ({
+            filter_single: e.op(partition.id, "=", sourcePartitionId),
+          })),
+        })
+    );
+
+    const client = edgedb.createClient();
+    const result = await query.run(client, {
+      value,
+      sourcePartitionId,
+      categoryId,
+      description,
+    });
+    return result;
   }
 );

@@ -2,6 +2,7 @@ import {
   findUser,
   findTransactions,
   getUserTransactions,
+  createTransaction,
 } from "./server_functions";
 
 /**
@@ -11,6 +12,7 @@ export const procedures = {
   findUser,
   findTransactions,
   getUserTransactions,
+  createTransaction,
 };
 
 export type Procedures = typeof procedures;
