@@ -15,16 +15,22 @@ function withValidation<S extends BaseSchema, R extends any>(
 export const findUser = withValidation(
   object({ username: string() }),
   async ({ username }) => {
-    const query = e.select(e.ExpensifUser, (user) => ({
+    const query = e.select(e.EUser, (user) => ({
       id: true,
       email: true,
       accounts: {
         id: true,
         name: true,
-        owner: {
+        balance: true,
+        owners: {
           id: true,
           username: true,
         },
+        partitions: {
+          id: true,
+          name: true,
+          balance: true,
+        }
       },
       filter: e.op(user.username, "=", username),
     }));
@@ -40,7 +46,7 @@ export const findUser = withValidation(
 export const findUserByEmail = withValidation(
   object({ email: string() }),
   async ({ email }) => {
-    const query = e.select(e.ExpensifUser, (user) => ({
+    const query = e.select(e.EUser, (user) => ({
       id: true,
       username: true,
       filter: e.op(user.email, "=", email),

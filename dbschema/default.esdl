@@ -1,5 +1,5 @@
 module default {
-  type ExpensifUser {
+  type EUser {
     required email: str {
       constraint exclusive;
     }
@@ -7,37 +7,43 @@ module default {
       constraint exclusive;
     }
     required name: str;
-    multi link accounts := .<owners[is ExpensifAccount];
+    multi link accounts := .<owners[is EAccount];
   }
 
   # Represents a bank account.
-  type ExpensifAccount {
+  type EAccount {
     required name: str;
-    multi owners: ExpensifUser;
-    multi link partitions := .<account[is ExpensifPartition];
+    multi owners: EUser;
+    multi link partitions := .<account[is EPartition];
+    property balance := sum(.partitions.balance);
   }
 
   # Represents a partition of an account.
   # A partition is a subset of an account that is used for a specific purpose.
   # An example is a savings partition, and a spending partition.
-  type ExpensifPartition {
+  type EPartition {
     required name: str;
-    required account: ExpensifAccount;
-    multi link transactions := .<source_partition[is ExpensifTransaction];
+    required account: EAccount;
+    multi link transactions := .<source_partition[is ETransaction];
+    property balance := sum(.transactions.value);
   }
 
-  type ExpensifCategory {
+  type ECategory {
     required name: str {
       constraint exclusive;
     }
-    multi link transactions := .<category[is ExpensifTransaction];
+    multi link transactions := .<category[is ETransaction];
+    property balance := sum(.transactions.value);
   }
 
   # Represents a transaction.
-  type ExpensifTransaction {
-    required date: datetime;
-    required source_partition: ExpensifPartition;
-    required category: ExpensifCategory;
+  type ETransaction {
+    required date: datetime {
+      readonly := true;
+      default := datetime_of_statement();
+    }
+    required source_partition: EPartition;
+    required category: ECategory;
     required value: decimal;
   }
 }
