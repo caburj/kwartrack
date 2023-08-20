@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactHTML, useReducer } from "react";
+import { ReactHTML, use, useReducer } from "react";
 import { css } from "../../../styled-system/css";
 import { rpc } from "../rpc_client";
 import {
@@ -105,6 +105,7 @@ export default function UserPage(props: { params: { username: string } }) {
                 </li>
               )}
             </ForEach>
+            <Categories userId={user.id} />
           </div>
           <div>
             <form
@@ -125,6 +126,9 @@ export default function UserPage(props: { params: { username: string } }) {
                 target.reset();
                 queryClient.invalidateQueries({ queryKey: ["transactions"] });
                 queryClient.invalidateQueries({ queryKey: ["user", username] });
+                queryClient.invalidateQueries({
+                  queryKey: ["categoryBalance", parsedData.categoryId],
+                });
               }}
             >
               <label htmlFor="sourcePartitionId">Source Partition</label>
@@ -164,6 +168,86 @@ export default function UserPage(props: { params: { username: string } }) {
   );
 }
 
+function Categories(props: { userId: string }) {
+  const queryClient = useQueryClient();
+  const { userId } = props;
+  const categories = useQuery(["categories", userId], () => {
+    return rpc.post.getUserCategories({ userId });
+  });
+  return (
+    <>
+      <QueryResult
+        query={categories}
+        as="div"
+        className={css({ padding: "1rem" })}
+        onLoading={<>Loading categories...</>}
+        onUndefined={<>No categories found</>}
+      >
+        {(categories) => (
+          <ForEach items={categories} as="ul">
+            {(category) => <Category category={category} userId={userId} />}
+          </ForEach>
+        )}
+      </QueryResult>
+      <form
+        onSubmit={async (event) => {
+          event.preventDefault();
+          const target = event.target as HTMLFormElement;
+          const formdata = new FormData(target as HTMLFormElement);
+          const formObj = Object.fromEntries(formdata.entries());
+          const dataSchema = object({ name: string() });
+          const parsedData = dataSchema.parse(formObj);
+          await rpc.post.createUserCategory({
+            userId,
+            name: parsedData.name,
+          });
+          target.reset();
+          queryClient.invalidateQueries({ queryKey: ["categories", userId] });
+        }}
+      >
+        <label htmlFor="name">Category Name</label>
+        <input type="text" name="name" />
+        <input type="submit" value="Create"></input>
+      </form>
+    </>
+  );
+}
+
+function Category(props: {
+  category: { id: string; name: string };
+  userId: string;
+}) {
+  const queryClient = useQueryClient();
+  const { category, userId } = props;
+  const categoryBalance = useQuery(["categoryBalance", category.id], () => {
+    return rpc.post.getCategoryBalance({ categoryId: category.id });
+  });
+
+  return (
+    <li key={category.id}>
+      {/* TODO: This delete button should be conditionally shown. Only categories without linked transactions can be deleted. */}
+      <button
+        onClick={async () => {
+          await rpc.post.deleteCategory({ categoryId: category.id });
+          queryClient.invalidateQueries({ queryKey: ["categories", userId] });
+        }}
+      >
+        x
+      </button>{" "}
+      | {category.name}
+      <QueryResult
+        query={categoryBalance}
+        as="span"
+        className={css({ marginLeft: "1rem" })}
+        onLoading={<>Loading balance...</>}
+        onUndefined={<>No balance found</>}
+      >
+        {(balance) => <> | {balance}</>}
+      </QueryResult>
+    </li>
+  );
+}
+
 function Transactions(props: {
   selectedPartitionIds: string[];
   userId: string;
@@ -196,7 +280,9 @@ function Transactions(props: {
             <li key={transaction.id}>
               <button
                 onClick={async () => {
-                  await rpc.post.deleteTransaction({ transactionId: transaction.id });
+                  await rpc.post.deleteTransaction({
+                    transactionId: transaction.id,
+                  });
                   queryClient.invalidateQueries({ queryKey: ["transactions"] });
                   queryClient.invalidateQueries({ queryKey: ["user", userId] });
                 }}

@@ -4,6 +4,10 @@ import {
   getUserTransactions,
   createTransaction,
   deleteTransaction,
+  getUserCategories,
+  deleteCategory,
+  getCategoryBalance,
+  createUserCategory,
 } from "./server_functions";
 
 /**
@@ -15,6 +19,10 @@ export const procedures = {
   getUserTransactions,
   createTransaction,
   deleteTransaction,
+  getUserCategories,
+  deleteCategory,
+  getCategoryBalance,
+  createUserCategory,
 };
 
 export type Procedures = typeof procedures;

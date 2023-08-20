@@ -186,3 +186,70 @@ export const deleteTransaction = withValidation(
     return result;
   }
 );
+
+export const getUserCategories = withValidation(
+  object({ userId: string() }),
+  async ({ userId }) => {
+    const query = e.params({ id: e.uuid }, ({ id }) =>
+      e.select(e.EUser, (user) => ({
+        filter: e.op(user.id, "=", id),
+        categories: {
+          id: true,
+          name: true,
+        },
+      }))
+    );
+    const client = edgedb.createClient();
+    const result = await query.run(client, { id: userId });
+    if (result.length !== 0) {
+      return result[0].categories;
+    }
+  }
+);
+
+export const deleteCategory = withValidation(
+  object({ categoryId: string() }),
+  async ({ categoryId }) => {
+    const query = e.params({ id: e.uuid }, ({ id }) =>
+      e.delete(e.ECategory, (category) => ({
+        filter_single: e.op(
+          e.op("not", e.op("exists", category.transactions)),
+          "and",
+          e.op(category.id, "=", id)
+        ),
+      }))
+    );
+    const client = edgedb.createClient();
+    const result = await query.run(client, { id: categoryId });
+    return result;
+  }
+);
+
+export const getCategoryBalance = withValidation(
+  object({ categoryId: string() }),
+  async ({ categoryId }) => {
+    const query = e.params({ id: e.uuid }, ({ id }) =>
+      e.select(e.ECategory, (category) => ({
+        filter: e.op(category.id, "=", id),
+        balance: true,
+      }))
+    );
+    const client = edgedb.createClient();
+    const result = await query.run(client, { id: categoryId });
+    if (result.length !== 0) {
+      return result[0].balance;
+    }
+  }
+);
+
+export const createUserCategory = withValidation(
+  object({ userId: string(), name: string() }),
+  async ({ userId, name }) => {
+    const query = e.params({ id: e.uuid, name: e.str }, ({ id, name }) =>
+      e.insert(e.ECategory, { name })
+    );
+    const client = edgedb.createClient();
+    const result = await query.run(client, { id: userId, name });
+    return result;
+  }
+);
