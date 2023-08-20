@@ -100,31 +100,52 @@ export const getUserTransactions = withValidation(
 );
 
 export const findTransactions = withValidation(
-  object({ partitionIds: array(string()) }),
-  async ({ partitionIds }) => {
-    const query = e.params({ ids: e.array(e.uuid) }, ({ ids }) =>
-      e.select(e.ETransaction, (transaction) => ({
-        id: true,
-        value: true,
-        source_partition: {
-          id: true,
-          name: true,
-        },
-        category: {
-          id: true,
-          name: true,
-        },
-        description: true,
-        filter: e.op(
-          transaction.source_partition.id,
-          "in",
-          e.array_unpack(ids)
-        ),
-      }))
+  object({ partitionIds: array(string()), categoryIds: array(string()) }),
+  async ({ partitionIds, categoryIds }) => {
+    const query = e.params(
+      { pIds: e.array(e.uuid), cIds: e.array(e.uuid) },
+      ({ pIds, cIds }) =>
+        e.select(e.ETransaction, (transaction) => {
+          let filter;
+          const cFilter = e.op(
+            transaction.category.id,
+            "in",
+            e.array_unpack(cIds)
+          );
+          const pFilter = e.op(
+            transaction.source_partition.id,
+            "in",
+            e.array_unpack(pIds)
+          );
+          if (partitionIds.length !== 0 && categoryIds.length !== 0) {
+            filter = e.op(cFilter, "and", pFilter);
+          } else if (partitionIds.length !== 0) {
+            filter = pFilter;
+          } else if (categoryIds.length !== 0) {
+            filter = cFilter;
+          }
+          return {
+            id: true,
+            value: true,
+            source_partition: {
+              id: true,
+              name: true,
+            },
+            category: {
+              id: true,
+              name: true,
+            },
+            description: true,
+            filter,
+          };
+        })
     );
 
     const client = edgedb.createClient();
-    const result = await query.run(client, { ids: partitionIds });
+    const result = await query.run(client, {
+      pIds: partitionIds,
+      cIds: categoryIds,
+    });
     if (result.length !== 0) {
       return result;
     }

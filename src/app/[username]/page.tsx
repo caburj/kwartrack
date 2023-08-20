@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactHTML, use, useReducer } from "react";
+import { ReactHTML, useReducer } from "react";
 import { css } from "../../../styled-system/css";
 import { rpc } from "../rpc_client";
 import {
@@ -17,6 +17,19 @@ export default function UserPage(props: { params: { username: string } }) {
     return rpc.post.findUser({ username });
   });
   const [selectedPartitions, toggleSelectedPartitions] = useReducer(
+    (state: string[], action: { ids: string[] }) => {
+      for (const id of action.ids) {
+        if (state.includes(id)) {
+          state = state.filter((_id) => _id !== id);
+        } else {
+          state = [...state, id];
+        }
+      }
+      return state;
+    },
+    []
+  );
+  const [selectedCategories, toggleSelectedCategories] = useReducer(
     (state: string[], action: { ids: string[] }) => {
       for (const id of action.ids) {
         if (state.includes(id)) {
@@ -105,7 +118,11 @@ export default function UserPage(props: { params: { username: string } }) {
                 </li>
               )}
             </ForEach>
-            <Categories userId={user.id} />
+            <Categories
+              userId={user.id}
+              selectedCategoryIds={selectedCategories}
+              toggleSelectedCategories={toggleSelectedCategories}
+            />
           </div>
           <div>
             <form
@@ -159,6 +176,7 @@ export default function UserPage(props: { params: { username: string } }) {
             </form>
             <Transactions
               selectedPartitionIds={selectedPartitions}
+              selectedCategoryIds={selectedCategories}
               userId={user.id}
             />
           </div>
@@ -168,9 +186,13 @@ export default function UserPage(props: { params: { username: string } }) {
   );
 }
 
-function Categories(props: { userId: string }) {
+function Categories(props: {
+  userId: string;
+  selectedCategoryIds: string[];
+  toggleSelectedCategories: (arg: { ids: string[] }) => void;
+}) {
   const queryClient = useQueryClient();
-  const { userId } = props;
+  const { userId, selectedCategoryIds, toggleSelectedCategories } = props;
   const categories = useQuery(["categories", userId], () => {
     return rpc.post.getUserCategories({ userId });
   });
@@ -185,7 +207,14 @@ function Categories(props: { userId: string }) {
       >
         {(categories) => (
           <ForEach items={categories} as="ul">
-            {(category) => <Category category={category} userId={userId} />}
+            {(category) => (
+              <Category
+                category={category}
+                userId={userId}
+                selectedCategoryIds={selectedCategoryIds}
+                toggleSelectedCategories={toggleSelectedCategories}
+              />
+            )}
           </ForEach>
         )}
       </QueryResult>
@@ -216,15 +245,26 @@ function Categories(props: { userId: string }) {
 function Category(props: {
   category: { id: string; name: string };
   userId: string;
+  selectedCategoryIds: string[];
+  toggleSelectedCategories: (arg: { ids: string[] }) => void;
 }) {
   const queryClient = useQueryClient();
-  const { category, userId } = props;
+  const { category, userId, selectedCategoryIds, toggleSelectedCategories } =
+    props;
   const categoryBalance = useQuery(["categoryBalance", category.id], () => {
     return rpc.post.getCategoryBalance({ categoryId: category.id });
   });
 
   return (
-    <li key={category.id}>
+    <li
+      key={category.id}
+      className={css({
+        color: selectedCategoryIds.includes(category.id) ? "blue" : "inherit",
+      })}
+      onClick={() => {
+        toggleSelectedCategories({ ids: [category.id] });
+      }}
+    >
       {/* TODO: This delete button should be conditionally shown. Only categories without linked transactions can be deleted. */}
       <button
         onClick={async () => {
@@ -250,18 +290,23 @@ function Category(props: {
 
 function Transactions(props: {
   selectedPartitionIds: string[];
+  selectedCategoryIds: string[];
   userId: string;
 }) {
   const queryClient = useQueryClient();
-  const { selectedPartitionIds, userId } = props;
+  const { selectedPartitionIds, selectedCategoryIds, userId } = props;
   const transactions = useQuery(
-    ["transactions", selectedPartitionIds, userId],
+    ["transactions", selectedPartitionIds, selectedCategoryIds, userId],
     () => {
-      if (selectedPartitionIds.length === 0) {
+      if (
+        selectedPartitionIds.length === 0 &&
+        selectedCategoryIds.length === 0
+      ) {
         return rpc.post.getUserTransactions({ userId: userId });
       }
       return rpc.post.findTransactions({
         partitionIds: selectedPartitionIds,
+        categoryIds: selectedCategoryIds,
       });
     }
   );
