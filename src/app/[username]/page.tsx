@@ -267,7 +267,8 @@ function Category(props: {
     >
       {/* TODO: This delete button should be conditionally shown. Only categories without linked transactions can be deleted. */}
       <button
-        onClick={async () => {
+        onClick={async (event) => {
+          event.stopPropagation();
           await rpc.post.deleteCategory({ categoryId: category.id });
           queryClient.invalidateQueries({ queryKey: ["categories", userId] });
         }}
