@@ -52,6 +52,7 @@ export default function UserPage(props: { params: { username: string } }) {
                 <li
                   key={account.id}
                   className={css({
+                    marginBottom: "0.5rem",
                     cursor: "pointer",
                     color: isSubset(
                       account.partitions.map((p) => p.id),
@@ -81,7 +82,7 @@ export default function UserPage(props: { params: { username: string } }) {
                   <ForEach
                     items={account.partitions}
                     as="ul"
-                    className={css({ paddingStart: "10px" })}
+                    className={css({ paddingStart: "1rem" })}
                   >
                     {(partition) => (
                       <li
@@ -107,6 +108,7 @@ export default function UserPage(props: { params: { username: string } }) {
           </div>
           <div>
             <form
+              className={css({ display: "flex", flexDirection: "column" })}
               onSubmit={async (event) => {
                 event.preventDefault();
                 const target = event.target as HTMLFormElement;
@@ -166,6 +168,7 @@ function Transactions(props: {
   selectedPartitionIds: string[];
   userId: string;
 }) {
+  const queryClient = useQueryClient();
   const { selectedPartitionIds, userId } = props;
   const transactions = useQuery(
     ["transactions", selectedPartitionIds, userId],
@@ -182,7 +185,7 @@ function Transactions(props: {
     <QueryResult
       query={transactions}
       as="div"
-      className={css({ padding: "10px" })}
+      className={css({ padding: "1rem" })}
       onLoading={<>Loading transactions...</>}
       onUndefined={<>Select a partition to show transactions</>}
     >
@@ -191,7 +194,17 @@ function Transactions(props: {
           <IfEmpty>No transactions found</IfEmpty>
           {(transaction) => (
             <li key={transaction.id}>
-              {transaction.source_partition.name} | {transaction.value}
+              <button
+                onClick={async () => {
+                  await rpc.post.deleteTransaction({ transactionId: transaction.id });
+                  queryClient.invalidateQueries({ queryKey: ["transactions"] });
+                  queryClient.invalidateQueries({ queryKey: ["user", userId] });
+                }}
+              >
+                x
+              </button>{" "}
+              | {transaction.source_partition.name} | {transaction.value} |{" "}
+              {transaction.category.name} | {transaction.description}
             </li>
           )}
         </ForEach>

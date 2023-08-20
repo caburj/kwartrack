@@ -9,6 +9,7 @@ module default {
     required name: str;
     multi link accounts := .<owners[is EAccount];
     multi link transactions := .accounts.transactions;
+    property balance := sum(.accounts.balance);
     multi link categories := (select ECategory);
   }
 

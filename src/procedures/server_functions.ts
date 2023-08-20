@@ -83,6 +83,11 @@ export const getUserTransactions = withValidation(
           id: true,
           name: true,
         },
+        category: {
+          id: true,
+          name: true,
+        },
+        description: true,
       },
     }));
 
@@ -105,6 +110,11 @@ export const findTransactions = withValidation(
           id: true,
           name: true,
         },
+        category: {
+          id: true,
+          name: true,
+        },
+        description: true,
         filter: e.op(
           transaction.source_partition.id,
           "in",
@@ -156,6 +166,23 @@ export const createTransaction = withValidation(
       categoryId,
       description,
     });
+    return result;
+  }
+);
+
+export const deleteTransaction = withValidation(
+  object({ transactionId: string() }),
+  async ({ transactionId }) => {
+    const query = e.params({ id: e.uuid }, ({ id }) =>
+      e.delete(e.ETransaction, (transaction) => {
+        return {
+          filter_single: e.op(transaction.id, "=", id),
+        };
+      })
+    );
+
+    const client = edgedb.createClient();
+    const result = await query.run(client, { id: transactionId });
     return result;
   }
 );
