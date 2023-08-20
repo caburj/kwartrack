@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactHTML, useReducer } from "react";
+import { ReactHTML, useReducer, useContext } from "react";
 import { css } from "../../../styled-system/css";
 import { rpc } from "../rpc_client";
 import {
@@ -9,39 +9,23 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { object, optional, string } from "valibot";
+import { StoreSelectedProvider, StoreSelectedContext } from "./store";
 
-export default function UserPage(props: { params: { username: string } }) {
-  const queryClient = useQueryClient();
+export default function Main(props: { params: { username: string } }) {
   const { username } = props.params;
+  return (
+    <StoreSelectedProvider>
+      <UserPage username={username} />
+    </StoreSelectedProvider>
+  );
+}
+
+export function UserPage({ username }: { username: string }) {
+  const queryClient = useQueryClient();
   const user = useQuery(["user", username], () => {
     return rpc.post.findUser({ username });
   });
-  const [selectedPartitions, toggleSelectedPartitions] = useReducer(
-    (state: string[], action: { ids: string[] }) => {
-      for (const id of action.ids) {
-        if (state.includes(id)) {
-          state = state.filter((_id) => _id !== id);
-        } else {
-          state = [...state, id];
-        }
-      }
-      return state;
-    },
-    []
-  );
-  const [selectedCategories, toggleSelectedCategories] = useReducer(
-    (state: string[], action: { ids: string[] }) => {
-      for (const id of action.ids) {
-        if (state.includes(id)) {
-          state = state.filter((_id) => _id !== id);
-        } else {
-          state = [...state, id];
-        }
-      }
-      return state;
-    },
-    []
-  );
+  const [selected, dispatch] = useContext(StoreSelectedContext);
   return (
     <QueryResult
       query={user}
@@ -69,22 +53,24 @@ export default function UserPage(props: { params: { username: string } }) {
                     cursor: "pointer",
                     color: isSubset(
                       account.partitions.map((p) => p.id),
-                      selectedPartitions
+                      selected.partitionIds
                     )
                       ? "blue"
                       : "inherit",
                   })}
                   onClick={() => {
                     const unselected = account.partitions.filter(
-                      (p) => !selectedPartitions.includes(p.id)
+                      (p) => !selected.partitionIds.includes(p.id)
                     );
                     if (unselected.length > 0) {
-                      toggleSelectedPartitions({
-                        ids: unselected.map((p) => p.id),
+                      dispatch({
+                        type: "TOGGLE_PARTITIONS",
+                        payload: unselected.map((p) => p.id),
                       });
                     } else {
-                      toggleSelectedPartitions({
-                        ids: account.partitions.map((p) => p.id),
+                      dispatch({
+                        type: "TOGGLE_PARTITIONS",
+                        payload: account.partitions.map((p) => p.id),
                       });
                     }
                   }}
@@ -102,13 +88,16 @@ export default function UserPage(props: { params: { username: string } }) {
                         key={partition.id}
                         className={css({
                           cursor: "pointer",
-                          color: selectedPartitions.includes(partition.id)
+                          color: selected.partitionIds.includes(partition.id)
                             ? "blue"
                             : "inherit",
                         })}
                         onClick={(event) => {
                           event.stopPropagation();
-                          toggleSelectedPartitions({ ids: [partition.id] });
+                          dispatch({
+                            type: "TOGGLE_PARTITIONS",
+                            payload: [partition.id],
+                          });
                         }}
                       >
                         {partition.name} | {partition.balance}
@@ -118,11 +107,7 @@ export default function UserPage(props: { params: { username: string } }) {
                 </li>
               )}
             </ForEach>
-            <Categories
-              userId={user.id}
-              selectedCategoryIds={selectedCategories}
-              toggleSelectedCategories={toggleSelectedCategories}
-            />
+            <Categories userId={user.id} />
           </div>
           <div>
             <form
@@ -142,7 +127,9 @@ export default function UserPage(props: { params: { username: string } }) {
                 await rpc.post.createTransaction(parsedData);
                 target.reset();
                 queryClient.invalidateQueries({ queryKey: ["transactions"] });
-                queryClient.invalidateQueries({ queryKey: ["user", username] });
+                queryClient.invalidateQueries({
+                  queryKey: ["user", username],
+                });
                 queryClient.invalidateQueries({
                   queryKey: ["categoryBalance", parsedData.categoryId],
                 });
@@ -174,11 +161,7 @@ export default function UserPage(props: { params: { username: string } }) {
               <input type="text" name="description" />
               <input type="submit" value="Submit" />
             </form>
-            <Transactions
-              selectedPartitionIds={selectedPartitions}
-              selectedCategoryIds={selectedCategories}
-              userId={user.id}
-            />
+            <Transactions userId={user.id} />
           </div>
         </>
       )}
@@ -186,13 +169,8 @@ export default function UserPage(props: { params: { username: string } }) {
   );
 }
 
-function Categories(props: {
-  userId: string;
-  selectedCategoryIds: string[];
-  toggleSelectedCategories: (arg: { ids: string[] }) => void;
-}) {
+function Categories({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
-  const { userId, selectedCategoryIds, toggleSelectedCategories } = props;
   const categories = useQuery(["categories", userId], () => {
     return rpc.post.getUserCategories({ userId });
   });
@@ -207,14 +185,7 @@ function Categories(props: {
       >
         {(categories) => (
           <ForEach items={categories} as="ul">
-            {(category) => (
-              <Category
-                category={category}
-                userId={userId}
-                selectedCategoryIds={selectedCategoryIds}
-                toggleSelectedCategories={toggleSelectedCategories}
-              />
-            )}
+            {(category) => <Category category={category} userId={userId} />}
           </ForEach>
         )}
       </QueryResult>
@@ -242,27 +213,27 @@ function Categories(props: {
   );
 }
 
-function Category(props: {
+function Category({
+  category,
+  userId,
+}: {
   category: { id: string; name: string };
   userId: string;
-  selectedCategoryIds: string[];
-  toggleSelectedCategories: (arg: { ids: string[] }) => void;
 }) {
   const queryClient = useQueryClient();
-  const { category, userId, selectedCategoryIds, toggleSelectedCategories } =
-    props;
   const categoryBalance = useQuery(["categoryBalance", category.id], () => {
     return rpc.post.getCategoryBalance({ categoryId: category.id });
   });
+  const [selected, dispatch] = useContext(StoreSelectedContext);
 
   return (
     <li
       key={category.id}
       className={css({
-        color: selectedCategoryIds.includes(category.id) ? "blue" : "inherit",
+        color: selected.categoryIds.includes(category.id) ? "blue" : "inherit",
       })}
       onClick={() => {
-        toggleSelectedCategories({ ids: [category.id] });
+        dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
       }}
     >
       {/* TODO: This delete button should be conditionally shown. Only categories without linked transactions can be deleted. */}
@@ -280,7 +251,7 @@ function Category(props: {
         query={categoryBalance}
         as="span"
         className={css({ marginLeft: "1rem" })}
-        onLoading={<>Loading balance...</>}
+        onLoading={<>...</>}
         onUndefined={<>No balance found</>}
       >
         {(balance) => <> | {balance}</>}
@@ -289,25 +260,21 @@ function Category(props: {
   );
 }
 
-function Transactions(props: {
-  selectedPartitionIds: string[];
-  selectedCategoryIds: string[];
-  userId: string;
-}) {
+function Transactions({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
-  const { selectedPartitionIds, selectedCategoryIds, userId } = props;
+  const [selected] = useContext(StoreSelectedContext);
   const transactions = useQuery(
-    ["transactions", selectedPartitionIds, selectedCategoryIds, userId],
+    ["transactions", selected.partitionIds, selected.categoryIds, userId],
     () => {
       if (
-        selectedPartitionIds.length === 0 &&
-        selectedCategoryIds.length === 0
+        selected.partitionIds.length === 0 &&
+        selected.categoryIds.length === 0
       ) {
         return rpc.post.getUserTransactions({ userId: userId });
       }
       return rpc.post.findTransactions({
-        partitionIds: selectedPartitionIds,
-        categoryIds: selectedCategoryIds,
+        partitionIds: selected.partitionIds,
+        categoryIds: selected.categoryIds,
       });
     }
   );
