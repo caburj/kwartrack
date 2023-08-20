@@ -275,6 +275,7 @@ function Transactions({ userId }: { userId: string }) {
       return rpc.post.findTransactions({
         partitionIds: selected.partitionIds,
         categoryIds: selected.categoryIds,
+        ownerId: userId,
       });
     }
   );

@@ -7,6 +7,7 @@ module default {
       constraint exclusive;
     }
     required name: str;
+
     multi link accounts := .<owners[is EAccount];
     multi link transactions := .accounts.transactions;
     property balance := sum(.accounts.balance);
@@ -17,6 +18,7 @@ module default {
   type EAccount {
     required name: str;
     multi owners: EUser;
+
     multi link partitions := .<account[is EPartition];
     property balance := sum(.partitions.balance);
     multi link transactions := .partitions.transactions;
@@ -28,14 +30,17 @@ module default {
   type EPartition {
     required name: str;
     required account: EAccount;
+
     multi link transactions := .<source_partition[is ETransaction];
     property balance := sum(.transactions.value);
+    multi link owners := .account.owners;
   }
 
   type ECategory {
     required name: str {
       constraint exclusive;
     }
+
     multi link transactions := .<category[is ETransaction];
     property balance := sum(.transactions.value);
   }
@@ -50,5 +55,7 @@ module default {
     required category: ECategory;
     required value: decimal;
     description: str;
+
+    multi link owners := .source_partition.owners;
   }
 }

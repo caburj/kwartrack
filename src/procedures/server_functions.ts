@@ -100,11 +100,15 @@ export const getUserTransactions = withValidation(
 );
 
 export const findTransactions = withValidation(
-  object({ partitionIds: array(string()), categoryIds: array(string()) }),
-  async ({ partitionIds, categoryIds }) => {
+  object({
+    partitionIds: array(string()),
+    categoryIds: array(string()),
+    ownerId: string(),
+  }),
+  async ({ partitionIds, categoryIds, ownerId }) => {
     const query = e.params(
-      { pIds: e.array(e.uuid), cIds: e.array(e.uuid) },
-      ({ pIds, cIds }) =>
+      { pIds: e.array(e.uuid), cIds: e.array(e.uuid), ownerId: e.uuid },
+      ({ pIds, cIds, ownerId }) =>
         e.select(e.ETransaction, (transaction) => {
           let filter;
           const cFilter = e.op(
@@ -121,7 +125,7 @@ export const findTransactions = withValidation(
             filter = e.op(cFilter, "and", pFilter);
           } else if (partitionIds.length !== 0) {
             filter = pFilter;
-          } else if (categoryIds.length !== 0) {
+          } else {
             filter = cFilter;
           }
           return {
@@ -136,7 +140,11 @@ export const findTransactions = withValidation(
               name: true,
             },
             description: true,
-            filter,
+            filter: e.op(
+              filter,
+              "and",
+              e.op(transaction.source_partition.account.owners.id, "=", ownerId)
+            ),
           };
         })
     );
@@ -145,6 +153,7 @@ export const findTransactions = withValidation(
     const result = await query.run(client, {
       pIds: partitionIds,
       cIds: categoryIds,
+      ownerId,
     });
     if (result.length !== 0) {
       return result;
