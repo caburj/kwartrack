@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactHTML, useContext } from "react";
+import { ReactHTML, useContext, useState } from "react";
 import { css } from "../../../styled-system/css";
 import { rpc } from "../rpc_client";
 import {
@@ -44,8 +44,8 @@ export function UserPage({ username }: { username: string }) {
               maxWidth: "300px",
             })}
           >
-            <ForEach items={user.accounts} as="ul">
-              {(account) => (
+            <ul>
+              {user.accounts.map((account) => (
                 <li
                   key={account.id}
                   className={css({
@@ -84,12 +84,8 @@ export function UserPage({ username }: { username: string }) {
                       }
                     />
                   </div>
-                  <ForEach
-                    items={account.partitions}
-                    as="ul"
-                    className={css({ paddingStart: "1rem" })}
-                  >
-                    {(partition) => (
+                  <ul className={css({ paddingStart: "1rem" })}>
+                    {account.partitions.map((partition) => (
                       <li
                         key={partition.id}
                         className={css({
@@ -116,11 +112,11 @@ export function UserPage({ username }: { username: string }) {
                           }
                         />
                       </li>
-                    )}
-                  </ForEach>
+                    ))}
+                  </ul>
                 </li>
-              )}
-            </ForEach>
+              ))}
+            </ul>
             <Categories userId={user.id} />
           </div>
           <div>
@@ -211,9 +207,11 @@ function Categories({ userId }: { userId: string }) {
         onUndefined={<>No categories found</>}
       >
         {(categories) => (
-          <ForEach items={categories} as="ul">
-            {(category) => <Category category={category} userId={userId} />}
-          </ForEach>
+          <ul>
+            {categories.map((category) => (
+              <Category key={category.id} category={category} userId={userId} />
+            ))}
+          </ul>
         )}
       </QueryResult>
       <form
@@ -249,6 +247,7 @@ function Category({
 }) {
   const queryClient = useQueryClient();
   const [selected, dispatch] = useContext(StoreSelectedContext);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   return (
     <li
@@ -256,6 +255,7 @@ function Category({
       className={css({
         cursor: "pointer",
         color: selected.categoryIds.includes(category.id) ? "blue" : "inherit",
+        textDecoration: isDeleting ? "line-through" : "inherit",
       })}
       onClick={() => {
         dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
@@ -265,6 +265,7 @@ function Category({
       <button
         onClick={async (event) => {
           event.stopPropagation();
+          setIsDeleting(true);
           await rpc.post.deleteCategory({ categoryId: category.id });
           queryClient.invalidateQueries({ queryKey: ["categories", userId] });
         }}
@@ -310,9 +311,8 @@ function Transactions({ userId }: { userId: string }) {
       onUndefined={<>Select a partition to show transactions</>}
     >
       {(transactions) => (
-        <ForEach items={transactions} as="ul">
-          <IfEmpty>No transactions found</IfEmpty>
-          {(transaction) => (
+        <ul>
+          {transactions.map((transaction) => (
             <li key={transaction.id}>
               <button
                 onClick={async () => {
@@ -343,8 +343,8 @@ function Transactions({ userId }: { userId: string }) {
               | {transaction.source_partition.name} | {transaction.value} |{" "}
               {transaction.category.name} | {transaction.description}
             </li>
-          )}
-        </ForEach>
+          ))}
+        </ul>
       )}
     </QueryResult>
   );
@@ -365,38 +365,6 @@ function LoadingValue<R>(props: {
       {(value) => <>{value}</>}
     </QueryResult>
   );
-}
-
-function ForEach<T>(props: {
-  as: keyof ReactHTML;
-  className?: string;
-  items: T[];
-  children:
-    | ((item: T) => React.ReactNode)
-    | [React.ReactNode, (item: T) => React.ReactNode];
-}) {
-  const { as: Tag } = props;
-  if (typeof props.children === "function") {
-    return (
-      <Tag className={props.className}>{props.items.map(props.children)}</Tag>
-    );
-  } else {
-    const [onEmpty, renderProp] = props.children;
-    return (
-      <Tag className={props.className}>
-        {props.items.length === 0 ? onEmpty : props.items.map(renderProp)}
-      </Tag>
-    );
-  }
-}
-
-/**
- * Dummy component to be used inside a ForEach component to render
- * something when the list is empty. Used to label the first child
- * to be used as the "onEmpty" element.
- */
-function IfEmpty(props: { children: React.ReactNode }) {
-  return props.children;
 }
 
 function QueryResult<T>(props: {
