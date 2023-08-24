@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactHTML, useReducer, useContext } from "react";
+import { ReactHTML, useContext } from "react";
 import { css } from "../../../styled-system/css";
 import { rpc } from "../rpc_client";
 import {
@@ -76,7 +76,13 @@ export function UserPage({ username }: { username: string }) {
                   }}
                 >
                   <div>
-                    {account.name} | {account.balance}
+                    {account.name} |
+                    <LoadingValue
+                      queryKey={["accountBalance", account.id]}
+                      valueLoader={() =>
+                        rpc.post.getAccountBalance({ accountId: account.id })
+                      }
+                    />
                   </div>
                   <ForEach
                     items={account.partitions}
@@ -100,7 +106,15 @@ export function UserPage({ username }: { username: string }) {
                           });
                         }}
                       >
-                        {partition.name} | {partition.balance}
+                        {partition.name} |
+                        <LoadingValue
+                          queryKey={["partitionBalance", partition.id]}
+                          valueLoader={() =>
+                            rpc.post.getPartitionBalance({
+                              partitionId: partition.id,
+                            })
+                          }
+                        />
                       </li>
                     )}
                   </ForEach>
@@ -124,15 +138,28 @@ export function UserPage({ username }: { username: string }) {
                   description: optional(string()),
                 });
                 const parsedData = dataSchema.parse(formObj);
-                await rpc.post.createTransaction(parsedData);
+                const newTransaction = await rpc.post.createTransaction(
+                  parsedData
+                );
                 target.reset();
-                queryClient.invalidateQueries({ queryKey: ["transactions"] });
-                queryClient.invalidateQueries({
-                  queryKey: ["user", username],
-                });
-                queryClient.invalidateQueries({
-                  queryKey: ["categoryBalance", parsedData.categoryId],
-                });
+                if (newTransaction) {
+                  queryClient.invalidateQueries({ queryKey: ["transactions"] });
+                  queryClient.invalidateQueries({
+                    queryKey: ["categoryBalance", parsedData.categoryId],
+                  });
+                  queryClient.invalidateQueries({
+                    queryKey: [
+                      "partitionBalance",
+                      parsedData.sourcePartitionId,
+                    ],
+                  });
+                  queryClient.invalidateQueries({
+                    queryKey: [
+                      "accountBalance",
+                      newTransaction.source_partition.account.id,
+                    ],
+                  });
+                }
               }}
             >
               <label htmlFor="sourcePartitionId">Source Partition</label>
@@ -221,15 +248,13 @@ function Category({
   userId: string;
 }) {
   const queryClient = useQueryClient();
-  const categoryBalance = useQuery(["categoryBalance", category.id], () => {
-    return rpc.post.getCategoryBalance({ categoryId: category.id });
-  });
   const [selected, dispatch] = useContext(StoreSelectedContext);
 
   return (
     <li
       key={category.id}
       className={css({
+        cursor: "pointer",
         color: selected.categoryIds.includes(category.id) ? "blue" : "inherit",
       })}
       onClick={() => {
@@ -246,16 +271,13 @@ function Category({
       >
         x
       </button>{" "}
-      | {category.name}
-      <QueryResult
-        query={categoryBalance}
-        as="span"
-        className={css({ marginLeft: "1rem" })}
-        onLoading={<>...</>}
-        onUndefined={<>No balance found</>}
-      >
-        {(balance) => <> | {balance}</>}
-      </QueryResult>
+      | {category.name} |
+      <LoadingValue
+        queryKey={["categoryBalance", category.id]}
+        valueLoader={() =>
+          rpc.post.getCategoryBalance({ categoryId: category.id })
+        }
+      />
     </li>
   );
 }
@@ -299,6 +321,21 @@ function Transactions({ userId }: { userId: string }) {
                   });
                   queryClient.invalidateQueries({ queryKey: ["transactions"] });
                   queryClient.invalidateQueries({ queryKey: ["user", userId] });
+                  queryClient.invalidateQueries({
+                    queryKey: [
+                      "partitionBalance",
+                      transaction.source_partition.id,
+                    ],
+                  });
+                  queryClient.invalidateQueries({
+                    queryKey: [
+                      "accountBalance",
+                      transaction.source_partition.account.id,
+                    ],
+                  });
+                  queryClient.invalidateQueries({
+                    queryKey: ["categoryBalance", transaction.category.id],
+                  });
                 }}
               >
                 x
@@ -309,6 +346,23 @@ function Transactions({ userId }: { userId: string }) {
           )}
         </ForEach>
       )}
+    </QueryResult>
+  );
+}
+
+function LoadingValue<R>(props: {
+  queryKey: string[];
+  valueLoader: () => Promise<R>;
+}) {
+  return (
+    <QueryResult
+      query={useQuery(props.queryKey, props.valueLoader)}
+      as="span"
+      className={css({ marginLeft: "0.5rem" })}
+      onLoading={<>...</>}
+      onUndefined={<>Missing Value</>}
+    >
+      {(value) => <>{value}</>}
     </QueryResult>
   );
 }
@@ -351,7 +405,7 @@ function QueryResult<T>(props: {
   query: UseQueryResult<T>;
   children: (data: NonNullable<T>) => React.ReactNode;
   onLoading: React.ReactNode;
-  onUndefined: React.ReactNode;
+  onUndefined?: React.ReactNode;
   onError?: (error: Error) => React.ReactNode;
 }) {
   const { data, isLoading, isError } = props.query;
