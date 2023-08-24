@@ -85,7 +85,7 @@ export const getUserTransactions = withValidation(
           account: {
             id: true,
             name: true,
-          }
+          },
         },
         category: {
           id: true,
@@ -141,7 +141,7 @@ export const findTransactions = withValidation(
               account: {
                 id: true,
                 name: true,
-              }
+              },
             },
             category: {
               id: true,
@@ -342,6 +342,36 @@ export const getAccountBalance = withValidation(
     const result = await query.run(client, { id: accountId });
     if (result.length !== 0) {
       return result[0].balance;
+    }
+  }
+);
+
+export const getUserAccounts = withValidation(
+  object({ userId: string() }),
+  async ({ userId }) => {
+    const query = e.params({ id: e.uuid }, ({ id }) =>
+      e.select(e.EUser, (user) => ({
+        filter: e.op(user.id, "=", id),
+        accounts: {
+          id: true,
+          name: true,
+          balance: true,
+          owners: {
+            id: true,
+            username: true,
+          },
+          partitions: {
+            id: true,
+            name: true,
+            balance: true,
+          },
+        },
+      }))
+    );
+    const client = edgedb.createClient();
+    const result = await query.run(client, { id: userId });
+    if (result.length !== 0) {
+      return result[0].accounts;
     }
   }
 );

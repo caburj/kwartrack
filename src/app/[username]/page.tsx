@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactHTML, useContext, useState } from "react";
+import { Fragment, ReactHTML, useContext, useState } from "react";
 import { css } from "../../../styled-system/css";
 import { rpc } from "../rpc_client";
 import {
@@ -120,70 +120,7 @@ export function UserPage({ username }: { username: string }) {
             <Categories userId={user.id} />
           </div>
           <div>
-            <form
-              className={css({ display: "flex", flexDirection: "column" })}
-              onSubmit={async (event) => {
-                event.preventDefault();
-                const target = event.target as HTMLFormElement;
-                const formdata = new FormData(target as HTMLFormElement);
-                const formObj = Object.fromEntries(formdata.entries());
-                const dataSchema = object({
-                  sourcePartitionId: string(),
-                  categoryId: string(),
-                  value: string(),
-                  description: optional(string()),
-                });
-                const parsedData = dataSchema.parse(formObj);
-                const newTransaction = await rpc.post.createTransaction(
-                  parsedData
-                );
-                target.reset();
-                if (newTransaction) {
-                  queryClient.invalidateQueries({ queryKey: ["transactions"] });
-                  queryClient.invalidateQueries({
-                    queryKey: ["categoryBalance", parsedData.categoryId],
-                  });
-                  queryClient.invalidateQueries({
-                    queryKey: [
-                      "partitionBalance",
-                      parsedData.sourcePartitionId,
-                    ],
-                  });
-                  queryClient.invalidateQueries({
-                    queryKey: [
-                      "accountBalance",
-                      newTransaction.source_partition.account.id,
-                    ],
-                  });
-                }
-              }}
-            >
-              <label htmlFor="sourcePartitionId">Source Partition</label>
-              <select name="sourcePartitionId">
-                {user.accounts
-                  .flatMap((account) => account.partitions)
-                  .map((p) => {
-                    return (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    );
-                  })}
-              </select>
-              <label htmlFor="value">Value</label>
-              <input type="text" inputMode="numeric" name="value" />
-              <label htmlFor="categoryId">Category</label>
-              <select name="categoryId">
-                {user.categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <label htmlFor="description">Description</label>
-              <input type="text" name="description" />
-              <input type="submit" value="Submit" />
-            </form>
+            <TransactionForm user={user} />
             <Transactions userId={user.id} />
           </div>
         </>
@@ -350,6 +287,83 @@ function Transactions({ userId }: { userId: string }) {
   );
 }
 
+function TransactionForm({ user }: { user: { id: string } }) {
+  const queryClient = useQueryClient();
+  const accounts = useQuery(["accounts", user.id], () => {
+    return rpc.post.getUserAccounts({ userId: user.id });
+  });
+  const categories = useQuery(["categories", user.id], () => {
+    return rpc.post.getUserCategories({ userId: user.id });
+  });
+  return (
+    <form
+      className={css({ display: "flex", flexDirection: "column" })}
+      onSubmit={async (event) => {
+        event.preventDefault();
+        const target = event.target as HTMLFormElement;
+        const formdata = new FormData(target as HTMLFormElement);
+        const formObj = Object.fromEntries(formdata.entries());
+        const dataSchema = object({
+          sourcePartitionId: string(),
+          categoryId: string(),
+          value: string(),
+          description: optional(string()),
+        });
+        const parsedData = dataSchema.parse(formObj);
+        const newTransaction = await rpc.post.createTransaction(parsedData);
+        target.reset();
+        if (newTransaction) {
+          queryClient.invalidateQueries({ queryKey: ["transactions"] });
+          queryClient.invalidateQueries({
+            queryKey: ["categoryBalance", parsedData.categoryId],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["partitionBalance", parsedData.sourcePartitionId],
+          });
+          queryClient.invalidateQueries({
+            queryKey: [
+              "accountBalance",
+              newTransaction.source_partition.account.id,
+            ],
+          });
+        }
+      }}
+    >
+      <label htmlFor="sourcePartitionId">Source Partition</label>
+      <QueryResult query={accounts}>
+        {(accounts) => (
+          <select name="sourcePartitionId">
+            {accounts.flatMap((account) =>
+              account.partitions.map((partition) => (
+                <option key={partition.id} value={partition.id}>
+                  {partition.name}
+                </option>
+              ))
+            )}
+          </select>
+        )}
+      </QueryResult>
+      <label htmlFor="value">Value</label>
+      <input type="text" inputMode="numeric" name="value" />
+      <label htmlFor="categoryId">Category</label>
+      <QueryResult query={categories}>
+        {(categories) => (
+          <select name="categoryId">
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </QueryResult>
+      <label htmlFor="description">Description</label>
+      <input type="text" name="description" />
+      <input type="submit" value="Submit" />
+    </form>
+  );
+}
+
 function LoadingValue<R>(props: {
   queryKey: string[];
   valueLoader: () => Promise<R>;
@@ -368,16 +382,16 @@ function LoadingValue<R>(props: {
 }
 
 function QueryResult<T>(props: {
-  as: keyof ReactHTML;
+  as?: keyof ReactHTML;
   className?: string;
   query: UseQueryResult<T>;
   children: (data: NonNullable<T>) => React.ReactNode;
-  onLoading: React.ReactNode;
+  onLoading?: React.ReactNode;
   onUndefined?: React.ReactNode;
   onError?: (error: Error) => React.ReactNode;
 }) {
   const { data, isLoading, isError } = props.query;
-  const { as: Tag } = props;
+  const { as: Tag = Fragment } = props;
   let node: React.ReactNode;
   if (isLoading) {
     node = props.onLoading;

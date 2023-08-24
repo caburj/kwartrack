@@ -10,6 +10,7 @@ import {
   createUserCategory,
   getPartitionBalance,
   getAccountBalance,
+  getUserAccounts,
 } from "./server_functions";
 
 /**
@@ -27,6 +28,7 @@ export const procedures = {
   createUserCategory,
   getPartitionBalance,
   getAccountBalance,
+  getUserAccounts,
 };
 
 export type Procedures = typeof procedures;
