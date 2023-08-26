@@ -1,4 +1,6 @@
 module default {
+  global current_user_id: uuid;
+
   type EUser {
     required email: str {
       constraint exclusive;
@@ -60,5 +62,9 @@ module default {
     description: str;
 
     multi link owners := .source_partition.owners;
+
+    access policy current_user_owned
+      allow all
+      using (.source_partition.is_private = false or any(.owners.id = global current_user_id));
   }
 }

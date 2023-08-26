@@ -85,7 +85,9 @@ export const getAccounts = withValidation(
       },
     }));
 
-    const client = edgedb.createClient();
+    const client = edgedb
+      .createClient()
+      .withGlobals({ current_user_id: userId });
     const result = await query.run(client);
     if (result.length !== 0) {
       return result;
@@ -96,9 +98,7 @@ export const getAccounts = withValidation(
 export const getPartitions = withValidation(
   object({ userId: string(), accountId: string() }),
   async ({ userId, accountId }) => {
-    // return all public partitions of the account and private partitions of the user
     const query = e.select(e.EPartition, (partition) => {
-      // get all partitions in the account
       const belongToAccount = e.op(
         partition.account.id,
         "=",
@@ -106,13 +106,9 @@ export const getPartitions = withValidation(
       );
       // get all private partitions of the user
       const visibleToUser = e.op(
-        e.op(partition.owners.id, "=", e.uuid(userId)),
+        e.op("not", partition.is_private),
         "or",
-        e.op(
-          e.op("not", partition.is_private),
-          "and",
-          e.op(partition.owners.id, "!=", e.uuid(userId))
-        )
+        e.op(partition.owners.id, "=", e.uuid(userId))
       );
       return {
         id: true,
@@ -138,13 +134,9 @@ export const getVisiblePartitions = withValidation(
     const query = e.select(e.EPartition, (partition) => {
       // get all private partitions of the user
       const visibleToUser = e.op(
-        e.op(partition.owners.id, "=", e.uuid(userId)),
+        e.op("not", partition.is_private),
         "or",
-        e.op(
-          e.op("not", partition.is_private),
-          "and",
-          e.op(partition.owners.id, "!=", e.uuid(userId))
-        )
+        e.op(partition.owners.id, "=", e.uuid(userId))
       );
       return {
         id: true,
@@ -167,8 +159,6 @@ export const getVisiblePartitions = withValidation(
 export const getUserTransactions = withValidation(
   object({ userId: string() }),
   async ({ userId }) => {
-    // get transactions visible to the user
-    // visible if source_partition is not private or user is owner of source_partition
     const query = e.select(e.ETransaction, (transaction) => ({
       id: true,
       value: true,
@@ -185,14 +175,11 @@ export const getUserTransactions = withValidation(
         name: true,
       },
       description: true,
-      filter: e.op(
-        e.op("not", transaction.source_partition.is_private),
-        "or",
-        e.op(transaction.source_partition.owners.id, "=", e.uuid(userId))
-      ),
     }));
 
-    const client = edgedb.createClient();
+    const client = edgedb
+      .createClient()
+      .withGlobals({ current_user_id: userId });
     const result = await query.run(client);
     if (result.length !== 0) {
       return result;
@@ -222,11 +209,6 @@ export const findTransactions = withValidation(
             "in",
             e.array_unpack(pIds)
           );
-          const visibleToUser = e.op(
-            e.op("not", transaction.source_partition.is_private),
-            "or",
-            e.op(transaction.source_partition.owners.id, "=", ownerId)
-          );
           if (partitionIds.length !== 0 && categoryIds.length !== 0) {
             filter = e.op(cFilter, "and", pFilter);
           } else if (partitionIds.length !== 0) {
@@ -250,12 +232,14 @@ export const findTransactions = withValidation(
               name: true,
             },
             description: true,
-            filter: e.op(filter, "and", visibleToUser),
+            filter,
           };
         })
     );
 
-    const client = edgedb.createClient();
+    const client = edgedb
+      .createClient()
+      .withGlobals({ current_user_id: ownerId });
     const result = await query.run(client, {
       pIds: partitionIds,
       cIds: categoryIds,
@@ -273,8 +257,9 @@ export const createTransaction = withValidation(
     sourcePartitionId: string(),
     categoryId: string(),
     description: optional(string()),
+    userId: string(),
   }),
-  async ({ value, sourcePartitionId, categoryId, description }) => {
+  async ({ value, sourcePartitionId, categoryId, description, userId }) => {
     const query = e.params(
       {
         value: e.decimal,
@@ -295,7 +280,9 @@ export const createTransaction = withValidation(
         })
     );
 
-    const client = edgedb.createClient();
+    const client = edgedb
+      .createClient()
+      .withGlobals({ current_user_id: userId });
     const { id: transactionId } = await query.run(client, {
       value,
       sourcePartitionId,
@@ -382,15 +369,17 @@ export const deleteCategory = withValidation(
 );
 
 export const getCategoryBalance = withValidation(
-  object({ categoryId: string() }),
-  async ({ categoryId }) => {
+  object({ categoryId: string(), userId: string() }),
+  async ({ categoryId, userId }) => {
     const query = e.params({ id: e.uuid }, ({ id }) =>
       e.select(e.ECategory, (category) => ({
         filter: e.op(category.id, "=", id),
         balance: true,
       }))
     );
-    const client = edgedb.createClient();
+    const client = edgedb
+      .createClient()
+      .withGlobals({ current_user_id: userId });
     const result = await query.run(client, { id: categoryId });
     if (result.length !== 0) {
       return result[0].balance;
@@ -411,15 +400,17 @@ export const createUserCategory = withValidation(
 );
 
 export const getPartitionBalance = withValidation(
-  object({ partitionId: string() }),
-  async ({ partitionId }) => {
+  object({ partitionId: string(), userId: string() }),
+  async ({ partitionId, userId }) => {
     const query = e.params({ id: e.uuid }, ({ id }) =>
       e.select(e.EPartition, (partition) => ({
         filter: e.op(partition.id, "=", id),
         balance: true,
       }))
     );
-    const client = edgedb.createClient();
+    const client = edgedb
+      .createClient()
+      .withGlobals({ current_user_id: userId });
     const result = await query.run(client, { id: partitionId });
     if (result.length !== 0) {
       return result[0].balance;
@@ -428,15 +419,17 @@ export const getPartitionBalance = withValidation(
 );
 
 export const getAccountBalance = withValidation(
-  object({ accountId: string() }),
-  async ({ accountId }) => {
+  object({ accountId: string(), userId: string() }),
+  async ({ accountId, userId }) => {
     const query = e.params({ id: e.uuid }, ({ id }) =>
       e.select(e.EAccount, (account) => ({
         filter: e.op(account.id, "=", id),
         balance: true,
       }))
     );
-    const client = edgedb.createClient();
+    const client = edgedb
+      .createClient()
+      .withGlobals({ current_user_id: userId });
     const result = await query.run(client, { id: accountId });
     if (result.length !== 0) {
       return result[0].balance;

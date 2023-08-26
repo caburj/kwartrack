@@ -8,7 +8,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { object, optional, set, string } from "valibot";
+import { object, optional, string } from "valibot";
 import { StoreSelectedProvider, StoreSelectedContext } from "./store";
 
 export default function Main(props: { params: { username: string } }) {
@@ -81,7 +81,7 @@ function Accounts({ userId }: { userId: string }) {
               <LoadingValue
                 queryKey={["accountBalance", account.id]}
                 valueLoader={() =>
-                  rpc.post.getAccountBalance({ accountId: account.id })
+                  rpc.post.getAccountBalance({ accountId: account.id, userId })
                 }
               />
             </div>
@@ -132,6 +132,7 @@ function Partitions(props: { accountId: string; userId: string }) {
                 valueLoader={() =>
                   rpc.post.getPartitionBalance({
                     partitionId: partition.id,
+                    userId,
                   })
                 }
               />
@@ -226,7 +227,7 @@ function Category({
       <LoadingValue
         queryKey={["categoryBalance", category.id]}
         valueLoader={() =>
-          rpc.post.getCategoryBalance({ categoryId: category.id })
+          rpc.post.getCategoryBalance({ categoryId: category.id, userId })
         }
       />
     </li>
@@ -264,9 +265,7 @@ function Transactions({ userId }: { userId: string }) {
       {(transactions) => (
         <ul>
           {transactions.map((transaction) => (
-            <li
-              key={transaction.id}
-            >
+            <li key={transaction.id}>
               <button
                 className={css({ cursor: "pointer" })}
                 onClick={async () => {
@@ -328,8 +327,9 @@ function TransactionForm({ user }: { user: { id: string } }) {
           categoryId: string(),
           value: string(),
           description: optional(string()),
+          userId: string(),
         });
-        const parsedData = dataSchema.parse(formObj);
+        const parsedData = dataSchema.parse({ ...formObj, userId: user.id });
         const newTransaction = await rpc.post.createTransaction(parsedData);
         target.reset();
         if (newTransaction) {
