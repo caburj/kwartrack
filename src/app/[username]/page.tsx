@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, ReactHTML, useContext, useState } from "react";
+import { ReactHTML, useContext, useState } from "react";
 import { css } from "../../../styled-system/css";
 import { rpc } from "../rpc_client";
 import {
@@ -8,7 +8,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { object, optional, string } from "valibot";
+import { object, optional, set, string } from "valibot";
 import { StoreSelectedProvider, StoreSelectedContext } from "./store";
 
 export default function Main(props: { params: { username: string } }) {
@@ -21,11 +21,9 @@ export default function Main(props: { params: { username: string } }) {
 }
 
 export function UserPage({ username }: { username: string }) {
-  const queryClient = useQueryClient();
   const user = useQuery(["user", username], () => {
     return rpc.post.findUser({ username });
   });
-  const [selected, dispatch] = useContext(StoreSelectedContext);
   return (
     <QueryResult
       query={user}
@@ -44,79 +42,8 @@ export function UserPage({ username }: { username: string }) {
               maxWidth: "300px",
             })}
           >
-            <ul>
-              {user.accounts.map((account) => (
-                <li
-                  key={account.id}
-                  className={css({
-                    marginBottom: "0.5rem",
-                    cursor: "pointer",
-                    color: isSubset(
-                      account.partitions.map((p) => p.id),
-                      selected.partitionIds
-                    )
-                      ? "blue"
-                      : "inherit",
-                  })}
-                  onClick={() => {
-                    const unselected = account.partitions.filter(
-                      (p) => !selected.partitionIds.includes(p.id)
-                    );
-                    if (unselected.length > 0) {
-                      dispatch({
-                        type: "TOGGLE_PARTITIONS",
-                        payload: unselected.map((p) => p.id),
-                      });
-                    } else {
-                      dispatch({
-                        type: "TOGGLE_PARTITIONS",
-                        payload: account.partitions.map((p) => p.id),
-                      });
-                    }
-                  }}
-                >
-                  <div>
-                    {account.name} |
-                    <LoadingValue
-                      queryKey={["accountBalance", account.id]}
-                      valueLoader={() =>
-                        rpc.post.getAccountBalance({ accountId: account.id })
-                      }
-                    />
-                  </div>
-                  <ul className={css({ paddingStart: "1rem" })}>
-                    {account.partitions.map((partition) => (
-                      <li
-                        key={partition.id}
-                        className={css({
-                          cursor: "pointer",
-                          color: selected.partitionIds.includes(partition.id)
-                            ? "blue"
-                            : "inherit",
-                        })}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          dispatch({
-                            type: "TOGGLE_PARTITIONS",
-                            payload: [partition.id],
-                          });
-                        }}
-                      >
-                        {partition.name} |
-                        <LoadingValue
-                          queryKey={["partitionBalance", partition.id]}
-                          valueLoader={() =>
-                            rpc.post.getPartitionBalance({
-                              partitionId: partition.id,
-                            })
-                          }
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ul>
+            <h1>{user.username}</h1>
+            <Accounts userId={user.id} />
             <Categories userId={user.id} />
           </div>
           <div>
@@ -124,6 +51,93 @@ export function UserPage({ username }: { username: string }) {
             <Transactions userId={user.id} />
           </div>
         </>
+      )}
+    </QueryResult>
+  );
+}
+
+function Accounts({ userId }: { userId: string }) {
+  const accounts = useQuery(["accounts", userId], () => {
+    return rpc.post.getAccounts({ userId });
+  });
+  return (
+    <QueryResult
+      query={accounts}
+      as="ul"
+      onLoading={<>Loading accounts...</>}
+      onUndefined={<>No accounts found</>}
+    >
+      {(accounts) =>
+        accounts.map((account) => (
+          <li
+            key={account.id}
+            className={css({
+              marginBottom: "0.5rem",
+              cursor: "pointer",
+            })}
+          >
+            <div>
+              {account.name} |
+              <LoadingValue
+                queryKey={["accountBalance", account.id]}
+                valueLoader={() =>
+                  rpc.post.getAccountBalance({ accountId: account.id })
+                }
+              />
+            </div>
+            <Partitions accountId={account.id} userId={userId} />
+          </li>
+        ))
+      }
+    </QueryResult>
+  );
+}
+
+function Partitions(props: { accountId: string; userId: string }) {
+  const { accountId, userId } = props;
+  const [selected, dispatch] = useContext(StoreSelectedContext);
+  const partitions = useQuery(["partitions", userId, accountId], () => {
+    return rpc.post.getPartitions({ accountId, userId });
+  });
+  return (
+    <QueryResult
+      query={partitions}
+      as="ul"
+      className={css({ marginLeft: "1rem" })}
+      onLoading={<>Loading partitions...</>}
+      onUndefined={<>No partitions found</>}
+    >
+      {(partitions) => (
+        <ul className={css({ paddingStart: "0.5rem" })}>
+          {partitions.map((partition) => (
+            <li
+              key={partition.id}
+              className={css({
+                cursor: "pointer",
+                color: selected.partitionIds.includes(partition.id)
+                  ? "blue"
+                  : "inherit",
+              })}
+              onClick={(event) => {
+                event.stopPropagation();
+                dispatch({
+                  type: "TOGGLE_PARTITIONS",
+                  payload: [partition.id],
+                });
+              }}
+            >
+              {partition.name} |
+              <LoadingValue
+                queryKey={["partitionBalance", partition.id]}
+                valueLoader={() =>
+                  rpc.post.getPartitionBalance({
+                    partitionId: partition.id,
+                  })
+                }
+              />
+            </li>
+          ))}
+        </ul>
       )}
     </QueryResult>
   );
@@ -185,7 +199,6 @@ function Category({
   const queryClient = useQueryClient();
   const [selected, dispatch] = useContext(StoreSelectedContext);
   const [isDeleting, setIsDeleting] = useState(false);
-
   return (
     <li
       key={category.id}
@@ -223,6 +236,7 @@ function Category({
 function Transactions({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
   const [selected] = useContext(StoreSelectedContext);
+  const [isDeleting, setIsDeleting] = useState(false);
   const transactions = useQuery(
     ["transactions", selected.partitionIds, selected.categoryIds, userId],
     () => {
@@ -250,9 +264,13 @@ function Transactions({ userId }: { userId: string }) {
       {(transactions) => (
         <ul>
           {transactions.map((transaction) => (
-            <li key={transaction.id}>
+            <li
+              key={transaction.id}
+            >
               <button
+                className={css({ cursor: "pointer" })}
                 onClick={async () => {
+                  setIsDeleting(true);
                   await rpc.post.deleteTransaction({
                     transactionId: transaction.id,
                   });
@@ -273,7 +291,9 @@ function Transactions({ userId }: { userId: string }) {
                   queryClient.invalidateQueries({
                     queryKey: ["categoryBalance", transaction.category.id],
                   });
+                  setIsDeleting(false);
                 }}
+                disabled={isDeleting}
               >
                 x
               </button>{" "}
@@ -289,8 +309,8 @@ function Transactions({ userId }: { userId: string }) {
 
 function TransactionForm({ user }: { user: { id: string } }) {
   const queryClient = useQueryClient();
-  const accounts = useQuery(["accounts", user.id], () => {
-    return rpc.post.getUserAccounts({ userId: user.id });
+  const partitions = useQuery(["partitions", user.id], () => {
+    return rpc.post.getVisiblePartitions({ userId: user.id });
   });
   const categories = useQuery(["categories", user.id], () => {
     return rpc.post.getUserCategories({ userId: user.id });
@@ -330,16 +350,14 @@ function TransactionForm({ user }: { user: { id: string } }) {
       }}
     >
       <label htmlFor="sourcePartitionId">Source Partition</label>
-      <QueryResult query={accounts}>
-        {(accounts) => (
+      <QueryResult query={partitions}>
+        {(partitions) => (
           <select name="sourcePartitionId">
-            {accounts.flatMap((account) =>
-              account.partitions.map((partition) => (
-                <option key={partition.id} value={partition.id}>
-                  {partition.name}
-                </option>
-              ))
-            )}
+            {partitions.map((partition) => (
+              <option key={partition.id} value={partition.id}>
+                {partition.name}
+              </option>
+            ))}
           </select>
         )}
       </QueryResult>
@@ -391,7 +409,7 @@ function QueryResult<T>(props: {
   onError?: (error: Error) => React.ReactNode;
 }) {
   const { data, isLoading, isError } = props.query;
-  const { as: Tag = Fragment } = props;
+  const { as: Tag } = props;
   let node: React.ReactNode;
   if (isLoading) {
     node = props.onLoading;
@@ -402,6 +420,7 @@ function QueryResult<T>(props: {
   } else {
     node = props.children(data);
   }
+  if (Tag === undefined) return <>{node}</>;
   return <Tag className={props.className}>{node}</Tag>;
 }
 

@@ -30,6 +30,9 @@ module default {
   type EPartition {
     required name: str;
     required account: EAccount;
+    required property is_private: bool {
+      default := false;
+    }
 
     multi link transactions := .<source_partition[is ETransaction];
     property balance := sum(.transactions.value);

@@ -11,6 +11,9 @@ import {
   getPartitionBalance,
   getAccountBalance,
   getUserAccounts,
+  getAccounts,
+  getPartitions,
+  getVisiblePartitions,
 } from "./server_functions";
 
 /**
@@ -29,6 +32,9 @@ export const procedures = {
   getPartitionBalance,
   getAccountBalance,
   getUserAccounts,
+  getAccounts,
+  getPartitions,
+  getVisiblePartitions,
 };
 
 export type Procedures = typeof procedures;

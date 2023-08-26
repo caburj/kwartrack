@@ -25,6 +25,7 @@ export const findUser = withValidation(
     const query = e.select(e.EUser, (user) => ({
       id: true,
       email: true,
+      username: true,
       categories: {
         id: true,
         name: true,
@@ -71,34 +72,134 @@ export const findUserByEmail = withValidation(
   }
 );
 
-export const getUserTransactions = withValidation(
+export const getAccounts = withValidation(
   object({ userId: string() }),
   async ({ userId }) => {
-    const query = e.select(e.EUser, (user) => ({
-      filter: e.op(user.id, "=", e.uuid(userId)),
-      transactions: {
+    // return all accounts
+    const query = e.select(e.EAccount, (account) => ({
+      id: true,
+      name: true,
+      owners: {
         id: true,
-        value: true,
-        source_partition: {
-          id: true,
-          name: true,
-          account: {
-            id: true,
-            name: true,
-          },
-        },
-        category: {
-          id: true,
-          name: true,
-        },
-        description: true,
+        username: true,
       },
     }));
 
     const client = edgedb.createClient();
     const result = await query.run(client);
     if (result.length !== 0) {
-      return result[0].transactions;
+      return result;
+    }
+  }
+);
+
+export const getPartitions = withValidation(
+  object({ userId: string(), accountId: string() }),
+  async ({ userId, accountId }) => {
+    // return all public partitions of the account and private partitions of the user
+    const query = e.select(e.EPartition, (partition) => {
+      // get all partitions in the account
+      const belongToAccount = e.op(
+        partition.account.id,
+        "=",
+        e.uuid(accountId)
+      );
+      // get all private partitions of the user
+      const visibleToUser = e.op(
+        e.op(partition.owners.id, "=", e.uuid(userId)),
+        "or",
+        e.op(
+          e.op("not", partition.is_private),
+          "and",
+          e.op(partition.owners.id, "!=", e.uuid(userId))
+        )
+      );
+      return {
+        id: true,
+        name: true,
+        owners: {
+          id: true,
+          username: true,
+        },
+        filter: e.op(belongToAccount, "and", visibleToUser),
+      };
+    });
+    const client = edgedb.createClient();
+    const result = await query.run(client);
+    if (result.length !== 0) {
+      return result;
+    }
+  }
+);
+
+export const getVisiblePartitions = withValidation(
+  object({ userId: string() }),
+  async ({ userId }) => {
+    const query = e.select(e.EPartition, (partition) => {
+      // get all private partitions of the user
+      const visibleToUser = e.op(
+        e.op(partition.owners.id, "=", e.uuid(userId)),
+        "or",
+        e.op(
+          e.op("not", partition.is_private),
+          "and",
+          e.op(partition.owners.id, "!=", e.uuid(userId))
+        )
+      );
+      return {
+        id: true,
+        name: true,
+        owners: {
+          id: true,
+          username: true,
+        },
+        filter: visibleToUser,
+      };
+    });
+    const client = edgedb.createClient();
+    const result = await query.run(client);
+    if (result.length !== 0) {
+      return result;
+    }
+  }
+);
+
+export const getUserTransactions = withValidation(
+  object({ userId: string() }),
+  async ({ userId }) => {
+    // get transactions visible to the user
+    // visible if source_partition is not private or user is owner of source_partition
+   const query = e.select(e.ETransaction, (transaction) => ({
+      id: true,
+      value: true,
+      source_partition: {
+        id: true,
+        name: true,
+        account: {
+          id: true,
+          name: true,
+        },
+      },
+      category: {
+        id: true,
+        name: true,
+      },
+      description: true,
+      filter: e.op(
+        e.op("not", transaction.source_partition.is_private),
+        "or",
+        e.op(
+          transaction.source_partition.owners.id,
+          "=",
+          e.uuid(userId)
+        )
+      ),
+    }));
+
+    const client = edgedb.createClient();
+    const result = await query.run(client);
+    if (result.length !== 0) {
+      return result;
     }
   }
 );
