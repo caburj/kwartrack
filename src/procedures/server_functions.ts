@@ -169,7 +169,7 @@ export const getUserTransactions = withValidation(
   async ({ userId }) => {
     // get transactions visible to the user
     // visible if source_partition is not private or user is owner of source_partition
-   const query = e.select(e.ETransaction, (transaction) => ({
+    const query = e.select(e.ETransaction, (transaction) => ({
       id: true,
       value: true,
       source_partition: {
@@ -188,11 +188,7 @@ export const getUserTransactions = withValidation(
       filter: e.op(
         e.op("not", transaction.source_partition.is_private),
         "or",
-        e.op(
-          transaction.source_partition.owners.id,
-          "=",
-          e.uuid(userId)
-        )
+        e.op(transaction.source_partition.owners.id, "=", e.uuid(userId))
       ),
     }));
 
@@ -226,6 +222,11 @@ export const findTransactions = withValidation(
             "in",
             e.array_unpack(pIds)
           );
+          const visibleToUser = e.op(
+            e.op("not", transaction.source_partition.is_private),
+            "or",
+            e.op(transaction.source_partition.owners.id, "=", ownerId)
+          );
           if (partitionIds.length !== 0 && categoryIds.length !== 0) {
             filter = e.op(cFilter, "and", pFilter);
           } else if (partitionIds.length !== 0) {
@@ -249,11 +250,7 @@ export const findTransactions = withValidation(
               name: true,
             },
             description: true,
-            filter: e.op(
-              filter,
-              "and",
-              e.op(transaction.source_partition.account.owners.id, "=", ownerId)
-            ),
+            filter: e.op(filter, "and", visibleToUser),
           };
         })
     );
