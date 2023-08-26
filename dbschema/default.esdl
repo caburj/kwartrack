@@ -60,7 +60,12 @@ module default {
     required category: ECategory;
     required value: decimal;
     description: str;
+    # Track the counterpart transaction if this is a transfer.
+    destination_transaction: ETransaction {
+      constraint exclusive;
+    }
 
+    property is_transfer := .destination_transaction != <ETransaction>{};
     multi link owners := .source_partition.owners;
 
     access policy current_user_owned

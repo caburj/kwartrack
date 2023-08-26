@@ -8,7 +8,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { object, optional, string } from "valibot";
+import { number, object, optional, string } from "valibot";
 import { StoreSelectedProvider, StoreSelectedContext } from "./store";
 
 export default function Main(props: { params: { username: string } }) {
@@ -314,6 +314,18 @@ function TransactionForm({ user }: { user: { id: string } }) {
   const categories = useQuery(["categories", user.id], () => {
     return rpc.post.getUserCategories({ userId: user.id });
   });
+  const [isDestinationKnown, setIsDestinationKnown] = useState(false);
+  const [inputValue, setInputValue] = useState("");
+
+  let isExpense = false;
+  let value: number;
+  try {
+    value = parseFloat(inputValue);
+    if (!isNaN(value)) {
+      isExpense = value < 0;
+    }
+  } catch (_error) {}
+
   return (
     <form
       className={css({ display: "flex", flexDirection: "column" })}
@@ -324,15 +336,23 @@ function TransactionForm({ user }: { user: { id: string } }) {
         const formObj = Object.fromEntries(formdata.entries());
         const dataSchema = object({
           sourcePartitionId: string(),
+          destinationPartitionId: optional(string()),
           categoryId: string(),
-          value: string(),
+          value: number(),
           description: optional(string()),
           userId: string(),
         });
-        const parsedData = dataSchema.parse({ ...formObj, userId: user.id });
-        const newTransaction = await rpc.post.createTransaction(parsedData);
+        const parsedData = dataSchema.parse({
+          ...formObj,
+          userId: user.id,
+          value,
+        });
+        const { source, destination } = await rpc.post.createTransaction(
+          parsedData
+        );
         target.reset();
-        if (newTransaction) {
+        if (source) {
+          setInputValue("");
           queryClient.invalidateQueries({ queryKey: ["transactions"] });
           queryClient.invalidateQueries({
             queryKey: ["categoryBalance", parsedData.categoryId],
@@ -341,9 +361,17 @@ function TransactionForm({ user }: { user: { id: string } }) {
             queryKey: ["partitionBalance", parsedData.sourcePartitionId],
           });
           queryClient.invalidateQueries({
+            queryKey: ["accountBalance", source.source_partition.account.id],
+          });
+        }
+        if (destination) {
+          queryClient.invalidateQueries({
+            queryKey: ["partitionBalance", parsedData.destinationPartitionId],
+          });
+          queryClient.invalidateQueries({
             queryKey: [
               "accountBalance",
-              newTransaction.source_partition.account.id,
+              destination.source_partition.account.id,
             ],
           });
         }
@@ -362,7 +390,47 @@ function TransactionForm({ user }: { user: { id: string } }) {
         )}
       </QueryResult>
       <label htmlFor="value">Value</label>
-      <input type="text" inputMode="numeric" name="value" />
+      <input
+        type="text"
+        inputMode="numeric"
+        name="value"
+        value={inputValue}
+        onInput={(event) => {
+          setInputValue((event.target as HTMLInputElement).value);
+        }}
+      />
+      {isExpense && (
+        <>
+          <label htmlFor="isDestinationKnown">Known Destination</label>
+          <input
+            type="checkbox"
+            name="isDestinationKnown"
+            checked={isDestinationKnown}
+            onChange={(event) => {
+              setIsDestinationKnown(event.target.checked);
+            }}
+          />
+          {isDestinationKnown && (
+            <>
+              <label htmlFor="destinationPartitionId">
+                Destination Partition
+              </label>
+              <QueryResult query={partitions}>
+                {(partitions) => (
+                  <select name="destinationPartitionId">
+                    {partitions.map((partition) => (
+                      <option key={partition.id} value={partition.id}>
+                        {partition.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </QueryResult>
+            </>
+          )}
+        </>
+      )}
+
       <label htmlFor="categoryId">Category</label>
       <QueryResult query={categories}>
         {(categories) => (

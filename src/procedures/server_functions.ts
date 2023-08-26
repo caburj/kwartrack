@@ -7,6 +7,7 @@ import {
   string,
   array,
   optional,
+  number,
 } from "valibot";
 
 function withValidation<S extends BaseSchema, R extends any>(
@@ -175,6 +176,10 @@ export const getUserTransactions = withValidation(
         name: true,
       },
       description: true,
+      order_by: {
+        expression: transaction.date,
+        direction: e.DESC,
+      },
     }));
 
     const client = edgedb
@@ -233,6 +238,10 @@ export const findTransactions = withValidation(
             },
             description: true,
             filter,
+            order_by: {
+              expression: transaction.date,
+              direction: e.DESC,
+            },
           };
         })
     );
@@ -253,21 +262,39 @@ export const findTransactions = withValidation(
 
 export const createTransaction = withValidation(
   object({
-    value: string(),
+    value: number(),
     sourcePartitionId: string(),
     categoryId: string(),
     description: optional(string()),
     userId: string(),
+    destinationPartitionId: optional(string()),
   }),
-  async ({ value, sourcePartitionId, categoryId, description, userId }) => {
-    const query = e.params(
+  async ({
+    value,
+    sourcePartitionId,
+    categoryId,
+    description,
+    userId,
+    destinationPartitionId,
+  }) => {
+    if (destinationPartitionId && value > 0) {
+      throw new Error("Transfer transaction is a type of expense.");
+    }
+    const createQuery = e.params(
       {
         value: e.decimal,
         sourcePartitionId: e.uuid,
         categoryId: e.uuid,
         description: e.optional(e.str),
+        destinationTransactionId: e.optional(e.uuid),
       },
-      ({ value, sourcePartitionId, description, categoryId }) =>
+      ({
+        value,
+        sourcePartitionId,
+        description,
+        categoryId,
+        destinationTransactionId,
+      }) =>
         e.insert(e.ETransaction, {
           value,
           description,
@@ -277,38 +304,76 @@ export const createTransaction = withValidation(
           source_partition: e.select(e.EPartition, (partition) => ({
             filter_single: e.op(partition.id, "=", sourcePartitionId),
           })),
+          destination_transaction: e.select(e.ETransaction, (transaction) => ({
+            filter_single: e.op(transaction.id, "=", destinationTransactionId),
+          })),
         })
+    );
+
+    const selectQuery = e.params(
+      {
+        id: e.uuid,
+      },
+      ({ id }) =>
+        e.select(e.ETransaction, (transaction) => ({
+          filter_single: e.op(transaction.id, "=", id),
+          id: true,
+          value: true,
+          source_partition: {
+            id: true,
+            name: true,
+            account: {
+              id: true,
+              name: true,
+            },
+          },
+          category: {
+            id: true,
+            name: true,
+          },
+          description: true,
+        }))
     );
 
     const client = edgedb
       .createClient()
       .withGlobals({ current_user_id: userId });
-    const { id: transactionId } = await query.run(client, {
-      value,
-      sourcePartitionId,
-      categoryId,
-      description,
+
+    const result = await client.transaction(async (tx) => {
+      let sourceTransactionId: string;
+      let destinationTransactionId: string | undefined;
+      if (destinationPartitionId) {
+        const { id } = await createQuery.run(tx, {
+          value: (-value).toString(),
+          sourcePartitionId: destinationPartitionId,
+          categoryId,
+          description,
+        });
+        destinationTransactionId = id;
+      }
+      const { id } = await createQuery.run(tx, {
+        value: value.toString(),
+        sourcePartitionId,
+        categoryId,
+        description,
+        destinationTransactionId,
+      });
+      sourceTransactionId = id;
+
+      const sourceTransaction = await selectQuery.run(tx, {
+        id: sourceTransactionId,
+      });
+      let destinationTransaction;
+      if (destinationTransactionId) {
+        destinationTransaction = await selectQuery.run(tx, {
+          id: destinationTransactionId,
+        });
+      }
+      return {
+        source: sourceTransaction || undefined,
+        destination: destinationTransaction || undefined,
+      };
     });
-    const result = await e
-      .select(e.ETransaction, (transaction) => ({
-        filter_single: e.op(transaction.id, "=", e.uuid(transactionId)),
-        id: true,
-        value: true,
-        source_partition: {
-          id: true,
-          name: true,
-          account: {
-            id: true,
-            name: true,
-          },
-        },
-        category: {
-          id: true,
-          name: true,
-        },
-        description: true,
-      }))
-      .run(client);
     return result;
   }
 );
