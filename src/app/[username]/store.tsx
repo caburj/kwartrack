@@ -1,22 +1,38 @@
 import { useReducer, createContext, ReactNode } from "react";
 
-type StoreSelected = {
+type UserPageStore = {
   partitionIds: string[];
   categoryIds: string[];
+  transactionSearchStartDate: Date | undefined;
+  transactionSearchEndDate: Date | undefined;
 };
 
-type ActionSelected =
+type UserPageAction =
   | { type: "TOGGLE_PARTITIONS"; payload: string[] }
   | { type: "TOGGLE_CATEGORIES"; payload: string[] }
+  | { type: "SET_TRANSACTION_SEARCH_START_DATE"; payload: Date | undefined }
+  | { type: "SET_TRANSACTION_SEARCH_END_DATE"; payload: Date | undefined };
 
-type DispatchSelected = (action: ActionSelected) => void;
+type UserPageDispatch = (action: UserPageAction) => void;
 
-const initSelected: StoreSelected = {
-  partitionIds: [],
-  categoryIds: [],
+const firstDayOfCurrentMonth = () => {
+  const date = new Date();
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), 1));
 };
 
-const reducerSelected = (state: StoreSelected, action: ActionSelected) => {
+const firstDayOfNextMonth = () => {
+  const date = new Date();
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth() + 1, 1));
+}
+
+const initStore: UserPageStore = {
+  partitionIds: [],
+  categoryIds: [],
+  transactionSearchStartDate: firstDayOfCurrentMonth(),
+  transactionSearchEndDate: firstDayOfNextMonth(),
+};
+
+const userPageStoreReducer = (state: UserPageStore, action: UserPageAction) => {
   switch (action.type) {
     case "TOGGLE_PARTITIONS": {
       let partitionIds = state.partitionIds;
@@ -29,7 +45,7 @@ const reducerSelected = (state: StoreSelected, action: ActionSelected) => {
       }
       return { ...state, partitionIds };
     }
-    case "TOGGLE_CATEGORIES":{
+    case "TOGGLE_CATEGORIES": {
       let categoryIds = state.categoryIds;
       for (const id of action.payload) {
         if (categoryIds.includes(id)) {
@@ -40,21 +56,24 @@ const reducerSelected = (state: StoreSelected, action: ActionSelected) => {
       }
       return { ...state, categoryIds };
     }
+    case "SET_TRANSACTION_SEARCH_START_DATE":
+      return { ...state, transactionSearchStartDate: action.payload };
+    case "SET_TRANSACTION_SEARCH_END_DATE":
+      return { ...state, transactionSearchEndDate: action.payload };
     default:
       return state;
   }
 };
 
-export const StoreSelectedContext = createContext<[state: StoreSelected, dispatch: DispatchSelected]>([
-  initSelected,
-  () => null,
-]);
+export const UserPageStoreContext = createContext<
+  [state: UserPageStore, dispatch: UserPageDispatch]
+>([initStore, () => null]);
 
-export const StoreSelectedProvider = (props: { children: ReactNode }) => {
-  const [state, dispatch] = useReducer(reducerSelected, initSelected);
+export const UserPageStoreProvider = (props: { children: ReactNode }) => {
+  const [state, dispatch] = useReducer(userPageStoreReducer, initStore);
   return (
-    <StoreSelectedContext.Provider value={[state, dispatch]}>
+    <UserPageStoreContext.Provider value={[state, dispatch]}>
       {props.children}
-    </StoreSelectedContext.Provider>
+    </UserPageStoreContext.Provider>
   );
 };

@@ -1,6 +1,14 @@
 module default {
   global current_user_id: uuid;
 
+  # if set, all transactions will be filtered to be within this date range.
+  global transaction_search_start_date: datetime {
+    default := <datetime>'0001-01-01T00:00:00+00';
+  };
+  global transaction_search_end_date: datetime {
+    default := <datetime>'9999-12-31T23:59:59+00';
+  };
+
   type EUser {
     required email: str {
       constraint exclusive;
@@ -53,7 +61,6 @@ module default {
   # Represents a transaction.
   type ETransaction {
     required date: datetime {
-      readonly := true;
       default := datetime_of_statement();
     }
     required source_partition: EPartition;
@@ -70,6 +77,10 @@ module default {
 
     access policy current_user_owned
       allow all
-      using (.source_partition.is_private = false or any(.owners.id = global current_user_id));
+      using (
+        (.source_partition.is_private = false or any(.owners.id = global current_user_id))
+        and all(.date >= global transaction_search_start_date)
+        and all(.date <= global transaction_search_end_date)
+      );
   }
 }

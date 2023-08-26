@@ -9,14 +9,14 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { number, object, optional, string } from "valibot";
-import { StoreSelectedProvider, StoreSelectedContext } from "./store";
+import { UserPageStoreProvider, UserPageStoreContext } from "./store";
 
 export default function Main(props: { params: { username: string } }) {
   const { username } = props.params;
   return (
-    <StoreSelectedProvider>
+    <UserPageStoreProvider>
       <UserPage username={username} />
-    </StoreSelectedProvider>
+    </UserPageStoreProvider>
   );
 }
 
@@ -45,6 +45,7 @@ export function UserPage({ username }: { username: string }) {
             <h1>{user.username}</h1>
             <Accounts userId={user.id} />
             <Categories userId={user.id} />
+            <DateRange userId={user.id} />
           </div>
           <div>
             <TransactionForm user={user} />
@@ -95,7 +96,7 @@ function Accounts({ userId }: { userId: string }) {
 
 function Partitions(props: { accountId: string; userId: string }) {
   const { accountId, userId } = props;
-  const [selected, dispatch] = useContext(StoreSelectedContext);
+  const [selected, dispatch] = useContext(UserPageStoreContext);
   const partitions = useQuery(["partitions", userId, accountId], () => {
     return rpc.post.getPartitions({ accountId, userId });
   });
@@ -198,7 +199,7 @@ function Category({
   userId: string;
 }) {
   const queryClient = useQueryClient();
-  const [selected, dispatch] = useContext(StoreSelectedContext);
+  const [selected, dispatch] = useContext(UserPageStoreContext);
   const [isDeleting, setIsDeleting] = useState(false);
   return (
     <li
@@ -236,24 +237,26 @@ function Category({
 
 function Transactions({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
-  const [selected] = useContext(StoreSelectedContext);
+  const [store] = useContext(UserPageStoreContext);
   const [isDeleting, setIsDeleting] = useState(false);
-  const transactions = useQuery(
-    ["transactions", selected.partitionIds, selected.categoryIds, userId],
-    () => {
-      if (
-        selected.partitionIds.length === 0 &&
-        selected.categoryIds.length === 0
-      ) {
-        return rpc.post.getUserTransactions({ userId: userId });
-      }
-      return rpc.post.findTransactions({
-        partitionIds: selected.partitionIds,
-        categoryIds: selected.categoryIds,
-        ownerId: userId,
+  const transactions = useQuery(["transactions", store], () => {
+    if (store.partitionIds.length === 0 && store.categoryIds.length === 0) {
+      return rpc.post.getUserTransactions({
+        userId: userId,
+        transactionSearchStartDate:
+          store.transactionSearchStartDate?.toISOString(),
+        transactionSearchEndDate: store.transactionSearchEndDate?.toISOString(),
       });
     }
-  );
+    return rpc.post.findTransactions({
+      partitionIds: store.partitionIds,
+      categoryIds: store.categoryIds,
+      ownerId: userId,
+      transactionSearchStartDate:
+        store.transactionSearchStartDate?.toISOString(),
+      transactionSearchEndDate: store.transactionSearchEndDate?.toISOString(),
+    });
+  });
   return (
     <QueryResult
       query={transactions}
@@ -447,6 +450,50 @@ function TransactionForm({ user }: { user: { id: string } }) {
       <input type="text" name="description" />
       <input type="submit" value="Submit" />
     </form>
+  );
+}
+
+function DateRange({ userId }: { userId: string }) {
+  const [store, dispatch] = useContext(UserPageStoreContext);
+  return (
+    <div>
+      <div>
+        <label htmlFor="startDate">Start Date</label>
+        <input
+          type="date"
+          name="startDate"
+          value={
+            store.transactionSearchStartDate?.toISOString().split("T")[0] ?? ""
+          }
+          onChange={(event) => {
+            dispatch({
+              type: "SET_TRANSACTION_SEARCH_START_DATE",
+              payload: event.target.value
+                ? new Date(event.target.value)
+                : undefined,
+            });
+          }}
+        />
+      </div>
+      <div>
+        <label htmlFor="endDate">End Date</label>
+        <input
+          type="date"
+          name="endDate"
+          value={
+            store.transactionSearchEndDate?.toISOString().split("T")[0] ?? ""
+          }
+          onChange={(event) => {
+            dispatch({
+              type: "SET_TRANSACTION_SEARCH_END_DATE",
+              payload: event.target.value
+                ? new Date(event.target.value)
+                : undefined,
+            });
+          }}
+        />
+      </div>
+    </div>
   );
 }
 

@@ -158,8 +158,12 @@ export const getVisiblePartitions = withValidation(
 );
 
 export const getUserTransactions = withValidation(
-  object({ userId: string() }),
-  async ({ userId }) => {
+  object({
+    userId: string(),
+    transactionSearchStartDate: optional(string()),
+    transactionSearchEndDate: optional(string()),
+  }),
+  async ({ userId, transactionSearchStartDate, transactionSearchEndDate }) => {
     const query = e.select(e.ETransaction, (transaction) => ({
       id: true,
       value: true,
@@ -182,9 +186,13 @@ export const getUserTransactions = withValidation(
       },
     }));
 
-    const client = edgedb
-      .createClient()
-      .withGlobals({ current_user_id: userId });
+    const client = edgedb.createClient().withGlobals({
+      current_user_id: userId,
+      transaction_search_start_date:
+        transactionSearchStartDate && new Date(transactionSearchStartDate),
+      transaction_search_end_date:
+        transactionSearchEndDate && new Date(transactionSearchEndDate),
+    });
     const result = await query.run(client);
     if (result.length !== 0) {
       return result;
@@ -197,8 +205,16 @@ export const findTransactions = withValidation(
     partitionIds: array(string()),
     categoryIds: array(string()),
     ownerId: string(),
+    transactionSearchStartDate: optional(string()),
+    transactionSearchEndDate: optional(string()),
   }),
-  async ({ partitionIds, categoryIds, ownerId }) => {
+  async ({
+    partitionIds,
+    categoryIds,
+    ownerId,
+    transactionSearchStartDate,
+    transactionSearchEndDate,
+  }) => {
     const query = e.params(
       { pIds: e.array(e.uuid), cIds: e.array(e.uuid), ownerId: e.uuid },
       ({ pIds, cIds, ownerId }) =>
@@ -248,7 +264,13 @@ export const findTransactions = withValidation(
 
     const client = edgedb
       .createClient()
-      .withGlobals({ current_user_id: ownerId });
+      .withGlobals({
+        current_user_id: ownerId,
+        transaction_search_start_date:
+          transactionSearchStartDate && new Date(transactionSearchStartDate),
+        transaction_search_end_date:
+          transactionSearchEndDate && new Date(transactionSearchEndDate),
+      });
     const result = await query.run(client, {
       pIds: partitionIds,
       cIds: categoryIds,
