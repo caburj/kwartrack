@@ -8,6 +8,7 @@ import {
   array,
   optional,
   number,
+  minValue,
 } from "valibot";
 
 function withValidation<S extends BaseSchema, R extends any>(
@@ -30,6 +31,7 @@ export const findUser = withValidation(
       categories: {
         id: true,
         name: true,
+        kind: true,
       },
       accounts: {
         id: true,
@@ -275,7 +277,7 @@ export const findTransactions = withValidation(
 
 export const createTransaction = withValidation(
   object({
-    value: number(),
+    value: number([minValue(0)]),
     sourcePartitionId: string(),
     categoryId: string(),
     description: optional(string()),
@@ -290,24 +292,15 @@ export const createTransaction = withValidation(
     userId,
     destinationPartitionId,
   }) => {
-    if (destinationPartitionId && value > 0) {
-      throw new Error("Transfer transaction is a type of expense.");
-    }
     const createQuery = e.params(
       {
         value: e.decimal,
         sourcePartitionId: e.uuid,
         categoryId: e.uuid,
         description: e.optional(e.str),
-        destinationTransactionId: e.optional(e.uuid),
+        counterpartId: e.optional(e.uuid),
       },
-      ({
-        value,
-        sourcePartitionId,
-        description,
-        categoryId,
-        destinationTransactionId,
-      }) =>
+      ({ value, sourcePartitionId, description, categoryId, counterpartId }) =>
         e.insert(e.ETransaction, {
           value,
           description,
@@ -318,7 +311,7 @@ export const createTransaction = withValidation(
             filter_single: e.op(partition.id, "=", sourcePartitionId),
           })),
           counterpart: e.select(e.ETransaction, (transaction) => ({
-            filter_single: e.op(transaction.id, "=", destinationTransactionId),
+            filter_single: e.op(transaction.id, "=", counterpartId),
           })),
         })
     );
@@ -353,38 +346,56 @@ export const createTransaction = withValidation(
       .withGlobals({ current_user_id: userId });
 
     const result = await client.transaction(async (tx) => {
-      let sourceTransactionId: string;
-      let destinationTransactionId: string | undefined;
+      const selectedCategory = await e
+        .select(e.ECategory, (category) => ({
+          filter_single: e.op(category.id, "=", e.uuid(categoryId)),
+          kind: true,
+        }))
+        .run(tx);
+
+      if (!selectedCategory) {
+        throw new Error("Category not found.");
+      }
+
+      let realValue: number;
+      if (selectedCategory.kind === "Expense") {
+        realValue = -Math.abs(value);
+      } else {
+        realValue = Math.abs(value);
+      }
+
+      let transactionId: string;
+      let counterpartId: string | undefined;
       if (destinationPartitionId) {
         const { id } = await createQuery.run(tx, {
-          value: (-value).toString(),
+          value: (-realValue).toString(),
           sourcePartitionId: destinationPartitionId,
           categoryId,
           description,
         });
-        destinationTransactionId = id;
+        counterpartId = id;
       }
       const { id } = await createQuery.run(tx, {
-        value: value.toString(),
+        value: realValue.toString(),
         sourcePartitionId,
         categoryId,
         description,
-        destinationTransactionId,
+        counterpartId: counterpartId,
       });
-      sourceTransactionId = id;
+      transactionId = id;
 
-      const sourceTransaction = await selectQuery.run(tx, {
-        id: sourceTransactionId,
+      const transaction = await selectQuery.run(tx, {
+        id: transactionId,
       });
-      let destinationTransaction;
-      if (destinationTransactionId) {
-        destinationTransaction = await selectQuery.run(tx, {
-          id: destinationTransactionId,
+      let counterpart;
+      if (counterpartId) {
+        counterpart = await selectQuery.run(tx, {
+          id: counterpartId,
         });
       }
       return {
-        source: sourceTransaction || undefined,
-        destination: destinationTransaction || undefined,
+        transaction: transaction || undefined,
+        counterpart: counterpart || undefined,
       };
     });
     return result;
@@ -411,20 +422,38 @@ export const deleteTransaction = withValidation(
 export const getUserCategories = withValidation(
   object({ userId: string() }),
   async ({ userId }) => {
-    const query = e.params({ id: e.uuid }, ({ id }) =>
-      e.select(e.EUser, (user) => ({
-        filter: e.op(user.id, "=", id),
-        categories: {
-          id: true,
-          name: true,
-        },
-      }))
-    );
     const client = edgedb.createClient();
-    const result = await query.run(client, { id: userId });
-    if (result.length !== 0) {
-      return result[0].categories;
-    }
+    const result = await client.transaction(async (tx) => {
+      const fields = {
+        id: true,
+        name: true,
+        kind: true,
+      } as const;
+      const expense = await e
+        .select(e.ECategory, (category) => ({
+          ...fields,
+          filter: e.op(category.kind, "=", e.ECategoryKind.Expense),
+        }))
+        .run(tx);
+      const income = await e
+        .select(e.ECategory, (category) => ({
+          ...fields,
+          filter: e.op(category.kind, "=", e.ECategoryKind.Income),
+        }))
+        .run(tx);
+      const transfer = await e
+        .select(e.ECategory, (category) => ({
+          ...fields,
+          filter: e.op(category.kind, "=", e.ECategoryKind.Transfer),
+        }))
+        .run(tx);
+      return {
+        expense,
+        income,
+        transfer,
+      };
+    });
+    return result;
   }
 );
 
@@ -473,13 +502,24 @@ export const getCategoryBalance = withValidation(
 );
 
 export const createUserCategory = withValidation(
-  object({ userId: string(), name: string() }),
-  async ({ userId, name }) => {
+  object({ userId: string(), name: string(), kind: string() }),
+  async ({ userId, name, kind }) => {
     const query = e.params({ id: e.uuid, name: e.str }, ({ id, name }) =>
-      e.insert(e.ECategory, { name })
+      e.insert(e.ECategory, {
+        name,
+        kind:
+          kind === "Expense"
+            ? "Expense"
+            : kind === "Income"
+            ? "Income"
+            : "Transfer",
+      })
     );
     const client = edgedb.createClient();
-    const result = await query.run(client, { id: userId, name });
+    const result = await query.run(client, {
+      id: userId,
+      name,
+    });
     return result;
   }
 );
@@ -524,13 +564,11 @@ export const getAccountBalance = withValidation(
         balance: true,
       }))
     );
-    const client = edgedb
-      .createClient()
-      .withGlobals({
-        current_user_id: userId,
-        tss_date: tssDate ? new Date(tssDate) : undefined,
-        tse_date: tseDate ? new Date(tseDate) : undefined,
-      });
+    const client = edgedb.createClient().withGlobals({
+      current_user_id: userId,
+      tss_date: tssDate ? new Date(tssDate) : undefined,
+      tse_date: tseDate ? new Date(tseDate) : undefined,
+    });
     const result = await query.run(client, { id: accountId });
     if (result.length !== 0) {
       return result[0].balance;

@@ -173,41 +173,81 @@ function Categories({ userId }: { userId: string }) {
   const categories = useQuery(["categories", userId], () => {
     return rpc.post.getUserCategories({ userId });
   });
+  console.log(categories.data);
   return (
     <>
       <QueryResult
         query={categories}
         as="div"
-        className={css({ padding: "1rem" })}
         onLoading={<>Loading categories...</>}
         onUndefined={<>No categories found</>}
       >
         {(categories) => (
-          <ul>
-            {categories.map((category) => (
-              <Category key={category.id} category={category} userId={userId} />
-            ))}
-          </ul>
+          <>
+            <h1>Income</h1>
+            <ul className={css({ paddingStart: "1rem" })}>
+              {categories.income.map((category) => (
+                <Category
+                  key={category.id}
+                  category={category}
+                  userId={userId}
+                />
+              ))}
+            </ul>
+            <h1>Expense</h1>
+            <ul className={css({ paddingStart: "1rem" })}>
+              {categories.expense.map((category) => (
+                <Category
+                  key={category.id}
+                  category={category}
+                  userId={userId}
+                />
+              ))}
+            </ul>
+            <h1>Transfer</h1>
+            <ul className={css({ paddingStart: "1rem" })}>
+              {categories.transfer.map((category) => (
+                <Category
+                  key={category.id}
+                  category={category}
+                  userId={userId}
+                />
+              ))}
+            </ul>
+          </>
         )}
       </QueryResult>
       <form
+        className={css({
+          margin: "1rem 0",
+          display: "flex",
+          flexDirection: "column",
+        })}
         onSubmit={async (event) => {
           event.preventDefault();
           const target = event.target as HTMLFormElement;
           const formdata = new FormData(target as HTMLFormElement);
           const formObj = Object.fromEntries(formdata.entries());
-          const dataSchema = object({ name: string() });
+          const dataSchema = object({ name: string(), kind: string() });
           const parsedData = dataSchema.parse(formObj);
           await rpc.post.createUserCategory({
             userId,
             name: parsedData.name,
+            kind: parsedData.kind,
           });
           target.reset();
           queryClient.invalidateQueries({ queryKey: ["categories", userId] });
         }}
       >
-        <label htmlFor="name">Category Name</label>
-        <input type="text" name="name" />
+        <h1>Create Category</h1>
+        <label htmlFor="name">Name:</label>
+        <input type="text" name="name" placeholder="E.g. Salary" />
+        <label htmlFor="kind">Kind: </label>
+        <select name="kind" defaultValue="Expense">
+          <option value="Income">Income</option>
+          <option value="Expense">Expense</option>
+          <option value="Transfer">Transfer</option>
+        </select>
         <input type="submit" value="Create"></input>
       </form>
     </>
@@ -353,7 +393,8 @@ function Transactions({ userId }: { userId: string }) {
                   x
                 </button>{" "}
                 | {transaction.source_partition.name} | {transaction.value} |{" "}
-                {transaction.category.name} | {transaction.description} | {transaction.str_date}
+                {transaction.category.name} | {transaction.description} |{" "}
+                {transaction.str_date}
               </li>
             );
           })}
@@ -372,16 +413,12 @@ function TransactionForm({ user }: { user: { id: string } }) {
   const categories = useQuery(["categories", user.id], () => {
     return rpc.post.getUserCategories({ userId: user.id });
   });
-  const [isDestinationKnown, setIsDestinationKnown] = useState(false);
+  const [inputCategoryKind, setInputCategoryKind] = useState("");
   const [inputValue, setInputValue] = useState("");
 
-  let isExpense = false;
   let value: number;
   try {
     value = parseFloat(inputValue);
-    if (!isNaN(value)) {
-      isExpense = value < 0;
-    }
   } catch (_error) {}
 
   return (
@@ -405,11 +442,11 @@ function TransactionForm({ user }: { user: { id: string } }) {
           userId: user.id,
           value,
         });
-        const { source, destination } = await rpc.post.createTransaction(
+        const { transaction, counterpart } = await rpc.post.createTransaction(
           parsedData
         );
         target.reset();
-        if (source) {
+        if (transaction) {
           setInputValue("");
           queryClient.invalidateQueries({ queryKey: ["transactions"] });
           queryClient.invalidateQueries({
@@ -436,14 +473,14 @@ function TransactionForm({ user }: { user: { id: string } }) {
             queryKey: [
               "accountBalance",
               {
-                accountId: source.source_partition.account.id,
+                accountId: transaction.source_partition.account.id,
                 tssDate: store.tssDate,
                 tseDate: store.tseDate,
               },
             ],
           });
         }
-        if (destination) {
+        if (counterpart) {
           queryClient.invalidateQueries({
             queryKey: [
               "partitionBalance",
@@ -458,7 +495,7 @@ function TransactionForm({ user }: { user: { id: string } }) {
             queryKey: [
               "accountBalance",
               {
-                accountId: destination.source_partition.account.id,
+                accountId: counterpart.source_partition.account.id,
                 tssDate: store.tssDate,
                 tseDate: store.tseDate,
               },
@@ -467,6 +504,45 @@ function TransactionForm({ user }: { user: { id: string } }) {
         }
       }}
     >
+      <label htmlFor="categoryId">Category</label>
+      <QueryResult query={categories}>
+        {(categories) => (
+          <select
+            name="categoryId"
+            onChange={(event) => {
+              const selectedCategory = [
+                ...categories.income,
+                ...categories.expense,
+                ...categories.transfer,
+              ].find((c) => c.id === event.target.value);
+              if (!selectedCategory) return;
+              setInputCategoryKind(selectedCategory.kind);
+            }}
+          >
+            <optgroup label="Income">
+              {categories.income.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Expenses">
+              {categories.expense.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Transfers">
+              {categories.transfer.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+        )}
+      </QueryResult>
       <label htmlFor="sourcePartitionId">Source Partition</label>
       <QueryResult query={partitions}>
         {(partitions) => (
@@ -479,6 +555,22 @@ function TransactionForm({ user }: { user: { id: string } }) {
           </select>
         )}
       </QueryResult>
+      {inputCategoryKind == "Transfer" ? (
+        <>
+          <label htmlFor="destinationPartitionId">Destination Partition</label>
+          <QueryResult query={partitions}>
+            {(partitions) => (
+              <select name="destinationPartitionId">
+                {partitions.map((partition) => (
+                  <option key={partition.id} value={partition.id}>
+                    {partition.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </QueryResult>
+        </>
+      ) : null}
       <label htmlFor="value">Value</label>
       <input
         type="text"
@@ -489,50 +581,6 @@ function TransactionForm({ user }: { user: { id: string } }) {
           setInputValue((event.target as HTMLInputElement).value);
         }}
       />
-      {isExpense && (
-        <>
-          <label htmlFor="isDestinationKnown">Known Destination</label>
-          <input
-            type="checkbox"
-            name="isDestinationKnown"
-            checked={isDestinationKnown}
-            onChange={(event) => {
-              setIsDestinationKnown(event.target.checked);
-            }}
-          />
-          {isDestinationKnown && (
-            <>
-              <label htmlFor="destinationPartitionId">
-                Destination Partition
-              </label>
-              <QueryResult query={partitions}>
-                {(partitions) => (
-                  <select name="destinationPartitionId">
-                    {partitions.map((partition) => (
-                      <option key={partition.id} value={partition.id}>
-                        {partition.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </QueryResult>
-            </>
-          )}
-        </>
-      )}
-
-      <label htmlFor="categoryId">Category</label>
-      <QueryResult query={categories}>
-        {(categories) => (
-          <select name="categoryId">
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        )}
-      </QueryResult>
       <label htmlFor="description">Description</label>
       <input type="text" name="description" />
       <input type="submit" value="Submit" />

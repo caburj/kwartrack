@@ -10,6 +10,8 @@ module default {
     default := <datetime>'9999-12-31T23:59:59+00';
   };
 
+  scalar type ECategoryKind extending enum<Income, Expense, Transfer>;
+
   type EUser {
     required email: str {
       constraint exclusive;
@@ -54,6 +56,7 @@ module default {
     required name: str {
       constraint exclusive;
     }
+    required kind: ECategoryKind;
 
     multi link transactions := .<category[is ETransaction];
     property balance := sum(.transactions.value);
