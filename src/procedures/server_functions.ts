@@ -177,7 +177,11 @@ export const findTransactions = withValidation(
             e.array_unpack(cIds)
           );
           const pFilter = e.op(
-            transaction.source_partition.id,
+            e.op(
+              transaction.source_partition.id,
+              "union",
+              transaction.counterpart.source_partition.id
+            ),
             "in",
             e.array_unpack(pIds)
           );
