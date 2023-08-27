@@ -118,6 +118,7 @@ export const getPartitions = withValidation(
           id: true,
           username: true,
         },
+        is_private: true,
         filter: e.op(belongToAccount, "and", visibleToUser),
       };
     });
@@ -160,10 +161,10 @@ export const getVisiblePartitions = withValidation(
 export const getUserTransactions = withValidation(
   object({
     userId: string(),
-    transactionSearchStartDate: optional(string()),
-    transactionSearchEndDate: optional(string()),
+    tssDate: optional(string()),
+    tseDate: optional(string()),
   }),
-  async ({ userId, transactionSearchStartDate, transactionSearchEndDate }) => {
+  async ({ userId, tssDate, tseDate }) => {
     const query = e.select(e.ETransaction, (transaction) => ({
       id: true,
       value: true,
@@ -180,6 +181,7 @@ export const getUserTransactions = withValidation(
         name: true,
       },
       description: true,
+      str_date: e.to_str(transaction.date, "YYYY-mm-dd"),
       order_by: {
         expression: transaction.date,
         direction: e.DESC,
@@ -188,10 +190,8 @@ export const getUserTransactions = withValidation(
 
     const client = edgedb.createClient().withGlobals({
       current_user_id: userId,
-      transaction_search_start_date:
-        transactionSearchStartDate && new Date(transactionSearchStartDate),
-      transaction_search_end_date:
-        transactionSearchEndDate && new Date(transactionSearchEndDate),
+      tss_date: tssDate && new Date(tssDate),
+      tse_date: tseDate && new Date(tseDate),
     });
     const result = await query.run(client);
     if (result.length !== 0) {
@@ -205,16 +205,10 @@ export const findTransactions = withValidation(
     partitionIds: array(string()),
     categoryIds: array(string()),
     ownerId: string(),
-    transactionSearchStartDate: optional(string()),
-    transactionSearchEndDate: optional(string()),
+    tssDate: optional(string()),
+    tseDate: optional(string()),
   }),
-  async ({
-    partitionIds,
-    categoryIds,
-    ownerId,
-    transactionSearchStartDate,
-    transactionSearchEndDate,
-  }) => {
+  async ({ partitionIds, categoryIds, ownerId, tssDate, tseDate }) => {
     const query = e.params(
       { pIds: e.array(e.uuid), cIds: e.array(e.uuid), ownerId: e.uuid },
       ({ pIds, cIds, ownerId }) =>
@@ -253,6 +247,7 @@ export const findTransactions = withValidation(
               name: true,
             },
             description: true,
+            str_date: e.to_str(transaction.date, "YYYY-mm-dd"),
             filter,
             order_by: {
               expression: transaction.date,
@@ -262,15 +257,11 @@ export const findTransactions = withValidation(
         })
     );
 
-    const client = edgedb
-      .createClient()
-      .withGlobals({
-        current_user_id: ownerId,
-        transaction_search_start_date:
-          transactionSearchStartDate && new Date(transactionSearchStartDate),
-        transaction_search_end_date:
-          transactionSearchEndDate && new Date(transactionSearchEndDate),
-      });
+    const client = edgedb.createClient().withGlobals({
+      current_user_id: ownerId,
+      tss_date: tssDate && new Date(tssDate),
+      tse_date: tseDate && new Date(tseDate),
+    });
     const result = await query.run(client, {
       pIds: partitionIds,
       cIds: categoryIds,
@@ -456,17 +447,24 @@ export const deleteCategory = withValidation(
 );
 
 export const getCategoryBalance = withValidation(
-  object({ categoryId: string(), userId: string() }),
-  async ({ categoryId, userId }) => {
+  object({
+    categoryId: string(),
+    userId: string(),
+    tssDate: optional(string()),
+    tseDate: optional(string()),
+  }),
+  async ({ categoryId, userId, tssDate, tseDate }) => {
     const query = e.params({ id: e.uuid }, ({ id }) =>
       e.select(e.ECategory, (category) => ({
         filter: e.op(category.id, "=", id),
         balance: true,
       }))
     );
-    const client = edgedb
-      .createClient()
-      .withGlobals({ current_user_id: userId });
+    const client = edgedb.createClient().withGlobals({
+      current_user_id: userId,
+      tss_date: tssDate ? new Date(tssDate) : undefined,
+      tse_date: tseDate ? new Date(tseDate) : undefined,
+    });
     const result = await query.run(client, { id: categoryId });
     if (result.length !== 0) {
       return result[0].balance;
@@ -487,17 +485,24 @@ export const createUserCategory = withValidation(
 );
 
 export const getPartitionBalance = withValidation(
-  object({ partitionId: string(), userId: string() }),
-  async ({ partitionId, userId }) => {
+  object({
+    partitionId: string(),
+    userId: string(),
+    tssDate: optional(string()),
+    tseDate: optional(string()),
+  }),
+  async ({ partitionId, userId, tssDate, tseDate }) => {
     const query = e.params({ id: e.uuid }, ({ id }) =>
       e.select(e.EPartition, (partition) => ({
         filter: e.op(partition.id, "=", id),
         balance: true,
       }))
     );
-    const client = edgedb
-      .createClient()
-      .withGlobals({ current_user_id: userId });
+    const client = edgedb.createClient().withGlobals({
+      current_user_id: userId,
+      tss_date: tssDate ? new Date(tssDate) : undefined,
+      tse_date: tseDate ? new Date(tseDate) : undefined,
+    });
     const result = await query.run(client, { id: partitionId });
     if (result.length !== 0) {
       return result[0].balance;
@@ -506,8 +511,13 @@ export const getPartitionBalance = withValidation(
 );
 
 export const getAccountBalance = withValidation(
-  object({ accountId: string(), userId: string() }),
-  async ({ accountId, userId }) => {
+  object({
+    accountId: string(),
+    userId: string(),
+    tssDate: optional(string()),
+    tseDate: optional(string()),
+  }),
+  async ({ accountId, userId, tssDate, tseDate }) => {
     const query = e.params({ id: e.uuid }, ({ id }) =>
       e.select(e.EAccount, (account) => ({
         filter: e.op(account.id, "=", id),
@@ -516,7 +526,11 @@ export const getAccountBalance = withValidation(
     );
     const client = edgedb
       .createClient()
-      .withGlobals({ current_user_id: userId });
+      .withGlobals({
+        current_user_id: userId,
+        tss_date: tssDate ? new Date(tssDate) : undefined,
+        tse_date: tseDate ? new Date(tseDate) : undefined,
+      });
     const result = await query.run(client, { id: accountId });
     if (result.length !== 0) {
       return result[0].balance;

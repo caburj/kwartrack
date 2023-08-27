@@ -1,11 +1,12 @@
 module default {
   global current_user_id: uuid;
 
-  # if set, all transactions will be filtered to be within this date range.
-  global transaction_search_start_date: datetime {
+  global tss_date: datetime {
+    annotation description := "The start date of the transaction search range.";
     default := <datetime>'0001-01-01T00:00:00+00';
   };
-  global transaction_search_end_date: datetime {
+  global tse_date: datetime {
+    annotation description := "The end date of the transaction search range.";
     default := <datetime>'9999-12-31T23:59:59+00';
   };
 
@@ -79,8 +80,8 @@ module default {
       allow all
       using (
         (.source_partition.is_private = false or any(.owners.id = global current_user_id))
-        and all(.date >= global transaction_search_start_date)
-        and all(.date <= global transaction_search_end_date)
+        and all(.date >= global tss_date)
+        and all(.date <= global tse_date)
       );
   }
 }

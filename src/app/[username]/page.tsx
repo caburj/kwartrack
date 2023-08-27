@@ -58,6 +58,7 @@ export function UserPage({ username }: { username: string }) {
 }
 
 function Accounts({ userId }: { userId: string }) {
+  const [store] = useContext(UserPageStoreContext);
   const accounts = useQuery(["accounts", userId], () => {
     return rpc.post.getAccounts({ userId });
   });
@@ -80,9 +81,21 @@ function Accounts({ userId }: { userId: string }) {
             <div>
               {account.name} |
               <LoadingValue
-                queryKey={["accountBalance", account.id]}
+                queryKey={[
+                  "accountBalance",
+                  {
+                    accountId: account.id,
+                    tssDate: store.tssDate,
+                    tseDate: store.tseDate,
+                  },
+                ]}
                 valueLoader={() =>
-                  rpc.post.getAccountBalance({ accountId: account.id, userId })
+                  rpc.post.getAccountBalance({
+                    accountId: account.id,
+                    userId,
+                    tssDate: store.tssDate?.toISOString(),
+                    tseDate: store.tseDate?.toISOString(),
+                  })
                 }
               />
             </div>
@@ -96,7 +109,7 @@ function Accounts({ userId }: { userId: string }) {
 
 function Partitions(props: { accountId: string; userId: string }) {
   const { accountId, userId } = props;
-  const [selected, dispatch] = useContext(UserPageStoreContext);
+  const [store, dispatch] = useContext(UserPageStoreContext);
   const partitions = useQuery(["partitions", userId, accountId], () => {
     return rpc.post.getPartitions({ accountId, userId });
   });
@@ -115,9 +128,10 @@ function Partitions(props: { accountId: string; userId: string }) {
               key={partition.id}
               className={css({
                 cursor: "pointer",
-                color: selected.partitionIds.includes(partition.id)
+                color: store.partitionIds.includes(partition.id)
                   ? "blue"
                   : "inherit",
+                textDecoration: partition.is_private ? "underline" : "inherit",
               })}
               onClick={(event) => {
                 event.stopPropagation();
@@ -129,11 +143,20 @@ function Partitions(props: { accountId: string; userId: string }) {
             >
               {partition.name} |
               <LoadingValue
-                queryKey={["partitionBalance", partition.id]}
+                queryKey={[
+                  "partitionBalance",
+                  {
+                    partitionId: partition.id,
+                    tssDate: store.tssDate,
+                    tseDate: store.tseDate,
+                  },
+                ]}
                 valueLoader={() =>
                   rpc.post.getPartitionBalance({
                     partitionId: partition.id,
                     userId,
+                    tssDate: store.tssDate?.toISOString(),
+                    tseDate: store.tseDate?.toISOString(),
                   })
                 }
               />
@@ -199,14 +222,14 @@ function Category({
   userId: string;
 }) {
   const queryClient = useQueryClient();
-  const [selected, dispatch] = useContext(UserPageStoreContext);
+  const [store, dispatch] = useContext(UserPageStoreContext);
   const [isDeleting, setIsDeleting] = useState(false);
   return (
     <li
       key={category.id}
       className={css({
         cursor: "pointer",
-        color: selected.categoryIds.includes(category.id) ? "blue" : "inherit",
+        color: store.categoryIds.includes(category.id) ? "blue" : "inherit",
         textDecoration: isDeleting ? "line-through" : "inherit",
       })}
       onClick={() => {
@@ -226,9 +249,21 @@ function Category({
       </button>{" "}
       | {category.name} |
       <LoadingValue
-        queryKey={["categoryBalance", category.id]}
+        queryKey={[
+          "categoryBalance",
+          {
+            categoryId: category.id,
+            tssDate: store.tssDate,
+            tseDate: store.tseDate,
+          },
+        ]}
         valueLoader={() =>
-          rpc.post.getCategoryBalance({ categoryId: category.id, userId })
+          rpc.post.getCategoryBalance({
+            userId,
+            categoryId: category.id,
+            tssDate: store.tssDate?.toISOString(),
+            tseDate: store.tseDate?.toISOString(),
+          })
         }
       />
     </li>
@@ -243,18 +278,16 @@ function Transactions({ userId }: { userId: string }) {
     if (store.partitionIds.length === 0 && store.categoryIds.length === 0) {
       return rpc.post.getUserTransactions({
         userId: userId,
-        transactionSearchStartDate:
-          store.transactionSearchStartDate?.toISOString(),
-        transactionSearchEndDate: store.transactionSearchEndDate?.toISOString(),
+        tssDate: store.tssDate?.toISOString(),
+        tseDate: store.tseDate?.toISOString(),
       });
     }
     return rpc.post.findTransactions({
       partitionIds: store.partitionIds,
       categoryIds: store.categoryIds,
       ownerId: userId,
-      transactionSearchStartDate:
-        store.transactionSearchStartDate?.toISOString(),
-      transactionSearchEndDate: store.transactionSearchEndDate?.toISOString(),
+      tssDate: store.tssDate?.toISOString(),
+      tseDate: store.tseDate?.toISOString(),
     });
   });
   return (
@@ -267,42 +300,63 @@ function Transactions({ userId }: { userId: string }) {
     >
       {(transactions) => (
         <ul>
-          {transactions.map((transaction) => (
-            <li key={transaction.id}>
-              <button
-                className={css({ cursor: "pointer" })}
-                onClick={async () => {
-                  setIsDeleting(true);
-                  await rpc.post.deleteTransaction({
-                    transactionId: transaction.id,
-                  });
-                  queryClient.invalidateQueries({ queryKey: ["transactions"] });
-                  queryClient.invalidateQueries({ queryKey: ["user", userId] });
-                  queryClient.invalidateQueries({
-                    queryKey: [
-                      "partitionBalance",
-                      transaction.source_partition.id,
-                    ],
-                  });
-                  queryClient.invalidateQueries({
-                    queryKey: [
-                      "accountBalance",
-                      transaction.source_partition.account.id,
-                    ],
-                  });
-                  queryClient.invalidateQueries({
-                    queryKey: ["categoryBalance", transaction.category.id],
-                  });
-                  setIsDeleting(false);
-                }}
-                disabled={isDeleting}
-              >
-                x
-              </button>{" "}
-              | {transaction.source_partition.name} | {transaction.value} |{" "}
-              {transaction.category.name} | {transaction.description}
-            </li>
-          ))}
+          {transactions.map((transaction) => {
+            return (
+              <li key={transaction.id}>
+                <button
+                  className={css({ cursor: "pointer" })}
+                  onClick={async () => {
+                    setIsDeleting(true);
+                    await rpc.post.deleteTransaction({
+                      transactionId: transaction.id,
+                    });
+                    queryClient.invalidateQueries({
+                      queryKey: ["transactions"],
+                    });
+                    queryClient.invalidateQueries({
+                      queryKey: ["user", userId],
+                    });
+                    queryClient.invalidateQueries({
+                      queryKey: [
+                        "partitionBalance",
+                        {
+                          partitionId: transaction.source_partition.id,
+                          tssDate: store.tssDate,
+                          tseDate: store.tseDate,
+                        },
+                      ],
+                    });
+                    queryClient.invalidateQueries({
+                      queryKey: [
+                        "accountBalance",
+                        {
+                          accountId: transaction.source_partition.account.id,
+                          tssDate: store.tssDate,
+                          tseDate: store.tseDate,
+                        },
+                      ],
+                    });
+                    queryClient.invalidateQueries({
+                      queryKey: [
+                        "categoryBalance",
+                        {
+                          categoryId: transaction.category.id,
+                          tssDate: store.tssDate,
+                          tseDate: store.tseDate,
+                        },
+                      ],
+                    });
+                    setIsDeleting(false);
+                  }}
+                  disabled={isDeleting}
+                >
+                  x
+                </button>{" "}
+                | {transaction.source_partition.name} | {transaction.value} |{" "}
+                {transaction.category.name} | {transaction.description} | {transaction.str_date}
+              </li>
+            );
+          })}
         </ul>
       )}
     </QueryResult>
@@ -311,6 +365,7 @@ function Transactions({ userId }: { userId: string }) {
 
 function TransactionForm({ user }: { user: { id: string } }) {
   const queryClient = useQueryClient();
+  const [store] = useContext(UserPageStoreContext);
   const partitions = useQuery(["partitions", user.id], () => {
     return rpc.post.getVisiblePartitions({ userId: user.id });
   });
@@ -358,23 +413,55 @@ function TransactionForm({ user }: { user: { id: string } }) {
           setInputValue("");
           queryClient.invalidateQueries({ queryKey: ["transactions"] });
           queryClient.invalidateQueries({
-            queryKey: ["categoryBalance", parsedData.categoryId],
+            queryKey: [
+              "categoryBalance",
+              {
+                categoryId: parsedData.categoryId,
+                tssDate: store.tssDate,
+                tseDate: store.tseDate,
+              },
+            ],
           });
           queryClient.invalidateQueries({
-            queryKey: ["partitionBalance", parsedData.sourcePartitionId],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["accountBalance", source.source_partition.account.id],
-          });
-        }
-        if (destination) {
-          queryClient.invalidateQueries({
-            queryKey: ["partitionBalance", parsedData.destinationPartitionId],
+            queryKey: [
+              "partitionBalance",
+              {
+                partitionId: parsedData.sourcePartitionId,
+                tssDate: store.tssDate,
+                tseDate: store.tseDate,
+              },
+            ],
           });
           queryClient.invalidateQueries({
             queryKey: [
               "accountBalance",
-              destination.source_partition.account.id,
+              {
+                accountId: source.source_partition.account.id,
+                tssDate: store.tssDate,
+                tseDate: store.tseDate,
+              },
+            ],
+          });
+        }
+        if (destination) {
+          queryClient.invalidateQueries({
+            queryKey: [
+              "partitionBalance",
+              {
+                partitionId: parsedData.destinationPartitionId,
+                tssDate: store.tssDate,
+                tseDate: store.tseDate,
+              },
+            ],
+          });
+          queryClient.invalidateQueries({
+            queryKey: [
+              "accountBalance",
+              {
+                accountId: destination.source_partition.account.id,
+                tssDate: store.tssDate,
+                tseDate: store.tseDate,
+              },
             ],
           });
         }
@@ -462,12 +549,10 @@ function DateRange({ userId }: { userId: string }) {
         <input
           type="date"
           name="startDate"
-          value={
-            store.transactionSearchStartDate?.toISOString().split("T")[0] ?? ""
-          }
+          value={store.tssDate?.toISOString().split("T")[0] ?? ""}
           onChange={(event) => {
             dispatch({
-              type: "SET_TRANSACTION_SEARCH_START_DATE",
+              type: "SET_TSS_DATE",
               payload: event.target.value
                 ? new Date(event.target.value)
                 : undefined,
@@ -480,12 +565,10 @@ function DateRange({ userId }: { userId: string }) {
         <input
           type="date"
           name="endDate"
-          value={
-            store.transactionSearchEndDate?.toISOString().split("T")[0] ?? ""
-          }
+          value={store.tseDate?.toISOString().split("T")[0] ?? ""}
           onChange={(event) => {
             dispatch({
-              type: "SET_TRANSACTION_SEARCH_END_DATE",
+              type: "SET_TSE_DATE",
               payload: event.target.value
                 ? new Date(event.target.value)
                 : undefined,
@@ -498,7 +581,7 @@ function DateRange({ userId }: { userId: string }) {
 }
 
 function LoadingValue<R>(props: {
-  queryKey: string[];
+  queryKey: [string, ...any];
   valueLoader: () => Promise<R>;
 }) {
   return (

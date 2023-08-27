@@ -3,15 +3,15 @@ import { useReducer, createContext, ReactNode } from "react";
 type UserPageStore = {
   partitionIds: string[];
   categoryIds: string[];
-  transactionSearchStartDate: Date | undefined;
-  transactionSearchEndDate: Date | undefined;
+  tssDate: Date | undefined;
+  tseDate: Date | undefined;
 };
 
 type UserPageAction =
   | { type: "TOGGLE_PARTITIONS"; payload: string[] }
   | { type: "TOGGLE_CATEGORIES"; payload: string[] }
-  | { type: "SET_TRANSACTION_SEARCH_START_DATE"; payload: Date | undefined }
-  | { type: "SET_TRANSACTION_SEARCH_END_DATE"; payload: Date | undefined };
+  | { type: "SET_TSS_DATE"; payload: Date | undefined }
+  | { type: "SET_TSE_DATE"; payload: Date | undefined };
 
 type UserPageDispatch = (action: UserPageAction) => void;
 
@@ -28,8 +28,8 @@ const firstDayOfNextMonth = () => {
 const initStore: UserPageStore = {
   partitionIds: [],
   categoryIds: [],
-  transactionSearchStartDate: firstDayOfCurrentMonth(),
-  transactionSearchEndDate: firstDayOfNextMonth(),
+  tssDate: firstDayOfCurrentMonth(),
+  tseDate: firstDayOfNextMonth(),
 };
 
 const userPageStoreReducer = (state: UserPageStore, action: UserPageAction) => {
@@ -56,10 +56,10 @@ const userPageStoreReducer = (state: UserPageStore, action: UserPageAction) => {
       }
       return { ...state, categoryIds };
     }
-    case "SET_TRANSACTION_SEARCH_START_DATE":
-      return { ...state, transactionSearchStartDate: action.payload };
-    case "SET_TRANSACTION_SEARCH_END_DATE":
-      return { ...state, transactionSearchEndDate: action.payload };
+    case "SET_TSS_DATE":
+      return { ...state, tssDate: action.payload };
+    case "SET_TSE_DATE":
+      return { ...state, tseDate: action.payload };
     default:
       return state;
   }
