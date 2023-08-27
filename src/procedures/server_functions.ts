@@ -21,6 +21,8 @@ function withValidation<S extends BaseSchema, R extends any>(
   };
 }
 
+const baseClient = edgedb.createClient();
+
 export const findUser = withValidation(
   object({ username: string() }),
   async ({ username }) => {
@@ -50,8 +52,7 @@ export const findUser = withValidation(
       filter: e.op(user.username, "=", username),
     }));
 
-    const client = edgedb.createClient();
-    const result = await query.run(client);
+    const result = await query.run(baseClient);
     if (result.length !== 0) {
       return result[0];
     }
@@ -67,8 +68,7 @@ export const findUserByEmail = withValidation(
       filter: e.op(user.email, "=", email),
     }));
 
-    const client = edgedb.createClient();
-    const result = await query.run(client);
+    const result = await query.run(baseClient);
     if (result.length !== 0) {
       return result[0];
     }
@@ -88,9 +88,7 @@ export const getAccounts = withValidation(
       },
     }));
 
-    const client = edgedb
-      .createClient()
-      .withGlobals({ current_user_id: userId });
+    const client = baseClient.withGlobals({ current_user_id: userId });
     const result = await query.run(client);
     if (result.length !== 0) {
       return result;
@@ -124,8 +122,7 @@ export const getPartitions = withValidation(
         filter: e.op(belongToAccount, "and", visibleToUser),
       };
     });
-    const client = edgedb.createClient();
-    const result = await query.run(client);
+    const result = await query.run(baseClient);
     if (result.length !== 0) {
       return result;
     }
@@ -152,8 +149,7 @@ export const getVisiblePartitions = withValidation(
         filter: visibleToUser,
       };
     });
-    const client = edgedb.createClient();
-    const result = await query.run(client);
+    const result = await query.run(baseClient);
     if (result.length !== 0) {
       return result;
     }
@@ -190,7 +186,7 @@ export const getUserTransactions = withValidation(
       },
     }));
 
-    const client = edgedb.createClient().withGlobals({
+    const client = baseClient.withGlobals({
       current_user_id: userId,
       tss_date: tssDate && new Date(tssDate),
       tse_date: tseDate && new Date(tseDate),
@@ -259,7 +255,7 @@ export const findTransactions = withValidation(
         })
     );
 
-    const client = edgedb.createClient().withGlobals({
+    const client = baseClient.withGlobals({
       current_user_id: ownerId,
       tss_date: tssDate && new Date(tssDate),
       tse_date: tseDate && new Date(tseDate),
@@ -292,6 +288,10 @@ export const createTransaction = withValidation(
     userId,
     destinationPartitionId,
   }) => {
+    if (sourcePartitionId === destinationPartitionId) {
+      throw new Error("Source and destination partitions cannot be the same.");
+    }
+
     const createQuery = e.params(
       {
         value: e.decimal,
@@ -341,10 +341,7 @@ export const createTransaction = withValidation(
         }))
     );
 
-    const client = edgedb
-      .createClient()
-      .withGlobals({ current_user_id: userId });
-
+    const client = baseClient.withGlobals({ current_user_id: userId });
     const result = await client.transaction(async (tx) => {
       const selectedCategory = await e
         .select(e.ECategory, (category) => ({
@@ -413,8 +410,7 @@ export const deleteTransaction = withValidation(
       })
     );
 
-    const client = edgedb.createClient();
-    const result = await query.run(client, { id: transactionId });
+    const result = await query.run(baseClient, { id: transactionId });
     return result;
   }
 );
@@ -422,8 +418,7 @@ export const deleteTransaction = withValidation(
 export const getUserCategories = withValidation(
   object({ userId: string() }),
   async ({ userId }) => {
-    const client = edgedb.createClient();
-    const result = await client.transaction(async (tx) => {
+    const result = await baseClient.transaction(async (tx) => {
       const fields = {
         id: true,
         name: true,
@@ -469,8 +464,7 @@ export const deleteCategory = withValidation(
         ),
       }))
     );
-    const client = edgedb.createClient();
-    const result = await query.run(client, { id: categoryId });
+    const result = await query.run(baseClient, { id: categoryId });
     return result;
   }
 );
@@ -489,7 +483,7 @@ export const getCategoryBalance = withValidation(
         balance: true,
       }))
     );
-    const client = edgedb.createClient().withGlobals({
+    const client = baseClient.withGlobals({
       current_user_id: userId,
       tss_date: tssDate ? new Date(tssDate) : undefined,
       tse_date: tseDate ? new Date(tseDate) : undefined,
@@ -515,8 +509,7 @@ export const createUserCategory = withValidation(
             : "Transfer",
       })
     );
-    const client = edgedb.createClient();
-    const result = await query.run(client, {
+    const result = await query.run(baseClient, {
       id: userId,
       name,
     });
@@ -538,7 +531,7 @@ export const getPartitionBalance = withValidation(
         balance: true,
       }))
     );
-    const client = edgedb.createClient().withGlobals({
+    const client = baseClient.withGlobals({
       current_user_id: userId,
       tss_date: tssDate ? new Date(tssDate) : undefined,
       tse_date: tseDate ? new Date(tseDate) : undefined,
@@ -564,7 +557,7 @@ export const getAccountBalance = withValidation(
         balance: true,
       }))
     );
-    const client = edgedb.createClient().withGlobals({
+    const client = baseClient.withGlobals({
       current_user_id: userId,
       tss_date: tssDate ? new Date(tssDate) : undefined,
       tse_date: tseDate ? new Date(tseDate) : undefined,
@@ -598,8 +591,7 @@ export const getUserAccounts = withValidation(
         },
       }))
     );
-    const client = edgedb.createClient();
-    const result = await query.run(client, { id: userId });
+    const result = await query.run(baseClient, { id: userId });
     if (result.length !== 0) {
       return result[0].accounts;
     }
