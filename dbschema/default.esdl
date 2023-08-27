@@ -76,7 +76,7 @@ module default {
       annotation description := "The counterpart transaction if this is a transfer.";
     }
 
-    property is_transfer := .counterpart != <ETransaction>{};
+    property is_counterpart := exists .<counterpart[is ETransaction];
     multi link owners := .source_partition.owners;
 
     access policy current_user_owned

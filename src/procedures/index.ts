@@ -1,7 +1,6 @@
 import {
   findUser,
   findTransactions,
-  getUserTransactions,
   createTransaction,
   deleteTransaction,
   getUserCategories,
@@ -22,7 +21,6 @@ import {
 export const procedures = {
   findUser,
   findTransactions,
-  getUserTransactions,
   createTransaction,
   deleteTransaction,
   getUserCategories,

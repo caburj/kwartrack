@@ -310,18 +310,13 @@ function Category({
   );
 }
 
+type Unpacked<T> = T extends (infer U)[] ? U : T;
+
 function Transactions({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
   const [store] = useContext(UserPageStoreContext);
   const [isDeleting, setIsDeleting] = useState(false);
   const transactions = useQuery(["transactions", store], () => {
-    if (store.partitionIds.length === 0 && store.categoryIds.length === 0) {
-      return rpc.post.getUserTransactions({
-        userId: userId,
-        tssDate: store.tssDate?.toISOString(),
-        tseDate: store.tseDate?.toISOString(),
-      });
-    }
     return rpc.post.findTransactions({
       partitionIds: store.partitionIds,
       categoryIds: store.categoryIds,
@@ -330,6 +325,25 @@ function Transactions({ userId }: { userId: string }) {
       tseDate: store.tseDate?.toISOString(),
     });
   });
+
+  type Transaction = NonNullable<Unpacked<typeof transactions.data>>;
+
+  const getPartitionColumn = (transaction: Transaction) => {
+    if (transaction.kind === "Transfer" && transaction.counterpart) {
+      return `${transaction.source_partition.name} -> ${transaction.counterpart?.source_partition.name}`;
+    } else {
+      return transaction.source_partition.name;
+    }
+  };
+
+  const noSign = (value: string) => {
+    if (value[0] === "-") {
+      return value.slice(1);
+    } else {
+      return value;
+    }
+  };
+
   return (
     <QueryResult
       query={transactions}
@@ -349,6 +363,7 @@ function Transactions({ userId }: { userId: string }) {
                     setIsDeleting(true);
                     await rpc.post.deleteTransaction({
                       transactionId: transaction.id,
+                      userId,
                     });
                     queryClient.invalidateQueries({
                       queryKey: ["transactions"],
@@ -392,9 +407,9 @@ function Transactions({ userId }: { userId: string }) {
                 >
                   x
                 </button>{" "}
-                | {transaction.source_partition.name} | {transaction.value} |{" "}
-                {transaction.category.name} | {transaction.description} |{" "}
-                {transaction.str_date}
+                | {transaction.kind[0]} | {transaction.str_date.slice(5)} |{" "}
+                {transaction.category.name} | {getPartitionColumn(transaction)}{" "}
+                | {noSign(transaction.value)} | {transaction.description}
               </li>
             );
           })}

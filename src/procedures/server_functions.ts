@@ -156,48 +156,6 @@ export const getVisiblePartitions = withValidation(
   }
 );
 
-export const getUserTransactions = withValidation(
-  object({
-    userId: string(),
-    tssDate: optional(string()),
-    tseDate: optional(string()),
-  }),
-  async ({ userId, tssDate, tseDate }) => {
-    const query = e.select(e.ETransaction, (transaction) => ({
-      id: true,
-      value: true,
-      source_partition: {
-        id: true,
-        name: true,
-        account: {
-          id: true,
-          name: true,
-        },
-      },
-      category: {
-        id: true,
-        name: true,
-      },
-      description: true,
-      str_date: e.to_str(transaction.date, "YYYY-mm-dd"),
-      order_by: {
-        expression: transaction.date,
-        direction: e.DESC,
-      },
-    }));
-
-    const client = baseClient.withGlobals({
-      current_user_id: userId,
-      tss_date: tssDate && new Date(tssDate),
-      tse_date: tseDate && new Date(tseDate),
-    });
-    const result = await query.run(client);
-    if (result.length !== 0) {
-      return result;
-    }
-  }
-);
-
 export const findTransactions = withValidation(
   object({
     partitionIds: array(string()),
@@ -208,9 +166,10 @@ export const findTransactions = withValidation(
   }),
   async ({ partitionIds, categoryIds, ownerId, tssDate, tseDate }) => {
     const query = e.params(
-      { pIds: e.array(e.uuid), cIds: e.array(e.uuid), ownerId: e.uuid },
-      ({ pIds, cIds, ownerId }) =>
+      { pIds: e.array(e.uuid), cIds: e.array(e.uuid) },
+      ({ pIds, cIds }) =>
         e.select(e.ETransaction, (transaction) => {
+          const baseFilter = e.op("not", transaction.is_counterpart);
           let filter;
           const cFilter = e.op(
             transaction.category.id,
@@ -223,11 +182,13 @@ export const findTransactions = withValidation(
             e.array_unpack(pIds)
           );
           if (partitionIds.length !== 0 && categoryIds.length !== 0) {
-            filter = e.op(cFilter, "and", pFilter);
+            filter = e.op(baseFilter, "and", e.op(cFilter, "and", pFilter));
           } else if (partitionIds.length !== 0) {
-            filter = pFilter;
+            filter = e.op(baseFilter, "and", pFilter);
+          } else if (categoryIds.length !== 0) {
+            filter = e.op(baseFilter, "and", cFilter);
           } else {
-            filter = cFilter;
+            filter = baseFilter;
           }
           return {
             id: true,
@@ -240,11 +201,24 @@ export const findTransactions = withValidation(
                 name: true,
               },
             },
+            counterpart: {
+              id: true,
+              value: true,
+              source_partition: {
+                id: true,
+                name: true,
+                account: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
             category: {
               id: true,
               name: true,
             },
             description: true,
+            kind: transaction.category.kind,
             str_date: e.to_str(transaction.date, "YYYY-mm-dd"),
             filter,
             order_by: {
@@ -263,7 +237,6 @@ export const findTransactions = withValidation(
     const result = await query.run(client, {
       pIds: partitionIds,
       cIds: categoryIds,
-      ownerId,
     });
     if (result.length !== 0) {
       return result;
@@ -355,10 +328,10 @@ export const createTransaction = withValidation(
       }
 
       let realValue: number;
-      if (selectedCategory.kind === "Expense") {
-        realValue = -Math.abs(value);
-      } else {
+      if (selectedCategory.kind === "Income") {
         realValue = Math.abs(value);
+      } else {
+        realValue = -Math.abs(value);
       }
 
       let transactionId: string;
@@ -400,9 +373,9 @@ export const createTransaction = withValidation(
 );
 
 export const deleteTransaction = withValidation(
-  object({ transactionId: string() }),
-  async ({ transactionId }) => {
-    const query = e.params({ id: e.uuid }, ({ id }) =>
+  object({ transactionId: string(), userId: string() }),
+  async ({ transactionId, userId }) => {
+    const deleteQuery = e.params({ id: e.uuid }, ({ id }) =>
       e.delete(e.ETransaction, (transaction) => {
         return {
           filter_single: e.op(transaction.id, "=", id),
@@ -410,8 +383,32 @@ export const deleteTransaction = withValidation(
       })
     );
 
-    const result = await query.run(baseClient, { id: transactionId });
-    return result;
+    return baseClient
+      .withGlobals({ current_user_id: userId })
+      .transaction(async (tx) => {
+        const toDelete = await e
+          .select(e.ETransaction, (transaction) => ({
+            filter_single: e.op(transaction.id, "=", e.uuid(transactionId)),
+            kind: transaction.category.kind,
+            counterpart: {
+              id: true,
+            },
+          }))
+          .run(tx);
+        if (!toDelete) {
+          throw new Error("Transaction not found.");
+        }
+        await deleteQuery.run(tx, { id: transactionId });
+        if (toDelete.kind === "Transfer") {
+          if (!toDelete.counterpart) {
+            throw new Error(
+              "Unable to delete transfer transaction. Counterpart not found."
+            );
+          } else {
+            await deleteQuery.run(tx, { id: toDelete.counterpart.id });
+          }
+        }
+      });
   }
 );
 
