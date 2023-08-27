@@ -317,7 +317,7 @@ export const createTransaction = withValidation(
           source_partition: e.select(e.EPartition, (partition) => ({
             filter_single: e.op(partition.id, "=", sourcePartitionId),
           })),
-          destination_transaction: e.select(e.ETransaction, (transaction) => ({
+          counterpart: e.select(e.ETransaction, (transaction) => ({
             filter_single: e.op(transaction.id, "=", destinationTransactionId),
           })),
         })
