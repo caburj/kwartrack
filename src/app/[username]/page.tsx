@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-query";
 import { number, object, optional, string } from "valibot";
 import { UserPageStoreProvider, UserPageStoreContext } from "./store";
+import { Unpacked, groupBy } from "@/utils/common";
 
 export default function Main(props: { params: { username: string } }) {
   const { username } = props.params;
@@ -310,8 +311,6 @@ function Category({
   );
 }
 
-type Unpacked<T> = T extends (infer U)[] ? U : T;
-
 function Transactions({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
   const [store] = useContext(UserPageStoreContext);
@@ -435,6 +434,25 @@ function TransactionForm({ user }: { user: { id: string } }) {
   try {
     value = parseFloat(inputValue);
   } catch (_error) {}
+
+  type Partition = NonNullable<Unpacked<typeof partitions.data>>;
+
+  const getSelectionOptions = (partitions: Partition[]) => {
+    const groupedPartitions = groupBy(partitions, (p) => p.account.id);
+    return (
+      <>
+        {Object.entries(groupedPartitions).map(([accountId, partitions]) => (
+          <optgroup key={accountId} label={partitions[0].account.name}>
+            {partitions.map((partition) => (
+              <option key={partition.id} value={partition.id}>
+                {partition.name}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </>
+    );
+  };
 
   return (
     <form
@@ -562,11 +580,7 @@ function TransactionForm({ user }: { user: { id: string } }) {
       <QueryResult query={partitions}>
         {(partitions) => (
           <select name="sourcePartitionId">
-            {partitions.map((partition) => (
-              <option key={partition.id} value={partition.id}>
-                {partition.name}
-              </option>
-            ))}
+            {getSelectionOptions(partitions)}
           </select>
         )}
       </QueryResult>
@@ -576,11 +590,7 @@ function TransactionForm({ user }: { user: { id: string } }) {
           <QueryResult query={partitions}>
             {(partitions) => (
               <select name="destinationPartitionId">
-                {partitions.map((partition) => (
-                  <option key={partition.id} value={partition.id}>
-                    {partition.name}
-                  </option>
-                ))}
+                {getSelectionOptions(partitions)}
               </select>
             )}
           </QueryResult>

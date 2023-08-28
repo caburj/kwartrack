@@ -146,6 +146,10 @@ export const getVisiblePartitions = withValidation(
           id: true,
           username: true,
         },
+        account: {
+          id: true,
+          name: true,
+        },
         filter: visibleToUser,
       };
     });
