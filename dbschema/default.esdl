@@ -1,11 +1,11 @@
 module default {
   global current_user_id: uuid;
 
-  global tss_date: datetime {
+  required global tss_date: datetime {
     annotation description := "The start date of the transaction search range.";
     default := <datetime>'0001-01-01T00:00:00+00';
   };
-  global tse_date: datetime {
+  required global tse_date: datetime {
     annotation description := "The end date of the transaction search range.";
     default := <datetime>'9999-12-31T23:59:59+00';
   };
@@ -82,9 +82,9 @@ module default {
     access policy current_user_owned
       allow all
       using (
-        (.source_partition.is_private = false or any(.owners.id = global current_user_id))
-        and all(.date >= global tss_date)
-        and all(.date <= global tse_date)
+        (not .source_partition.is_private or any(.owners.id = global current_user_id))
+        and (.date >= global tss_date)
+        and (.date <= global tse_date)
       );
   }
 }
