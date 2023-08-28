@@ -20,16 +20,16 @@ const firstDayOfCurrentMonth = () => {
   return new Date(Date.UTC(date.getFullYear(), date.getMonth(), 1));
 };
 
-const firstDayOfNextMonth = () => {
+const lastDayOfCurrentMonth = () => {
   const date = new Date();
-  return new Date(Date.UTC(date.getFullYear(), date.getMonth() + 1, 1));
-}
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth() + 1, 0));
+};
 
 const initStore: UserPageStore = {
   partitionIds: [],
   categoryIds: [],
   tssDate: firstDayOfCurrentMonth(),
-  tseDate: firstDayOfNextMonth(),
+  tseDate: lastDayOfCurrentMonth(),
 };
 
 const userPageStoreReducer = (state: UserPageStore, action: UserPageAction) => {

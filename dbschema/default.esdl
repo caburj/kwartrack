@@ -6,8 +6,11 @@ module default {
     default := <datetime>'0001-01-01T00:00:00+00';
   };
   required global tse_date: datetime {
-    annotation description := "The end date of the transaction search range.";
-    default := <datetime>'9999-12-31T23:59:59+00';
+    annotation description := "
+      The end date of the transaction search range.
+      24 hours is added to this in the access policy to ensure that transactions on the end date are included.
+    ";
+    default := <datetime>'9999-12-30T23:59:59+00';
   };
 
   scalar type ECategoryKind extending enum<Income, Expense, Transfer>;
@@ -84,7 +87,7 @@ module default {
       using (
         (not .source_partition.is_private or any(.owners.id = global current_user_id))
         and (.date >= global tss_date)
-        and (.date <= global tse_date)
+        and (.date < (global tse_date + <duration>'24 hours'))
       );
   }
 }
