@@ -38,7 +38,6 @@ export const findUser = withValidation(
       accounts: {
         id: true,
         name: true,
-        balance: true,
         owners: {
           id: true,
           username: true,
@@ -46,7 +45,6 @@ export const findUser = withValidation(
         partitions: {
           id: true,
           name: true,
-          balance: true,
         },
       },
       filter: e.op(user.username, "=", username),
@@ -482,21 +480,18 @@ export const getCategoryBalance = withValidation(
     tseDate: optional(string()),
   }),
   async ({ categoryId, userId, tssDate, tseDate }) => {
-    const query = e.params({ id: e.uuid }, ({ id }) =>
-      e.select(e.ECategory, (category) => ({
-        filter: e.op(category.id, "=", id),
-        balance: true,
-      }))
-    );
+    const query = e.params({ id: e.uuid }, ({ id }) => {
+      const transactions = e.select(e.ETransaction, (transaction) => ({
+        filter: e.op(transaction.category.id, "=", id),
+      }));
+      return e.sum(transactions.value);
+    });
     const client = baseClient.withGlobals({
       current_user_id: userId,
       tss_date: tssDate ? new Date(tssDate) : undefined,
       tse_date: tseDate ? new Date(tseDate) : undefined,
     });
-    const result = await query.run(client, { id: categoryId });
-    if (result.length !== 0) {
-      return result[0].balance;
-    }
+    return await query.run(client, { id: categoryId });
   }
 );
 
@@ -530,21 +525,19 @@ export const getPartitionBalance = withValidation(
     tseDate: optional(string()),
   }),
   async ({ partitionId, userId, tssDate, tseDate }) => {
-    const query = e.params({ id: e.uuid }, ({ id }) =>
-      e.select(e.EPartition, (partition) => ({
-        filter: e.op(partition.id, "=", id),
-        balance: true,
-      }))
-    );
+    const balanceQuery = e.params({ id: e.uuid }, ({ id }) => {
+      const transactions = e.select(e.ETransaction, (transaction) => ({
+        filter: e.op(transaction.source_partition.id, "=", id),
+      }));
+      return e.sum(transactions.value);
+    });
+
     const client = baseClient.withGlobals({
       current_user_id: userId,
       tss_date: tssDate ? new Date(tssDate) : undefined,
       tse_date: tseDate ? new Date(tseDate) : undefined,
     });
-    const result = await query.run(client, { id: partitionId });
-    if (result.length !== 0) {
-      return result[0].balance;
-    }
+    return await balanceQuery.run(client, { id: partitionId });
   }
 );
 
@@ -556,49 +549,17 @@ export const getAccountBalance = withValidation(
     tseDate: optional(string()),
   }),
   async ({ accountId, userId, tssDate, tseDate }) => {
-    const query = e.params({ id: e.uuid }, ({ id }) =>
-      e.select(e.EAccount, (account) => ({
-        filter: e.op(account.id, "=", id),
-        balance: true,
-      }))
-    );
+    const query = e.params({ id: e.uuid }, ({ id }) => {
+      const tx = e.select(e.ETransaction, (transaction) => ({
+        filter: e.op(transaction.source_partition.account.id, "=", id),
+      }));
+      return e.sum(tx.value);
+    });
     const client = baseClient.withGlobals({
       current_user_id: userId,
       tss_date: tssDate ? new Date(tssDate) : undefined,
       tse_date: tseDate ? new Date(tseDate) : undefined,
     });
-    const result = await query.run(client, { id: accountId });
-    if (result.length !== 0) {
-      return result[0].balance;
-    }
-  }
-);
-
-export const getUserAccounts = withValidation(
-  object({ userId: string() }),
-  async ({ userId }) => {
-    const query = e.params({ id: e.uuid }, ({ id }) =>
-      e.select(e.EUser, (user) => ({
-        filter: e.op(user.id, "=", id),
-        accounts: {
-          id: true,
-          name: true,
-          balance: true,
-          owners: {
-            id: true,
-            username: true,
-          },
-          partitions: {
-            id: true,
-            name: true,
-            balance: true,
-          },
-        },
-      }))
-    );
-    const result = await query.run(baseClient, { id: userId });
-    if (result.length !== 0) {
-      return result[0].accounts;
-    }
+    return await query.run(client, { id: accountId });
   }
 );
