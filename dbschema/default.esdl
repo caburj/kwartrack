@@ -34,6 +34,9 @@ module default {
   type EAccount {
     required name: str;
     multi owners: EUser;
+    required current_balance: decimal {
+      default := 0;
+    }
 
     multi link partitions := .<account[is EPartition];
     property balance := sum(.partitions.balance);
@@ -49,6 +52,9 @@ module default {
     required property is_private: bool {
       default := false;
     }
+    required current_balance: decimal {
+      default := 0;
+    }
 
     multi link transactions := .<source_partition[is ETransaction];
     property balance := sum(.transactions.value);
@@ -60,6 +66,9 @@ module default {
       constraint exclusive;
     }
     required kind: ECategoryKind;
+    required current_balance: decimal {
+      default := 0;
+    }
 
     multi link transactions := .<category[is ETransaction];
     property balance := sum(.transactions.value);
@@ -69,6 +78,7 @@ module default {
   type ETransaction {
     required date: datetime {
       default := datetime_of_statement();
+      readonly := true;
     }
     required source_partition: EPartition;
     required category: ECategory;
@@ -81,13 +91,5 @@ module default {
 
     property is_counterpart := exists .<counterpart[is ETransaction];
     multi link owners := .source_partition.owners;
-
-    access policy current_user_owned
-      allow all
-      using (
-        (not .source_partition.is_private or any(.owners.id = global current_user_id))
-        and (.date >= global tss_date)
-        and (.date < (global tse_date + <duration>'24 hours'))
-      );
   }
 }
