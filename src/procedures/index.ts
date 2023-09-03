@@ -12,6 +12,7 @@ import {
   getAccounts,
   getPartitions,
   getVisiblePartitions,
+  getCategoryKindBalance,
 } from "./server_functions";
 
 /**
@@ -31,6 +32,7 @@ export const procedures = {
   getAccounts,
   getPartitions,
   getVisiblePartitions,
+  getCategoryKindBalance,
 };
 
 export type Procedures = typeof procedures;

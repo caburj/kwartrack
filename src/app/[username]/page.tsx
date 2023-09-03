@@ -29,25 +29,13 @@ export function UserPage({ username }: { username: string }) {
     <QueryResult
       query={user}
       as="div"
-      className={css({ display: "flex" })}
+      className={css({ display: "flex", height: "100%" })}
       onLoading={<>Loading {`${username}'s accounts`}...</>}
       onUndefined={<>{`${username}'s data`} not found</>}
     >
       {(user) => (
         <>
-          <div
-            className={css({
-              padding: "10px",
-              width: "1/3",
-              minWidth: "250px",
-              maxWidth: "300px",
-            })}
-          >
-            <h1>{user.username}</h1>
-            <Accounts userId={user.id} />
-            <Categories userId={user.id} />
-            <DateRange userId={user.id} />
-          </div>
+          <SideBar user={user} />
           <div>
             <TransactionForm user={user} />
             <Transactions userId={user.id} />
@@ -55,6 +43,84 @@ export function UserPage({ username }: { username: string }) {
         </>
       )}
     </QueryResult>
+  );
+}
+
+type FindUserResult = NonNullable<
+  Unpacked<Awaited<ReturnType<typeof rpc.post.findUser>>>
+>;
+
+function SectionLabel(props: { children: React.ReactNode }) {
+  return (
+    <h1
+      className={css({
+        fontWeight: "bold",
+        textAlign: "center",
+        margin: "0.5rem 0",
+        fontSize: "1.1rem",
+        display: "flex",
+      })}
+    >
+      <span
+        className={css({
+          height: "1px",
+          alignSelf: "center",
+          flexGrow: 1,
+          borderBottom: "0.5px solid black",
+        })}
+      ></span>
+      <span
+        className={css({
+          margin: "0 1rem",
+        })}
+      >
+        {props.children}
+      </span>
+      <span
+        className={css({
+          height: "1px",
+          alignSelf: "center",
+          flexGrow: 1,
+          borderBottom: "0.5px solid black",
+        })}
+      ></span>
+    </h1>
+  );
+}
+
+function SideBar({ user }: { user: FindUserResult }) {
+  return (
+    <div
+      className={css({
+        width: "1/4",
+        minWidth: "18rem",
+        height: "100%",
+        display: "flex",
+        backgroundColor: "#f5f5f5",
+        flexDirection: "column",
+        justifyContent: "space-between",
+      })}
+    >
+      <div
+        className={css({
+          flexGrow: 1,
+          overflowY: "scroll",
+          padding: "1rem 0.75rem 1rem 1rem",
+          "&::-webkit-scrollbar": {
+            width: "0.25rem",
+          },
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor: "lightgray",
+          },
+        })}
+      >
+        <SectionLabel>Accounts</SectionLabel>
+        <Accounts userId={user.id} />
+        <SectionLabel>Categories</SectionLabel>
+        <Categories userId={user.id} />
+      </div>
+      <DateRange userId={user.id} />
+    </div>
   );
 }
 
@@ -77,10 +143,16 @@ function Accounts({ userId }: { userId: string }) {
             className={css({
               marginBottom: "0.5rem",
               cursor: "pointer",
+              fontWeight: "bold",
             })}
           >
-            <div>
-              {account.name} |
+            <div
+              className={css({
+                display: "flex",
+                justifyContent: "space-between",
+              })}
+            >
+              <span>{account.name}</span>
               <LoadingValue
                 queryKey={[
                   "accountBalance",
@@ -117,8 +189,6 @@ function Partitions(props: { accountId: string; userId: string }) {
   return (
     <QueryResult
       query={partitions}
-      as="ul"
-      className={css({ marginLeft: "1rem" })}
       onLoading={<>Loading partitions...</>}
       onUndefined={<>No partitions found</>}
     >
@@ -128,11 +198,13 @@ function Partitions(props: { accountId: string; userId: string }) {
             <li
               key={partition.id}
               className={css({
+                display: "flex",
+                justifyContent: "space-between",
+                fontWeight: "medium",
                 cursor: "pointer",
                 color: store.partitionIds.includes(partition.id)
                   ? "blue"
                   : "inherit",
-                textDecoration: partition.is_private ? "underline" : "inherit",
               })}
               onClick={(event) => {
                 event.stopPropagation();
@@ -142,7 +214,7 @@ function Partitions(props: { accountId: string; userId: string }) {
                 });
               }}
             >
-              {partition.name} |
+              <span>{partition.name}</span>
               <LoadingValue
                 queryKey={[
                   "partitionBalance",
@@ -174,7 +246,15 @@ function Categories({ userId }: { userId: string }) {
   const categories = useQuery(["categories", userId], () => {
     return rpc.post.getUserCategories({ userId });
   });
-  console.log(categories.data);
+  const categoryLabelClass = css({
+    display: "flex",
+    justifyContent: "space-between",
+    fontWeight: "bold",
+  });
+  const categoryListClass = css({
+    paddingStart: "0.5rem",
+    paddingBottom: "0.5rem",
+  });
   return (
     <>
       <QueryResult
@@ -185,8 +265,19 @@ function Categories({ userId }: { userId: string }) {
       >
         {(categories) => (
           <>
-            <h1>Income</h1>
-            <ul className={css({ paddingStart: "1rem" })}>
+            <div className={categoryLabelClass}>
+              <span>Income</span>
+              <LoadingValue
+                queryKey={["categoryKindBalance", "Income"]}
+                valueLoader={() =>
+                  rpc.post.getCategoryKindBalance({
+                    kind: "Income",
+                    userId,
+                  })
+                }
+              />
+            </div>
+            <ul className={categoryListClass}>
               {categories.income.map((category) => (
                 <Category
                   key={category.id}
@@ -195,8 +286,19 @@ function Categories({ userId }: { userId: string }) {
                 />
               ))}
             </ul>
-            <h1>Expense</h1>
-            <ul className={css({ paddingStart: "1rem" })}>
+            <div className={categoryLabelClass}>
+              <span>Expense</span>
+              <LoadingValue
+                queryKey={["categoryKindBalance", "Expense"]}
+                valueLoader={() =>
+                  rpc.post.getCategoryKindBalance({
+                    kind: "Expense",
+                    userId,
+                  })
+                }
+              />
+            </div>
+            <ul className={categoryListClass}>
               {categories.expense.map((category) => (
                 <Category
                   key={category.id}
@@ -205,8 +307,19 @@ function Categories({ userId }: { userId: string }) {
                 />
               ))}
             </ul>
-            <h1>Transfer</h1>
-            <ul className={css({ paddingStart: "1rem" })}>
+            <div className={categoryLabelClass}>
+              <span>Transfer</span>
+              <LoadingValue
+                queryKey={["categoryKindBalance", "Transfer"]}
+                valueLoader={() =>
+                  rpc.post.getCategoryKindBalance({
+                    kind: "Transfer",
+                    userId,
+                  })
+                }
+              />
+            </div>
+            <ul className={categoryListClass}>
               {categories.transfer.map((category) => (
                 <Category
                   key={category.id}
@@ -218,7 +331,7 @@ function Categories({ userId }: { userId: string }) {
           </>
         )}
       </QueryResult>
-      <form
+      {/* <form
         className={css({
           margin: "1rem 0",
           display: "flex",
@@ -250,7 +363,7 @@ function Categories({ userId }: { userId: string }) {
           <option value="Transfer">Transfer</option>
         </select>
         <input type="submit" value="Create"></input>
-      </form>
+      </form> */}
     </>
   );
 }
@@ -271,14 +384,16 @@ function Category({
       className={css({
         cursor: "pointer",
         color: store.categoryIds.includes(category.id) ? "blue" : "inherit",
-        textDecoration: isDeleting ? "line-through" : "inherit",
+        fontWeight: "medium",
+        display: "flex",
+        justifyContent: "space-between",
       })}
       onClick={() => {
         dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
       }}
     >
       {/* TODO: This delete button should be conditionally shown. Only categories without linked transactions can be deleted. */}
-      <button
+      {/* <button
         onClick={async (event) => {
           event.stopPropagation();
           setIsDeleting(true);
@@ -287,8 +402,8 @@ function Category({
         }}
       >
         x
-      </button>{" "}
-      | {category.name} |
+      </button>{" "} */}
+      <span>{category.name}</span>
       <LoadingValue
         queryKey={[
           "categoryBalance",
@@ -616,7 +731,12 @@ function TransactionForm({ user }: { user: { id: string } }) {
 function DateRange({ userId }: { userId: string }) {
   const [store, dispatch] = useContext(UserPageStoreContext);
   return (
-    <div>
+    <div
+      className={css({
+        borderTop: "1px solid lightgray",
+        padding: "1rem",
+      })}
+    >
       <div>
         <label htmlFor="startDate">Start Date</label>
         <input

@@ -563,3 +563,22 @@ export const getAccountBalance = withValidation(
     return await query.run(client, { id: accountId });
   }
 );
+
+export const getCategoryKindBalance = withValidation(
+  object({
+    userId: string(),
+    kind: string(),
+  }),
+  async ({ userId, kind }) => {
+    const query = e.params({ kind: e.ECategoryKind }, ({ kind }) => {
+      const tx = e.select(e.ETransaction, (transaction) => ({
+        filter: e.op(transaction.category.kind, "=", kind),
+      }));
+      return e.sum(tx.value);
+    });
+    const client = baseClient.withGlobals({
+      current_user_id: userId,
+    });
+    return await query.run(client, { kind: kind as any });
+  }
+);
