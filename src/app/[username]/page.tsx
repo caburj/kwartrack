@@ -10,7 +10,7 @@ import {
 } from "@tanstack/react-query";
 import { number, object, optional, string } from "valibot";
 import { UserPageStoreProvider, UserPageStoreContext } from "./store";
-import { Unpacked, groupBy } from "@/utils/common";
+import { Unpacked, formatValue, groupBy } from "@/utils/common";
 
 export default function Main(props: { params: { username: string } }) {
   const { username } = props.params;
@@ -798,19 +798,34 @@ function DateRange({ userId }: { userId: string }) {
   );
 }
 
-function LoadingValue<R>(props: {
+function LoadingValue(props: {
   queryKey: [string, ...any];
-  valueLoader: () => Promise<R>;
+  valueLoader: () => Promise<string>;
 }) {
   return (
     <QueryResult
       query={useQuery(props.queryKey, props.valueLoader)}
-      as="span"
-      className={css({ marginLeft: "0.5rem" })}
       onLoading={<>...</>}
       onUndefined={<>Missing Value</>}
     >
-      {(value) => <>{value}</>}
+      {(value) => {
+        const parsedValue = parseFloat(value);
+        let result;
+        if (isNaN(parsedValue)) {
+          result = value;
+        } else {
+          result = formatValue(parsedValue);
+        }
+        return (
+          <span
+            className={css({
+              marginLeft: "0.5rem",
+            })}
+          >
+            {result}
+          </span>
+        );
+      }}
     </QueryResult>
   );
 }
