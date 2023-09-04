@@ -1,5 +1,6 @@
 module default {
   global current_user_id: uuid;
+  global current_user := (select EUser filter .id = global current_user_id);
 
   scalar type ECategoryKind extending enum<Income, Expense, Transfer>;
 
@@ -10,12 +11,12 @@ module default {
     required username: str {
       constraint exclusive;
     }
+    required is_admin: bool {
+      default := false;
+    }
     required name: str;
 
     multi link accounts := .<owners[is EAccount];
-    multi link transactions := .accounts.transactions;
-    property balance := sum(.accounts.balance);
-    multi link categories := (select ECategory);
   }
 
   # Represents a bank account.
@@ -24,8 +25,6 @@ module default {
     multi owners: EUser;
 
     multi link partitions := .<account[is EPartition];
-    property balance := sum(.partitions.balance);
-    multi link transactions := .partitions.transactions;
   }
 
   # Represents a partition of an account.
@@ -38,9 +37,8 @@ module default {
       default := false;
     }
 
-    multi link transactions := .<source_partition[is ETransaction];
-    property balance := sum(.transactions.value);
     multi link owners := .account.owners;
+    property is_visible := not .is_private or global current_user.is_admin or any(.owners.id = global current_user_id)
   }
 
   type ECategory {
@@ -70,5 +68,6 @@ module default {
 
     property is_counterpart := exists .<counterpart[is ETransaction];
     multi link owners := .source_partition.owners;
+    property is_visible := .source_partition.is_visible;
   }
 }

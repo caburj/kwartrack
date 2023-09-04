@@ -538,6 +538,12 @@ function Transactions({ userId }: { userId: string }) {
                         },
                       ],
                     });
+                    queryClient.invalidateQueries({
+                      queryKey: [
+                        "categoryKindBalance",
+                        transaction.category.kind,
+                      ],
+                    });
                     setIsDeleting(false);
                   }}
                   disabled={isDeleting}
@@ -560,7 +566,7 @@ function TransactionForm({ user }: { user: { id: string } }) {
   const queryClient = useQueryClient();
   const [store] = useContext(UserPageStoreContext);
   const partitions = useQuery(["partitions", user.id], () => {
-    return rpc.post.getVisiblePartitions({ userId: user.id });
+    return rpc.post.getPartitionOptions({ userId: user.id });
   });
   const categories = useQuery(["categories", user.id], () => {
     return rpc.post.getUserCategories({ userId: user.id });
@@ -644,6 +650,9 @@ function TransactionForm({ user }: { user: { id: string } }) {
               },
             ],
           });
+          queryClient.invalidateQueries({
+            queryKey: ["categoryKindBalance", transaction.category.kind],
+          });
         }
         if (counterpart) {
           queryClient.invalidateQueries({
@@ -661,6 +670,9 @@ function TransactionForm({ user }: { user: { id: string } }) {
                 accountId: counterpart.source_partition.account.id,
               },
             ],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["categoryKindBalance", counterpart.category.kind],
           });
         }
       }}

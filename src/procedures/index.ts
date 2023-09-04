@@ -11,7 +11,7 @@ import {
   getAccountBalance,
   getAccounts,
   getPartitions,
-  getVisiblePartitions,
+  getPartitionOptions,
   getCategoryKindBalance,
 } from "./server_functions";
 
@@ -31,7 +31,7 @@ export const procedures = {
   getAccountBalance,
   getAccounts,
   getPartitions,
-  getVisiblePartitions,
+  getPartitionOptions,
   getCategoryKindBalance,
 };
 

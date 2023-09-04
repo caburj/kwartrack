@@ -30,11 +30,6 @@ export const findUser = withValidation(
       id: true,
       email: true,
       username: true,
-      categories: {
-        id: true,
-        name: true,
-        kind: true,
-      },
       accounts: {
         id: true,
         name: true,
@@ -108,11 +103,6 @@ export const getPartitions = withValidation(
         e.uuid(accountId)
       );
       // get all private partitions of the user
-      const visibleToUser = e.op(
-        e.op("not", partition.is_private),
-        "or",
-        e.op(partition.owners.id, "=", e.uuid(userId))
-      );
       return {
         id: true,
         name: true,
@@ -121,26 +111,22 @@ export const getPartitions = withValidation(
           username: true,
         },
         is_private: true,
-        filter: e.op(belongToAccount, "and", visibleToUser),
+        filter: e.op(belongToAccount, "and", partition.is_visible),
       };
     });
-    const result = await query.run(baseClient);
+    const result = await query.run(
+      baseClient.withGlobals({ current_user_id: userId })
+    );
     if (result.length !== 0) {
       return result;
     }
   }
 );
 
-export const getVisiblePartitions = withValidation(
+export const getPartitionOptions = withValidation(
   object({ userId: string() }),
   async ({ userId }) => {
     const query = e.select(e.EPartition, (partition) => {
-      // get all private partitions of the user
-      const visibleToUser = e.op(
-        e.op("not", partition.is_private),
-        "or",
-        e.op(partition.owners.id, "=", e.uuid(userId))
-      );
       return {
         id: true,
         name: true,
@@ -152,10 +138,12 @@ export const getVisiblePartitions = withValidation(
           id: true,
           name: true,
         },
-        filter: visibleToUser,
+        filter: partition.is_visible,
       };
     });
-    const result = await query.run(baseClient);
+    const result = await query.run(
+      baseClient.withGlobals({ current_user_id: userId })
+    );
     if (result.length !== 0) {
       return result;
     }
@@ -175,7 +163,11 @@ export const findTransactions = withValidation(
       { pIds: e.array(e.uuid), cIds: e.array(e.uuid) },
       ({ pIds, cIds }) =>
         e.select(e.ETransaction, (transaction) => {
-          let baseFilter = e.op("not", transaction.is_counterpart);
+          let baseFilter = e.op(
+            transaction.is_visible,
+            "and",
+            e.op("not", transaction.is_counterpart)
+          );
           if (tssDate) {
             baseFilter = e.op(
               baseFilter,
@@ -245,6 +237,7 @@ export const findTransactions = withValidation(
             category: {
               id: true,
               name: true,
+              kind: true,
             },
             description: true,
             kind: transaction.category.kind,
@@ -334,6 +327,7 @@ export const createTransaction = withValidation(
           category: {
             id: true,
             name: true,
+            kind: true,
           },
           description: true,
         }))
@@ -499,7 +493,11 @@ export const getCategoryBalance = withValidation(
   async ({ categoryId, userId }) => {
     const query = e.params({ id: e.uuid }, ({ id }) => {
       const transactions = e.select(e.ETransaction, (transaction) => ({
-        filter: e.op(transaction.category.id, "=", id),
+        filter: e.op(
+          transaction.is_visible,
+          "and",
+          e.op(transaction.category.id, "=", id)
+        ),
       }));
       return e.sum(transactions.value);
     });
@@ -540,7 +538,11 @@ export const getPartitionBalance = withValidation(
   async ({ partitionId, userId }) => {
     const balanceQuery = e.params({ id: e.uuid }, ({ id }) => {
       const transactions = e.select(e.ETransaction, (transaction) => ({
-        filter: e.op(transaction.source_partition.id, "=", id),
+        filter: e.op(
+          transaction.is_visible,
+          "and",
+          e.op(transaction.source_partition.id, "=", id)
+        ),
       }));
       return e.sum(transactions.value);
     });
@@ -560,7 +562,11 @@ export const getAccountBalance = withValidation(
   async ({ accountId, userId }) => {
     const query = e.params({ id: e.uuid }, ({ id }) => {
       const tx = e.select(e.ETransaction, (transaction) => ({
-        filter: e.op(transaction.source_partition.account.id, "=", id),
+        filter: e.op(
+          transaction.is_visible,
+          "and",
+          e.op(transaction.source_partition.account.id, "=", id)
+        ),
       }));
       return e.sum(tx.value);
     });
@@ -579,7 +585,11 @@ export const getCategoryKindBalance = withValidation(
   async ({ userId, kind }) => {
     const query = e.params({ kind: e.ECategoryKind }, ({ kind }) => {
       const tx = e.select(e.ETransaction, (transaction) => ({
-        filter: e.op(transaction.category.kind, "=", kind),
+        filter: e.op(
+          transaction.is_visible,
+          "and",
+          e.op(transaction.category.kind, "=", kind)
+        ),
       }));
       return e.sum(tx.value);
     });
