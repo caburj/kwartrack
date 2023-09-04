@@ -175,7 +175,26 @@ export const findTransactions = withValidation(
       { pIds: e.array(e.uuid), cIds: e.array(e.uuid) },
       ({ pIds, cIds }) =>
         e.select(e.ETransaction, (transaction) => {
-          const baseFilter = e.op("not", transaction.is_counterpart);
+          let baseFilter = e.op("not", transaction.is_counterpart);
+          if (tssDate) {
+            baseFilter = e.op(
+              baseFilter,
+              "and",
+              e.op(transaction.date, ">=", new Date(tssDate))
+            );
+          }
+          if (tseDate) {
+            baseFilter = e.op(
+              baseFilter,
+              "and",
+              e.op(
+                transaction.date,
+                "<",
+                // add one day to the end date to include it in the range
+                new Date(new Date(tseDate).getTime() + 86400000)
+              )
+            );
+          }
           let filter;
           const cFilter = e.op(
             transaction.category.id,
@@ -239,11 +258,7 @@ export const findTransactions = withValidation(
         })
     );
 
-    const client = baseClient.withGlobals({
-      current_user_id: ownerId,
-      tss_date: tssDate && new Date(tssDate),
-      tse_date: tseDate && new Date(tseDate),
-    });
+    const client = baseClient.withGlobals({ current_user_id: ownerId });
     const result = await query.run(client, {
       pIds: partitionIds,
       cIds: categoryIds,
@@ -480,10 +495,8 @@ export const getCategoryBalance = withValidation(
   object({
     categoryId: string(),
     userId: string(),
-    tssDate: optional(string()),
-    tseDate: optional(string()),
   }),
-  async ({ categoryId, userId, tssDate, tseDate }) => {
+  async ({ categoryId, userId }) => {
     const query = e.params({ id: e.uuid }, ({ id }) => {
       const transactions = e.select(e.ETransaction, (transaction) => ({
         filter: e.op(transaction.category.id, "=", id),
@@ -492,8 +505,6 @@ export const getCategoryBalance = withValidation(
     });
     const client = baseClient.withGlobals({
       current_user_id: userId,
-      tss_date: tssDate ? new Date(tssDate) : undefined,
-      tse_date: tseDate ? new Date(tseDate) : undefined,
     });
     return await query.run(client, { id: categoryId });
   }
@@ -525,10 +536,8 @@ export const getPartitionBalance = withValidation(
   object({
     partitionId: string(),
     userId: string(),
-    tssDate: optional(string()),
-    tseDate: optional(string()),
   }),
-  async ({ partitionId, userId, tssDate, tseDate }) => {
+  async ({ partitionId, userId }) => {
     const balanceQuery = e.params({ id: e.uuid }, ({ id }) => {
       const transactions = e.select(e.ETransaction, (transaction) => ({
         filter: e.op(transaction.source_partition.id, "=", id),
@@ -538,8 +547,6 @@ export const getPartitionBalance = withValidation(
 
     const client = baseClient.withGlobals({
       current_user_id: userId,
-      tss_date: tssDate ? new Date(tssDate) : undefined,
-      tse_date: tseDate ? new Date(tseDate) : undefined,
     });
     return await balanceQuery.run(client, { id: partitionId });
   }
@@ -549,10 +556,8 @@ export const getAccountBalance = withValidation(
   object({
     accountId: string(),
     userId: string(),
-    tssDate: optional(string()),
-    tseDate: optional(string()),
   }),
-  async ({ accountId, userId, tssDate, tseDate }) => {
+  async ({ accountId, userId }) => {
     const query = e.params({ id: e.uuid }, ({ id }) => {
       const tx = e.select(e.ETransaction, (transaction) => ({
         filter: e.op(transaction.source_partition.account.id, "=", id),
@@ -561,8 +566,6 @@ export const getAccountBalance = withValidation(
     });
     const client = baseClient.withGlobals({
       current_user_id: userId,
-      tss_date: tssDate ? new Date(tssDate) : undefined,
-      tse_date: tseDate ? new Date(tseDate) : undefined,
     });
     return await query.run(client, { id: accountId });
   }

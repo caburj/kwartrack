@@ -164,16 +164,12 @@ function Accounts({ userId }: { userId: string }) {
                   "accountBalance",
                   {
                     accountId: account.id,
-                    tssDate: store.tssDate,
-                    tseDate: store.tseDate,
                   },
                 ]}
                 valueLoader={() =>
                   rpc.post.getAccountBalance({
                     accountId: account.id,
                     userId,
-                    tssDate: store.tssDate?.toISOString(),
-                    tseDate: store.tseDate?.toISOString(),
                   })
                 }
               />
@@ -226,16 +222,12 @@ function Partitions(props: { accountId: string; userId: string }) {
                   "partitionBalance",
                   {
                     partitionId: partition.id,
-                    tssDate: store.tssDate,
-                    tseDate: store.tseDate,
                   },
                 ]}
                 valueLoader={() =>
                   rpc.post.getPartitionBalance({
                     partitionId: partition.id,
                     userId,
-                    tssDate: store.tssDate?.toISOString(),
-                    tseDate: store.tseDate?.toISOString(),
                   })
                 }
               />
@@ -450,16 +442,12 @@ function Category({
           "categoryBalance",
           {
             categoryId: category.id,
-            tssDate: store.tssDate,
-            tseDate: store.tseDate,
           },
         ]}
         valueLoader={() =>
           rpc.post.getCategoryBalance({
             userId,
             categoryId: category.id,
-            tssDate: store.tssDate?.toISOString(),
-            tseDate: store.tseDate?.toISOString(),
           })
         }
       />
@@ -531,8 +519,6 @@ function Transactions({ userId }: { userId: string }) {
                         "partitionBalance",
                         {
                           partitionId: transaction.source_partition.id,
-                          tssDate: store.tssDate,
-                          tseDate: store.tseDate,
                         },
                       ],
                     });
@@ -541,8 +527,6 @@ function Transactions({ userId }: { userId: string }) {
                         "accountBalance",
                         {
                           accountId: transaction.source_partition.account.id,
-                          tssDate: store.tssDate,
-                          tseDate: store.tseDate,
                         },
                       ],
                     });
@@ -551,8 +535,6 @@ function Transactions({ userId }: { userId: string }) {
                         "categoryBalance",
                         {
                           categoryId: transaction.category.id,
-                          tssDate: store.tssDate,
-                          tseDate: store.tseDate,
                         },
                       ],
                     });
@@ -643,8 +625,6 @@ function TransactionForm({ user }: { user: { id: string } }) {
               "categoryBalance",
               {
                 categoryId: parsedData.categoryId,
-                tssDate: store.tssDate,
-                tseDate: store.tseDate,
               },
             ],
           });
@@ -653,8 +633,6 @@ function TransactionForm({ user }: { user: { id: string } }) {
               "partitionBalance",
               {
                 partitionId: parsedData.sourcePartitionId,
-                tssDate: store.tssDate,
-                tseDate: store.tseDate,
               },
             ],
           });
@@ -663,8 +641,6 @@ function TransactionForm({ user }: { user: { id: string } }) {
               "accountBalance",
               {
                 accountId: transaction.source_partition.account.id,
-                tssDate: store.tssDate,
-                tseDate: store.tseDate,
               },
             ],
           });
@@ -675,8 +651,6 @@ function TransactionForm({ user }: { user: { id: string } }) {
               "partitionBalance",
               {
                 partitionId: parsedData.destinationPartitionId,
-                tssDate: store.tssDate,
-                tseDate: store.tseDate,
               },
             ],
           });
@@ -685,8 +659,6 @@ function TransactionForm({ user }: { user: { id: string } }) {
               "accountBalance",
               {
                 accountId: counterpart.source_partition.account.id,
-                tssDate: store.tssDate,
-                tseDate: store.tseDate,
               },
             ],
           });
