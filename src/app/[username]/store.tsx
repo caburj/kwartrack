@@ -9,6 +9,7 @@ type UserPageStore = {
 
 type UserPageAction =
   | { type: "TOGGLE_PARTITIONS"; payload: string[] }
+  | { type: "TOGGLE_ACCOUNT"; payload: string[] }
   | { type: "TOGGLE_CATEGORIES"; payload: string[] }
   | { type: "TOGGLE_CATEGORY_KIND"; payload: string[] }
   | { type: "SET_TSS_DATE"; payload: Date | undefined }
@@ -48,6 +49,29 @@ const userPageStoreReducer = (
         }
       }
       return { ...state, partitionIds };
+    }
+    case "TOGGLE_ACCOUNT": {
+      // payload is partitionIds in the clicked account
+      let allSelected = true;
+      for (const id of action.payload) {
+        if (!state.partitionIds.includes(id)) {
+          allSelected = false;
+          break;
+        }
+      }
+      if (allSelected) {
+        return {
+          ...state,
+          partitionIds: state.partitionIds.filter(
+            (id) => !action.payload.includes(id)
+          ),
+        };
+      } else {
+        return {
+          ...state,
+          partitionIds: [...state.partitionIds, ...action.payload],
+        };
+      }
     }
     case "TOGGLE_CATEGORIES": {
       let categoryIds = state.categoryIds;

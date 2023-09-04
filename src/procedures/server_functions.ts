@@ -84,6 +84,10 @@ export const getAccounts = withValidation(
         id: true,
         username: true,
       },
+      partitions: {
+        id: true,
+        name: true,
+      },
     }));
 
     const client = baseClient.withGlobals({ current_user_id: userId });

@@ -125,7 +125,7 @@ function SideBar({ user }: { user: FindUserResult }) {
 }
 
 function Accounts({ userId }: { userId: string }) {
-  const [store] = useContext(UserPageStoreContext);
+  const [store, dispatch] = useContext(UserPageStoreContext);
   const accounts = useQuery(["accounts", userId], () => {
     return rpc.post.getAccounts({ userId });
   });
@@ -145,6 +145,12 @@ function Accounts({ userId }: { userId: string }) {
               cursor: "pointer",
               fontWeight: "bold",
             })}
+            onClick={() => {
+              dispatch({
+                type: "TOGGLE_ACCOUNT",
+                payload: account.partitions.map((p) => p.id),
+              });
+            }}
           >
             <div
               className={css({
