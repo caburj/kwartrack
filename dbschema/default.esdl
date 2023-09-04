@@ -22,9 +22,6 @@ module default {
   type EAccount {
     required name: str;
     multi owners: EUser;
-    required current_balance: decimal {
-      default := 0;
-    }
 
     multi link partitions := .<account[is EPartition];
     property balance := sum(.partitions.balance);
@@ -40,9 +37,6 @@ module default {
     required property is_private: bool {
       default := false;
     }
-    required current_balance: decimal {
-      default := 0;
-    }
 
     multi link transactions := .<source_partition[is ETransaction];
     property balance := sum(.transactions.value);
@@ -54,9 +48,6 @@ module default {
       constraint exclusive;
     }
     required kind: ECategoryKind;
-    required current_balance: decimal {
-      default := 0;
-    }
 
     multi link transactions := .<category[is ETransaction];
     property balance := sum(.transactions.value);
