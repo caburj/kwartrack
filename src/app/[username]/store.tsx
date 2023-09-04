@@ -10,6 +10,7 @@ type UserPageStore = {
 type UserPageAction =
   | { type: "TOGGLE_PARTITIONS"; payload: string[] }
   | { type: "TOGGLE_CATEGORIES"; payload: string[] }
+  | { type: "TOGGLE_CATEGORY_KIND"; payload: string[] }
   | { type: "SET_TSS_DATE"; payload: Date | undefined }
   | { type: "SET_TSE_DATE"; payload: Date | undefined };
 
@@ -32,7 +33,10 @@ const initStore: UserPageStore = {
   tseDate: lastDayOfCurrentMonth(),
 };
 
-const userPageStoreReducer = (state: UserPageStore, action: UserPageAction) => {
+const userPageStoreReducer = (
+  state: UserPageStore,
+  action: UserPageAction
+): UserPageStore => {
   switch (action.type) {
     case "TOGGLE_PARTITIONS": {
       let partitionIds = state.partitionIds;
@@ -56,12 +60,34 @@ const userPageStoreReducer = (state: UserPageStore, action: UserPageAction) => {
       }
       return { ...state, categoryIds };
     }
-    case "SET_TSS_DATE":
+    case "TOGGLE_CATEGORY_KIND": {
+      let allSelected = true;
+      for (const id of action.payload) {
+        if (!state.categoryIds.includes(id)) {
+          allSelected = false;
+          break;
+        }
+      }
+      if (allSelected) {
+        return {
+          ...state,
+          categoryIds: state.categoryIds.filter(
+            (id) => !action.payload.includes(id)
+          ),
+        };
+      } else {
+        return {
+          ...state,
+          categoryIds: [...state.categoryIds, ...action.payload],
+        };
+      }
+    }
+    case "SET_TSS_DATE": {
       return { ...state, tssDate: action.payload };
-    case "SET_TSE_DATE":
+    }
+    case "SET_TSE_DATE": {
       return { ...state, tseDate: action.payload };
-    default:
-      return state;
+    }
   }
 };
 

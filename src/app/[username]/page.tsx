@@ -246,15 +246,41 @@ function Categories({ userId }: { userId: string }) {
   const categories = useQuery(["categories", userId], () => {
     return rpc.post.getUserCategories({ userId });
   });
+  const [store, dispatch] = useContext(UserPageStoreContext);
   const categoryLabelClass = css({
     display: "flex",
     justifyContent: "space-between",
     fontWeight: "bold",
+    cursor: "pointer",
   });
   const categoryListClass = css({
     paddingStart: "0.5rem",
     paddingBottom: "0.5rem",
   });
+  const selectCategories = (kind: string) => {
+    if (kind === "Income") {
+      if (categories?.data?.income) {
+        dispatch({
+          type: "TOGGLE_CATEGORY_KIND",
+          payload: categories.data.income.map((c) => c.id),
+        });
+      }
+    } else if (kind === "Expense") {
+      if (categories?.data?.expense) {
+        dispatch({
+          type: "TOGGLE_CATEGORY_KIND",
+          payload: categories.data.expense.map((c) => c.id),
+        });
+      }
+    } else if (kind === "Transfer") {
+      if (categories?.data?.transfer) {
+        dispatch({
+          type: "TOGGLE_CATEGORY_KIND",
+          payload: categories.data.transfer.map((c) => c.id),
+        });
+      }
+    }
+  };
   return (
     <>
       <QueryResult
@@ -265,7 +291,10 @@ function Categories({ userId }: { userId: string }) {
       >
         {(categories) => (
           <>
-            <div className={categoryLabelClass}>
+            <div
+              onClick={() => selectCategories("Income")}
+              className={categoryLabelClass}
+            >
               <span>Income</span>
               <LoadingValue
                 queryKey={["categoryKindBalance", "Income"]}
@@ -286,7 +315,10 @@ function Categories({ userId }: { userId: string }) {
                 />
               ))}
             </ul>
-            <div className={categoryLabelClass}>
+            <div
+              onClick={() => selectCategories("Expense")}
+              className={categoryLabelClass}
+            >
               <span>Expense</span>
               <LoadingValue
                 queryKey={["categoryKindBalance", "Expense"]}
@@ -307,7 +339,10 @@ function Categories({ userId }: { userId: string }) {
                 />
               ))}
             </ul>
-            <div className={categoryLabelClass}>
+            <div
+              onClick={() => selectCategories("Transfer")}
+              className={categoryLabelClass}
+            >
               <span>Transfer</span>
               <LoadingValue
                 queryKey={["categoryKindBalance", "Transfer"]}
