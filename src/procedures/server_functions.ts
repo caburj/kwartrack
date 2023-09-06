@@ -434,7 +434,10 @@ export const deleteTransaction = withValidation(
 export const getUserCategories = withValidation(
   object({ userId: string() }),
   async ({ userId }) => {
-    const result = await baseClient.transaction(async (tx) => {
+    const client = baseClient.withGlobals({
+      current_user_id: userId,
+    });
+    const result = await client.transaction(async (tx) => {
       const fields = {
         id: true,
         name: true,
@@ -443,19 +446,31 @@ export const getUserCategories = withValidation(
       const expense = await e
         .select(e.ECategory, (category) => ({
           ...fields,
-          filter: e.op(category.kind, "=", e.ECategoryKind.Expense),
+          filter: e.op(
+            category.is_visible,
+            "and",
+            e.op(category.kind, "=", e.ECategoryKind.Expense)
+          ),
         }))
         .run(tx);
       const income = await e
         .select(e.ECategory, (category) => ({
           ...fields,
-          filter: e.op(category.kind, "=", e.ECategoryKind.Income),
+          filter: e.op(
+            category.is_visible,
+            "and",
+            e.op(category.kind, "=", e.ECategoryKind.Income)
+          ),
         }))
         .run(tx);
       const transfer = await e
         .select(e.ECategory, (category) => ({
           ...fields,
-          filter: e.op(category.kind, "=", e.ECategoryKind.Transfer),
+          filter: e.op(
+            category.is_visible,
+            "and",
+            e.op(category.kind, "=", e.ECategoryKind.Transfer)
+          ),
         }))
         .run(tx);
       return {
@@ -468,13 +483,14 @@ export const getUserCategories = withValidation(
   }
 );
 
+// TODO: should take into account the user id. Only those that the user owns can be deleted.
 export const deleteCategory = withValidation(
   object({ categoryId: string() }),
   async ({ categoryId }) => {
     const query = e.params({ id: e.uuid }, ({ id }) =>
       e.delete(e.ECategory, (category) => ({
         filter_single: e.op(
-          e.op("not", e.op("exists", category.transactions)),
+          e.op("not", e.op("exists", category["<category[is ETransaction]"])),
           "and",
           e.op(category.id, "=", id)
         ),

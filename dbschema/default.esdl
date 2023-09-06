@@ -35,10 +35,11 @@ module default {
     required account: EAccount;
     required property is_private: bool {
       default := false;
+      annotation description := "Only the owners can see this partition and its transactions."
     }
 
     multi link owners := .account.owners;
-    property is_visible := not .is_private or global current_user.is_admin or any(.owners.id = global current_user_id)
+    property is_visible := not .is_private or global current_user.is_admin or any(.owners = global current_user)
   }
 
   type ECategory {
@@ -46,9 +47,16 @@ module default {
       constraint exclusive;
     }
     required kind: ECategoryKind;
+    multi owners: EUser;
+    required property is_private: bool {
+      default := false;
+      annotation description := "
+        Only the owners can see this category. Only transactions
+        with public partition can be linked to this category.
+      "
+    }
 
-    multi link transactions := .<category[is ETransaction];
-    property balance := sum(.transactions.value);
+    property is_visible := not .is_private or global current_user.is_admin or any(.owners = global current_user)
   }
 
   # Represents a transaction.
