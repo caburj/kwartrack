@@ -572,6 +572,7 @@ function TransactionForm({ user }: { user: { id: string } }) {
     return rpc.post.getUserCategories({ userId: user.id });
   });
   const [inputCategoryKind, setInputCategoryKind] = useState("");
+  const [inputCategoryIsPrivate, setInputCategoryIsPrivate] = useState(false);
   const [inputValue, setInputValue] = useState("");
 
   let value: number;
@@ -580,22 +581,40 @@ function TransactionForm({ user }: { user: { id: string } }) {
   } catch (_error) {}
 
   type Partition = NonNullable<Unpacked<typeof partitions.data>>;
+  type Category = Unpacked<NonNullable<Unpacked<typeof categories.data>>['expense']>;
 
-  const getSelectionOptions = (partitions: Partition[]) => {
+  const getPartitionOptions = (
+    partitions: Partition[],
+    onlyPrivate: boolean
+  ) => {
     const groupedPartitions = groupBy(partitions, (p) => p.account.id);
     return (
       <>
-        {Object.entries(groupedPartitions).map(([accountId, partitions]) => (
-          <optgroup key={accountId} label={partitions[0].account.name}>
-            {partitions.map((partition) => (
-              <option key={partition.id} value={partition.id}>
-                {partition.name}
-              </option>
-            ))}
-          </optgroup>
-        ))}
+        {Object.entries(groupedPartitions).map(([accountId, partitions]) => {
+          const partitionsToShow = partitions.filter((p) =>
+            onlyPrivate ? p.is_private : true
+          );
+          if (partitionsToShow.length === 0) return null;
+          return (
+            <optgroup key={accountId} label={partitions[0].account.name}>
+              {partitionsToShow.map((partition) => (
+                <option key={partition.id} value={partition.id}>
+                  {partition.name}
+                </option>
+              ))}
+            </optgroup>
+          );
+        })}
       </>
     );
+  };
+
+  const getCategoryOptionName = (category: Category) => {
+    if (category.is_private) {
+      return `${category.name} (Private)`;
+    } else {
+      return category.name;
+    }
   };
 
   return (
@@ -690,26 +709,27 @@ function TransactionForm({ user }: { user: { id: string } }) {
               ].find((c) => c.id === event.target.value);
               if (!selectedCategory) return;
               setInputCategoryKind(selectedCategory.kind);
+              setInputCategoryIsPrivate(selectedCategory.is_private);
             }}
           >
             <optgroup label="Income">
               {categories.income.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {getCategoryOptionName(c)}
                 </option>
               ))}
             </optgroup>
             <optgroup label="Expenses">
               {categories.expense.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {getCategoryOptionName(c)}
                 </option>
               ))}
             </optgroup>
             <optgroup label="Transfers">
               {categories.transfer.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {getCategoryOptionName(c)}
                 </option>
               ))}
             </optgroup>
@@ -720,7 +740,7 @@ function TransactionForm({ user }: { user: { id: string } }) {
       <QueryResult query={partitions}>
         {(partitions) => (
           <select name="sourcePartitionId">
-            {getSelectionOptions(partitions)}
+            {getPartitionOptions(partitions, inputCategoryIsPrivate)}
           </select>
         )}
       </QueryResult>
@@ -730,7 +750,7 @@ function TransactionForm({ user }: { user: { id: string } }) {
           <QueryResult query={partitions}>
             {(partitions) => (
               <select name="destinationPartitionId">
-                {getSelectionOptions(partitions)}
+                {getPartitionOptions(partitions, inputCategoryIsPrivate)}
               </select>
             )}
           </QueryResult>

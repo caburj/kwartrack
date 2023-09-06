@@ -138,6 +138,7 @@ export const getPartitionOptions = withValidation(
           id: true,
           name: true,
         },
+        is_private: true,
         filter: partition.is_visible,
       };
     });
@@ -307,7 +308,7 @@ export const createTransaction = withValidation(
         })
     );
 
-    const selectQuery = e.params(
+    const selectTransactionQuery = e.params(
       {
         id: e.uuid,
       },
@@ -333,17 +334,54 @@ export const createTransaction = withValidation(
         }))
     );
 
+    const partitionQuery = e.params(
+      {
+        id: e.uuid,
+      },
+      ({ id }) =>
+        e.select(e.EPartition, (partition) => ({
+          filter_single: e.op(
+            e.op(partition.is_visible, "and", partition.is_private),
+            "and",
+            e.op(partition.id, "=", id)
+          ),
+        }))
+    );
+
     const client = baseClient.withGlobals({ current_user_id: userId });
     const result = await client.transaction(async (tx) => {
       const selectedCategory = await e
         .select(e.ECategory, (category) => ({
           filter_single: e.op(category.id, "=", e.uuid(categoryId)),
           kind: true,
+          is_private: true,
         }))
         .run(tx);
 
       if (!selectedCategory) {
         throw new Error("Category not found.");
+      }
+
+      if (selectedCategory.is_private) {
+        // both the source and destination partitions must be owned by the user
+        const sourcePartition = await partitionQuery.run(tx, {
+          id: sourcePartitionId,
+        });
+        if (!sourcePartition) {
+          throw new Error(
+            "Selected source partition should be privately owned by the user."
+          );
+        }
+        if (destinationPartitionId) {
+          const destinationPartition = await partitionQuery.run(tx, {
+            id: destinationPartitionId,
+          });
+          if (!destinationPartition) {
+            throw new Error(
+              "Selected destination partition should be privately owned by the user."
+            );
+          }
+        }
       }
 
       let realValue: number;
@@ -373,12 +411,12 @@ export const createTransaction = withValidation(
       });
       transactionId = id;
 
-      const transaction = await selectQuery.run(tx, {
+      const transaction = await selectTransactionQuery.run(tx, {
         id: transactionId,
       });
       let counterpart;
       if (counterpartId) {
-        counterpart = await selectQuery.run(tx, {
+        counterpart = await selectTransactionQuery.run(tx, {
           id: counterpartId,
         });
       }
@@ -442,6 +480,7 @@ export const getUserCategories = withValidation(
         id: true,
         name: true,
         kind: true,
+        is_private: true,
       } as const;
       const expense = await e
         .select(e.ECategory, (category) => ({
