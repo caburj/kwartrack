@@ -472,8 +472,12 @@ function Transactions({ userId }: { userId: string }) {
   type Transaction = NonNullable<Unpacked<typeof transactions.data>>;
 
   const getPartitionColumn = (transaction: Transaction) => {
-    if (transaction.kind === "Transfer" && transaction.counterpart) {
-      return `${transaction.source_partition.label} -> ${transaction.counterpart.source_partition.label}`;
+    if (transaction.kind === "Transfer") {
+      if (transaction.counterpart) {
+        return `${transaction.source_partition.label} -> ${transaction.counterpart.source_partition.label}`;
+      } else {
+        return `${transaction.source_partition.label} -> private partition`;
+      }
     } else {
       return transaction.source_partition.label;
     }

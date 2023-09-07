@@ -19,10 +19,8 @@ export function groupBy<T>(
 const nf = new Intl.NumberFormat("fr-BE", {
   maximumFractionDigits: 2,
   minimumFractionDigits: 2,
-  currency: "EUR",
-  style: "currency",
 });
 
 export function formatValue(value: number) {
-  return nf.format(Math.abs(value));
+  return nf.format(value);
 }

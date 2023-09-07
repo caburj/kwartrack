@@ -292,17 +292,20 @@ export const findTransactions = withValidation(
               tx.source_partition.account
             )})`,
           },
-          counterpart: tx.counterpart && {
-            ...tx.counterpart,
-            source_partition: {
-              ...tx.counterpart.source_partition,
-              label: `${
-                tx.counterpart.source_partition.name
-              } (${computeAccountLabel(
-                tx.counterpart.source_partition.account
-              )})`,
-            },
-          },
+          counterpart:
+            tx.counterpart && tx.counterpart.is_visible
+              ? {
+                  ...tx.counterpart,
+                  source_partition: {
+                    ...tx.counterpart.source_partition,
+                    label: `${
+                      tx.counterpart.source_partition.name
+                    } (${computeAccountLabel(
+                      tx.counterpart.source_partition.account
+                    )})`,
+                  },
+                }
+              : null,
         };
       });
     }
