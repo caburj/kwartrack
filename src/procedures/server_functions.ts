@@ -68,6 +68,19 @@ export const findUserByEmail = withValidation(
   }
 );
 
+type Account = {
+  name: string;
+  owners: {
+    name: string;
+  }[];
+};
+
+const computeAccountLabel = (acc: Account) => {
+  return acc.owners.length === 1
+    ? `${acc.owners[0].name}'s ${acc.name}`
+    : acc.name;
+};
+
 export const getAccounts = withValidation(
   object({ userId: string() }),
   async ({ userId }) => {
@@ -78,6 +91,7 @@ export const getAccounts = withValidation(
       owners: {
         id: true,
         username: true,
+        name: true,
       },
       partitions: {
         id: true,
@@ -88,7 +102,9 @@ export const getAccounts = withValidation(
     const client = baseClient.withGlobals({ current_user_id: userId });
     const result = await query.run(client);
     if (result.length !== 0) {
-      return result;
+      return result.map((acc) => {
+        return { ...acc, label: computeAccountLabel(acc) };
+      });
     }
   }
 );
@@ -130,13 +146,13 @@ export const getPartitionOptions = withValidation(
       return {
         id: true,
         name: true,
-        owners: {
-          id: true,
-          username: true,
-        },
         account: {
           id: true,
           name: true,
+          owners: {
+            id: true,
+            name: true,
+          },
         },
         is_private: true,
         filter: partition.is_visible,
@@ -146,7 +162,15 @@ export const getPartitionOptions = withValidation(
       baseClient.withGlobals({ current_user_id: userId })
     );
     if (result.length !== 0) {
-      return result;
+      return result.map((p) => {
+        return {
+          ...p,
+          account: {
+            ...p.account,
+            label: computeAccountLabel(p.account),
+          },
+        };
+      });
     }
   }
 );
@@ -212,28 +236,29 @@ export const findTransactions = withValidation(
           } else {
             filter = baseFilter;
           }
-          return {
+
+          const partitionFields = {
             id: true,
-            value: true,
-            source_partition: {
+            name: true,
+            account: {
               id: true,
               name: true,
-              account: {
+              owners: {
                 id: true,
                 name: true,
               },
             },
+          } as const;
+
+          return {
+            id: true,
+            value: true,
+            source_partition: partitionFields,
             counterpart: {
               id: true,
               value: true,
-              source_partition: {
-                id: true,
-                name: true,
-                account: {
-                  id: true,
-                  name: true,
-                },
-              },
+              source_partition: partitionFields,
+              is_visible: true,
             },
             category: {
               id: true,
@@ -258,7 +283,28 @@ export const findTransactions = withValidation(
       cIds: categoryIds,
     });
     if (result.length !== 0) {
-      return result;
+      return result.map((tx) => {
+        return {
+          ...tx,
+          source_partition: {
+            ...tx.source_partition,
+            label: `${tx.source_partition.name} (${computeAccountLabel(
+              tx.source_partition.account
+            )})`,
+          },
+          counterpart: tx.counterpart && {
+            ...tx.counterpart,
+            source_partition: {
+              ...tx.counterpart.source_partition,
+              label: `${
+                tx.counterpart.source_partition.name
+              } (${computeAccountLabel(
+                tx.counterpart.source_partition.account
+              )})`,
+            },
+          },
+        };
+      });
     }
   }
 );

@@ -7,3 +7,14 @@
     private category.
   - A private partition with private category transactions can't be changed to a
     public partition.
+
+# TODO
+
+* [ ] A way to reinitialize the database.
+  - During dev, we want to start from scratch.
+  - When starting from scratch, the micro migration steps should be ignored.
+    - There is no point in running the migration steps, it can just be
+      initialized with the latest schema.
+
+* [ ] Migration.
+  - Looks like piecewise migrations are needed when developing new features.

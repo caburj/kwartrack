@@ -158,7 +158,7 @@ function Accounts({ userId }: { userId: string }) {
                 justifyContent: "space-between",
               })}
             >
-              <span>{account.name}</span>
+              <span>{account.label}</span>
               <LoadingValue
                 queryKey={[
                   "accountBalance",
@@ -473,9 +473,9 @@ function Transactions({ userId }: { userId: string }) {
 
   const getPartitionColumn = (transaction: Transaction) => {
     if (transaction.kind === "Transfer" && transaction.counterpart) {
-      return `${transaction.source_partition.name} -> ${transaction.counterpart?.source_partition.name}`;
+      return `${transaction.source_partition.label} -> ${transaction.counterpart.source_partition.label}`;
     } else {
-      return transaction.source_partition.name;
+      return transaction.source_partition.label;
     }
   };
 
@@ -581,7 +581,9 @@ function TransactionForm({ user }: { user: { id: string } }) {
   } catch (_error) {}
 
   type Partition = NonNullable<Unpacked<typeof partitions.data>>;
-  type Category = Unpacked<NonNullable<Unpacked<typeof categories.data>>['expense']>;
+  type Category = Unpacked<
+    NonNullable<Unpacked<typeof categories.data>>["expense"]
+  >;
 
   const getPartitionOptions = (
     partitions: Partition[],
@@ -596,7 +598,7 @@ function TransactionForm({ user }: { user: { id: string } }) {
           );
           if (partitionsToShow.length === 0) return null;
           return (
-            <optgroup key={accountId} label={partitions[0].account.name}>
+            <optgroup key={accountId} label={partitions[0].account.label}>
               {partitionsToShow.map((partition) => (
                 <option key={partition.id} value={partition.id}>
                   {partition.name}

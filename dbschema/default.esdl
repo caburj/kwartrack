@@ -39,7 +39,7 @@ module default {
     }
 
     multi link owners := .account.owners;
-    property is_visible := not .is_private or global current_user.is_admin or any(.owners = global current_user)
+    property is_visible := not .is_private or global current_user.is_admin or any(.owners = global current_user);
   }
 
   type ECategory {
