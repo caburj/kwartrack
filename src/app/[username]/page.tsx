@@ -36,7 +36,15 @@ export function UserPage({ username }: { username: string }) {
       {(user) => (
         <>
           <SideBar user={user} />
-          <div>
+          <div
+            className={css({
+              height: "100%",
+              display: "flex",
+              backgroundColor: "#f5f5f5",
+              flexDirection: "column",
+              flexGrow: 1,
+            })}
+          >
             <TransactionForm user={user} />
             <Transactions userId={user.id} />
           </div>
@@ -495,7 +503,7 @@ function Transactions({ userId }: { userId: string }) {
     <QueryResult
       query={transactions}
       as="div"
-      className={css({ padding: "1rem" })}
+      className={css({ padding: "1rem", overflowY: "scroll" })}
       onLoading={<>Loading transactions...</>}
       onUndefined={<>Select a partition to show transactions</>}
     >
@@ -566,6 +574,28 @@ function Transactions({ userId }: { userId: string }) {
   );
 }
 
+function FormInput(props: { children: React.ReactNode; flexGrow?: number, width: string }) {
+  return (
+    <div
+      className={css({
+        display: "flex",
+        flexDirection: "column",
+        flexGrow: props.flexGrow,
+        width: props.width,
+        padding: "0.5rem",
+        "& *": {
+          padding: "0.25rem",
+        },
+        "& label": {
+          fontSize: "0.8rem",
+        },
+      })}
+    >
+      {props.children}
+    </div>
+  );
+}
+
 function TransactionForm({ user }: { user: { id: string } }) {
   const queryClient = useQueryClient();
   const [store] = useContext(UserPageStoreContext);
@@ -579,7 +609,7 @@ function TransactionForm({ user }: { user: { id: string } }) {
   const [inputCategoryIsPrivate, setInputCategoryIsPrivate] = useState(false);
   const [inputValue, setInputValue] = useState("");
 
-  let value: number;
+  let value: number | undefined = undefined;
   try {
     value = parseFloat(inputValue);
   } catch (_error) {}
@@ -623,135 +653,139 @@ function TransactionForm({ user }: { user: { id: string } }) {
     }
   };
 
+  const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const target = event.target as HTMLFormElement;
+    const formdata = new FormData(target as HTMLFormElement);
+    const formObj = Object.fromEntries(formdata.entries());
+    const dataSchema = object({
+      sourcePartitionId: string(),
+      destinationPartitionId: optional(string()),
+      categoryId: string(),
+      value: number(),
+      description: optional(string()),
+      userId: string(),
+    });
+    const parsedData = dataSchema.parse({
+      ...formObj,
+      userId: user.id,
+      value,
+    });
+    const { transaction, counterpart } = await rpc.post.createTransaction(
+      parsedData
+    );
+    target.reset();
+    if (transaction) {
+      setInputValue("");
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({
+        queryKey: [
+          "categoryBalance",
+          {
+            categoryId: parsedData.categoryId,
+          },
+        ],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [
+          "partitionBalance",
+          {
+            partitionId: parsedData.sourcePartitionId,
+          },
+        ],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [
+          "accountBalance",
+          {
+            accountId: transaction.source_partition.account.id,
+          },
+        ],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["categoryKindBalance", transaction.category.kind],
+      });
+    }
+    if (counterpart) {
+      queryClient.invalidateQueries({
+        queryKey: [
+          "partitionBalance",
+          {
+            partitionId: parsedData.destinationPartitionId,
+          },
+        ],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [
+          "accountBalance",
+          {
+            accountId: counterpart.source_partition.account.id,
+          },
+        ],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["categoryKindBalance", counterpart.category.kind],
+      });
+    }
+  };
+
   return (
-    <form
-      className={css({ display: "flex", flexDirection: "column" })}
-      onSubmit={async (event) => {
-        event.preventDefault();
-        const target = event.target as HTMLFormElement;
-        const formdata = new FormData(target as HTMLFormElement);
-        const formObj = Object.fromEntries(formdata.entries());
-        const dataSchema = object({
-          sourcePartitionId: string(),
-          destinationPartitionId: optional(string()),
-          categoryId: string(),
-          value: number(),
-          description: optional(string()),
-          userId: string(),
-        });
-        const parsedData = dataSchema.parse({
-          ...formObj,
-          userId: user.id,
-          value,
-        });
-        const { transaction, counterpart } = await rpc.post.createTransaction(
-          parsedData
-        );
-        target.reset();
-        if (transaction) {
-          setInputValue("");
-          queryClient.invalidateQueries({ queryKey: ["transactions"] });
-          queryClient.invalidateQueries({
-            queryKey: [
-              "categoryBalance",
-              {
-                categoryId: parsedData.categoryId,
-              },
-            ],
-          });
-          queryClient.invalidateQueries({
-            queryKey: [
-              "partitionBalance",
-              {
-                partitionId: parsedData.sourcePartitionId,
-              },
-            ],
-          });
-          queryClient.invalidateQueries({
-            queryKey: [
-              "accountBalance",
-              {
-                accountId: transaction.source_partition.account.id,
-              },
-            ],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["categoryKindBalance", transaction.category.kind],
-          });
-        }
-        if (counterpart) {
-          queryClient.invalidateQueries({
-            queryKey: [
-              "partitionBalance",
-              {
-                partitionId: parsedData.destinationPartitionId,
-              },
-            ],
-          });
-          queryClient.invalidateQueries({
-            queryKey: [
-              "accountBalance",
-              {
-                accountId: counterpart.source_partition.account.id,
-              },
-            ],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["categoryKindBalance", counterpart.category.kind],
-          });
-        }
-      }}
-    >
-      <label htmlFor="categoryId">Category</label>
-      <QueryResult query={categories}>
-        {(categories) => (
-          <select
-            name="categoryId"
-            onChange={(event) => {
-              const selectedCategory = [
-                ...categories.income,
-                ...categories.expense,
-                ...categories.transfer,
-              ].find((c) => c.id === event.target.value);
-              if (!selectedCategory) return;
-              setInputCategoryKind(selectedCategory.kind);
-              setInputCategoryIsPrivate(selectedCategory.is_private);
-            }}
-          >
-            <optgroup label="Income">
-              {categories.income.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {getCategoryOptionName(c)}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Expenses">
-              {categories.expense.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {getCategoryOptionName(c)}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Transfers">
-              {categories.transfer.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {getCategoryOptionName(c)}
-                </option>
-              ))}
-            </optgroup>
-          </select>
-        )}
-      </QueryResult>
-      <label htmlFor="sourcePartitionId">Source Partition</label>
-      <QueryResult query={partitions}>
-        {(partitions) => (
-          <select name="sourcePartitionId">
-            {getPartitionOptions(partitions, inputCategoryIsPrivate)}
-          </select>
-        )}
-      </QueryResult>
+    <form onSubmit={onSubmit} className={css({ display: "flex" })}>
+      <FormInput flexGrow={2} width="20%">
+        <label htmlFor="categoryId">Category</label>
+        <QueryResult query={categories}>
+          {(categories) => (
+            <select
+              name="categoryId"
+              onChange={(event) => {
+                const selectedCategory = [
+                  ...categories.income,
+                  ...categories.expense,
+                  ...categories.transfer,
+                ].find((c) => c.id === event.target.value);
+                if (!selectedCategory) return;
+                setInputCategoryKind(selectedCategory.kind);
+                setInputCategoryIsPrivate(selectedCategory.is_private);
+              }}
+            >
+              <optgroup label="Income">
+                {categories.income.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {getCategoryOptionName(c)}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Expenses">
+                {categories.expense.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {getCategoryOptionName(c)}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Transfers">
+                {categories.transfer.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {getCategoryOptionName(c)}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          )}
+        </QueryResult>
+      </FormInput>
+      <FormInput flexGrow={2} width="20%">
+        <label htmlFor="sourcePartitionId">Source Partition</label>
+        <QueryResult query={partitions}>
+          {(partitions) => (
+            <select name="sourcePartitionId">
+              {getPartitionOptions(partitions, inputCategoryIsPrivate)}
+            </select>
+          )}
+        </QueryResult>
+      </FormInput>
+
       {inputCategoryKind == "Transfer" ? (
-        <>
+        <FormInput flexGrow={2} width="20%">
           <label htmlFor="destinationPartitionId">Destination Partition</label>
           <QueryResult query={partitions}>
             {(partitions) => (
@@ -760,21 +794,28 @@ function TransactionForm({ user }: { user: { id: string } }) {
               </select>
             )}
           </QueryResult>
-        </>
+        </FormInput>
       ) : null}
-      <label htmlFor="value">Value</label>
-      <input
-        type="text"
-        inputMode="numeric"
-        name="value"
-        value={inputValue}
-        onInput={(event) => {
-          setInputValue((event.target as HTMLInputElement).value);
-        }}
-      />
-      <label htmlFor="description">Description</label>
-      <input type="text" name="description" />
-      <input type="submit" value="Submit" />
+      <FormInput flexGrow={1} width="10%">
+        <label htmlFor="value">Value</label>
+        <input
+          className={css({
+            textAlign: "right",
+          })}
+          type="text"
+          inputMode="numeric"
+          name="value"
+          value={inputValue}
+          onInput={(event) => {
+            setInputValue((event.target as HTMLInputElement).value);
+          }}
+        />
+      </FormInput>
+      <FormInput flexGrow={4} width="40%">
+        <label htmlFor="description">Description</label>
+        <input type="text" name="description" />
+      </FormInput>
+      <input type="submit" value="Create" hidden />
     </form>
   );
 }
