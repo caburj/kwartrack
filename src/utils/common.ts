@@ -22,5 +22,5 @@ const nf = new Intl.NumberFormat("fr-BE", {
 });
 
 export function formatValue(value: number) {
-  return nf.format(value);
+  return nf.format(Math.abs(value));
 }

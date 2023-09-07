@@ -491,90 +491,131 @@ function Transactions({ userId }: { userId: string }) {
     }
   };
 
-  const noSign = (value: string) => {
-    if (value[0] === "-") {
-      return value.slice(1);
-    } else {
-      return value;
-    }
+  const getCategoryLabel = (category: Transaction["category"]) => {
+    const prefix = category.kind[0];
+    return `[${prefix}] ${category.name}`;
   };
 
   return (
     <QueryResult
       query={transactions}
       as="div"
-      className={css({ padding: "1rem", overflowY: "scroll" })}
+      className={css({ margin: "0.5rem", overflowY: "scroll" })}
       onLoading={<>Loading transactions...</>}
       onUndefined={<>Select a partition to show transactions</>}
     >
       {(transactions) => (
-        <ul>
-          {transactions.map((transaction) => {
-            return (
-              <li key={transaction.id}>
-                <button
-                  className={css({ cursor: "pointer" })}
-                  onClick={async () => {
-                    setIsDeleting(true);
-                    await rpc.post.deleteTransaction({
-                      transactionId: transaction.id,
-                      userId,
-                    });
-                    queryClient.invalidateQueries({
-                      queryKey: ["transactions"],
-                    });
-                    queryClient.invalidateQueries({
-                      queryKey: ["user", userId],
-                    });
-                    queryClient.invalidateQueries({
-                      queryKey: [
-                        "partitionBalance",
-                        {
-                          partitionId: transaction.source_partition.id,
-                        },
-                      ],
-                    });
-                    queryClient.invalidateQueries({
-                      queryKey: [
-                        "accountBalance",
-                        {
-                          accountId: transaction.source_partition.account.id,
-                        },
-                      ],
-                    });
-                    queryClient.invalidateQueries({
-                      queryKey: [
-                        "categoryBalance",
-                        {
-                          categoryId: transaction.category.id,
-                        },
-                      ],
-                    });
-                    queryClient.invalidateQueries({
-                      queryKey: [
-                        "categoryKindBalance",
-                        transaction.category.kind,
-                      ],
-                    });
-                    setIsDeleting(false);
-                  }}
-                  disabled={isDeleting}
-                >
-                  x
-                </button>{" "}
-                | {transaction.kind[0]} | {transaction.str_date.slice(5)} |{" "}
-                {transaction.category.name} | {getPartitionColumn(transaction)}{" "}
-                | {noSign(transaction.value)} | {transaction.description}
-              </li>
-            );
+        <table
+          className={css({
+            width: "100%",
+            "& td": { px: "2", py: "1", maxWidth: "350px", whiteSpace: "nowrap" },
+            "& th": { px: "2", py: "1", maxWidth: "350px", whiteSpace: "nowrap" },
+            "& thead": {
+              position: "sticky",
+              top: 0,
+              backgroundColor: "#f5f5f5",
+            },
+            "& thead tr": {
+              borderBottom: "3px double black",
+              fontWeight: "bold",
+            },
+            "& tbody tr:nth-child(odd)": {
+              backgroundColor: "#e5e5e5",
+            },
           })}
-        </ul>
+        >
+          <thead>
+            <tr>
+              <th className={css({ textAlign: "left" })}>Date</th>
+              <th className={css({ textAlign: "left" })}>Category</th>
+              <th className={css({ textAlign: "left" })}>Partition</th>
+              <th className={css({ textAlign: "right" })}>Value</th>
+              <th className={css({ textAlign: "left" })}>Description</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {transactions.map((transaction) => {
+              return (
+                <tr key={transaction.id}>
+                  <td>{transaction.str_date.slice(5)}</td>
+                  <td>{getCategoryLabel(transaction.category)}</td>
+                  <td>{getPartitionColumn(transaction)}</td>
+                  <td className={css({ textAlign: "right" })}>
+                    {formatValue(parseFloat(transaction.value))}
+                  </td>
+                  <td>{transaction.description}</td>
+                  <td>
+                    <button
+                      className={css({
+                        cursor: "pointer",
+                        padding: "0 0.25rem",
+                      })}
+                      onClick={async () => {
+                        setIsDeleting(true);
+                        await rpc.post.deleteTransaction({
+                          transactionId: transaction.id,
+                          userId,
+                        });
+                        queryClient.invalidateQueries({
+                          queryKey: ["transactions"],
+                        });
+                        queryClient.invalidateQueries({
+                          queryKey: ["user", userId],
+                        });
+                        queryClient.invalidateQueries({
+                          queryKey: [
+                            "partitionBalance",
+                            {
+                              partitionId: transaction.source_partition.id,
+                            },
+                          ],
+                        });
+                        queryClient.invalidateQueries({
+                          queryKey: [
+                            "accountBalance",
+                            {
+                              accountId:
+                                transaction.source_partition.account.id,
+                            },
+                          ],
+                        });
+                        queryClient.invalidateQueries({
+                          queryKey: [
+                            "categoryBalance",
+                            {
+                              categoryId: transaction.category.id,
+                            },
+                          ],
+                        });
+                        queryClient.invalidateQueries({
+                          queryKey: [
+                            "categoryKindBalance",
+                            transaction.category.kind,
+                          ],
+                        });
+                        setIsDeleting(false);
+                      }}
+                      disabled={isDeleting}
+                    >
+                      x
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       )}
     </QueryResult>
   );
 }
 
-function FormInput(props: { children: React.ReactNode; flexGrow?: number, width: string }) {
+function FormInput(props: {
+  children: React.ReactNode;
+  flexGrow?: number;
+  width: string;
+}) {
   return (
     <div
       className={css({
