@@ -16,7 +16,7 @@ export function groupBy<T>(
   return result;
 }
 
-const nf = new Intl.NumberFormat("fr-BE", {
+const nf = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
   minimumFractionDigits: 2,
 });

@@ -508,15 +508,23 @@ function Transactions({ userId }: { userId: string }) {
         <table
           className={css({
             width: "100%",
-            "& td": { px: "2", py: "1", maxWidth: "350px", whiteSpace: "nowrap" },
-            "& th": { px: "2", py: "1", maxWidth: "350px", whiteSpace: "nowrap" },
-            "& thead": {
-              position: "sticky",
-              top: 0,
-              backgroundColor: "#f5f5f5",
+            borderCollapse: "separate",
+            borderSpacing: "0",
+            "& td": {
+              px: "2",
+              py: "1",
+              maxWidth: "350px",
+              whiteSpace: "nowrap",
+            },
+            "& th": {
+              px: "2",
+              py: "1",
+              maxWidth: "350px",
+              whiteSpace: "nowrap",
+              borderTop: "1px solid black",
+              borderBottom: "3px double black",
             },
             "& thead tr": {
-              borderBottom: "3px double black",
               fontWeight: "bold",
             },
             "& tbody tr:nth-child(odd)": {
@@ -524,7 +532,13 @@ function Transactions({ userId }: { userId: string }) {
             },
           })}
         >
-          <thead>
+          <thead
+            className={css({
+              position: "sticky",
+              top: 0,
+              backgroundColor: "#f5f5f5",
+            })}
+          >
             <tr>
               <th className={css({ textAlign: "left" })}>Date</th>
               <th className={css({ textAlign: "left" })}>Category</th>
@@ -625,10 +639,23 @@ function FormInput(props: {
         width: props.width,
         padding: "0.5rem",
         "& *": {
-          padding: "0.25rem",
+          padding: "0.25rem 0.50rem",
+          borderRadius: "0.25rem",
+        },
+        "& *:focus": {
+          outline: "1px solid blue",
         },
         "& label": {
           fontSize: "0.8rem",
+          fontWeight: "medium",
+        },
+        "& select": {
+          appearance: "none",
+          // TODO: Check the security of this background image.
+          backgroundImage: `url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")`,
+          backgroundRepeat: "no-repeat, repeat",
+          backgroundPosition: "right .7em top 50%, 0 0",
+          backgroundSize: ".65em auto, 100%",
         },
       })}
     >
@@ -840,9 +867,7 @@ function TransactionForm({ user }: { user: { id: string } }) {
       <FormInput flexGrow={1} width="10%">
         <label htmlFor="value">Value</label>
         <input
-          className={css({
-            textAlign: "right",
-          })}
+          className={css({ textAlign: "right" })}
           type="text"
           inputMode="numeric"
           name="value"
