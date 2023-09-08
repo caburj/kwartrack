@@ -28,13 +28,11 @@ export function UserPage({ username }: { username: string }) {
   return (
     <QueryResult
       query={user}
-      as="div"
-      className={css({ display: "flex", height: "100%" })}
       onLoading={<>Loading {`${username}'s accounts`}...</>}
       onUndefined={<>{`${username}'s data`} not found</>}
     >
       {(user) => (
-        <>
+        <div className={css({ display: "flex", height: "100%" })}>
           <SideBar user={user} />
           <div
             className={css({
@@ -48,7 +46,7 @@ export function UserPage({ username }: { username: string }) {
             <TransactionForm user={user} />
             <Transactions userId={user.id} />
           </div>
-        </>
+        </div>
       )}
     </QueryResult>
   );
@@ -100,8 +98,8 @@ function SideBar({ user }: { user: FindUserResult }) {
   return (
     <div
       className={css({
-        width: "1/4",
-        minWidth: "18rem",
+        width: "25%",
+        minWidth: "25%",
         height: "100%",
         display: "flex",
         backgroundColor: "#f5f5f5",
