@@ -5,6 +5,7 @@ type UserPageStore = {
   categoryIds: string[];
   tssDate: Date | undefined;
   tseDate: Date | undefined;
+  nPerPage: number;
 };
 
 type UserPageAction =
@@ -12,6 +13,7 @@ type UserPageAction =
   | { type: "TOGGLE_ACCOUNT"; payload: string[] }
   | { type: "TOGGLE_CATEGORIES"; payload: string[] }
   | { type: "TOGGLE_CATEGORY_KIND"; payload: string[] }
+  | { type: "SET_N_PER_PAGE"; payload: number }
   | { type: "SET_TSS_DATE"; payload: Date | undefined }
   | { type: "SET_TSE_DATE"; payload: Date | undefined };
 
@@ -30,6 +32,7 @@ const lastDayOfCurrentMonth = () => {
 const initStore: UserPageStore = {
   partitionIds: [],
   categoryIds: [],
+  nPerPage: 15,
   tssDate: firstDayOfCurrentMonth(),
   tseDate: lastDayOfCurrentMonth(),
 };
@@ -105,6 +108,9 @@ const userPageStoreReducer = (
           categoryIds: [...state.categoryIds, ...action.payload],
         };
       }
+    }
+    case "SET_N_PER_PAGE": {
+      return { ...state, nPerPage: action.payload };
     }
     case "SET_TSS_DATE": {
       return { ...state, tssDate: action.payload };

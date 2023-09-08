@@ -465,10 +465,22 @@ function Category({
 
 function Transactions({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
-  const [store] = useContext(UserPageStoreContext);
+  const [store, dispatch] = useContext(UserPageStoreContext);
   const [isDeleting, setIsDeleting] = useState(false);
-  const transactions = useQuery(["transactions", store], () => {
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const incrementPage = () => {
+    setCurrentPage((currentPage) => currentPage + 1);
+  };
+
+  const decrementPage = () => {
+    setCurrentPage((currentPage) => currentPage - 1);
+  };
+
+  const transactions = useQuery(["transactions", store, currentPage], () => {
     return rpc.post.findTransactions({
+      currentPage,
+      nPerPage: store.nPerPage,
       partitionIds: store.partitionIds,
       categoryIds: store.categoryIds,
       ownerId: userId,
@@ -477,7 +489,7 @@ function Transactions({ userId }: { userId: string }) {
     });
   });
 
-  type Transaction = NonNullable<Unpacked<typeof transactions.data>>;
+  type Transaction = Unpacked<NonNullable<typeof transactions.data>[0]>;
 
   const getPartitionColumn = (transaction: Transaction) => {
     if (transaction.kind === "Transfer") {
@@ -491,20 +503,46 @@ function Transactions({ userId }: { userId: string }) {
     }
   };
 
-  const getCategoryLabel = (category: Transaction["category"]) => {
-    const prefix = category.kind[0];
-    return `[${prefix}] ${category.name}`;
-  };
-
   return (
-    <QueryResult
-      query={transactions}
-      as="div"
-      className={css({ margin: "0.5rem", overflowY: "scroll" })}
-      onLoading={<>Loading transactions...</>}
-      onUndefined={<>Select a partition to show transactions</>}
-    >
-      {(transactions) => (
+    <>
+      <div
+        className={css({
+          display: "flex",
+          justifyContent: "flex-end",
+          padding: "0.5rem",
+          "& button": {
+            cursor: "pointer",
+            padding: "0 0.50rem",
+          },
+        })}
+      >
+        <span>Items per page</span>
+        <input
+          type="number"
+          min="1"
+          max="100"
+          value={store.nPerPage}
+          onChange={(event) => {
+            const value = parseInt(event.target.value);
+            if (isNaN(value)) return;
+            dispatch({ type: "SET_N_PER_PAGE", payload: value });
+          }}
+        />
+        <button
+          onClick={decrementPage}
+          disabled={transactions.isLoading || currentPage === 1}
+        >
+          Prev
+        </button>
+        <span>{currentPage}</span>
+        <button
+          onClick={incrementPage}
+          disabled={transactions.isLoading || !transactions.data?.[1]}
+        >
+          Next
+        </button>
+      </div>
+      <div className={css({ margin: "0.5rem", overflowY: "scroll" })}>
         <table
           className={css({
             width: "100%",
@@ -513,13 +551,10 @@ function Transactions({ userId }: { userId: string }) {
             "& td": {
               px: "2",
               py: "1",
-              maxWidth: "350px",
-              whiteSpace: "nowrap",
             },
             "& th": {
               px: "2",
               py: "1",
-              maxWidth: "350px",
               whiteSpace: "nowrap",
               borderTop: "1px solid black",
               borderBottom: "3px double black",
@@ -540,88 +575,178 @@ function Transactions({ userId }: { userId: string }) {
             })}
           >
             <tr>
-              <th className={css({ textAlign: "left" })}>Date</th>
-              <th className={css({ textAlign: "left" })}>Category</th>
-              <th className={css({ textAlign: "left" })}>Partition</th>
-              <th className={css({ textAlign: "right" })}>Value</th>
-              <th className={css({ textAlign: "left" })}>Description</th>
-              <th></th>
+              <th
+                className={css({
+                  textAlign: "left",
+                  width: "10%",
+                })}
+              >
+                Date
+              </th>
+              <th
+                className={css({
+                  textAlign: "left",
+                  width: "20%",
+                })}
+              >
+                Category
+              </th>
+              <th
+                className={css({
+                  textAlign: "left",
+                  width: "22.5%",
+                })}
+              >
+                Partition
+              </th>
+              <th
+                className={css({
+                  textAlign: "right",
+                  width: "15%",
+                })}
+              >
+                Value
+              </th>
+              <th
+                className={css({
+                  textAlign: "left",
+                  width: "30%",
+                })}
+              >
+                Description
+              </th>
+              <th
+                className={css({
+                  width: "2.5%",
+                })}
+              ></th>
             </tr>
           </thead>
-          <tbody>
-            {transactions.map((transaction) => {
-              return (
-                <tr key={transaction.id}>
-                  <td>{transaction.str_date.slice(5)}</td>
-                  <td>{getCategoryLabel(transaction.category)}</td>
-                  <td>{getPartitionColumn(transaction)}</td>
-                  <td className={css({ textAlign: "right" })}>
-                    {formatValue(parseFloat(transaction.value))}
-                  </td>
-                  <td>{transaction.description}</td>
-                  <td>
-                    <button
-                      className={css({
-                        cursor: "pointer",
-                        padding: "0 0.25rem",
-                      })}
-                      onClick={async () => {
-                        setIsDeleting(true);
-                        await rpc.post.deleteTransaction({
-                          transactionId: transaction.id,
-                          userId,
-                        });
-                        queryClient.invalidateQueries({
-                          queryKey: ["transactions"],
-                        });
-                        queryClient.invalidateQueries({
-                          queryKey: ["user", userId],
-                        });
-                        queryClient.invalidateQueries({
-                          queryKey: [
-                            "partitionBalance",
-                            {
-                              partitionId: transaction.source_partition.id,
-                            },
-                          ],
-                        });
-                        queryClient.invalidateQueries({
-                          queryKey: [
-                            "accountBalance",
-                            {
-                              accountId:
-                                transaction.source_partition.account.id,
-                            },
-                          ],
-                        });
-                        queryClient.invalidateQueries({
-                          queryKey: [
-                            "categoryBalance",
-                            {
-                              categoryId: transaction.category.id,
-                            },
-                          ],
-                        });
-                        queryClient.invalidateQueries({
-                          queryKey: [
-                            "categoryKindBalance",
-                            transaction.category.kind,
-                          ],
-                        });
-                        setIsDeleting(false);
-                      }}
-                      disabled={isDeleting}
-                    >
-                      x
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
+          <QueryResult query={transactions}>
+            {([transactions]) => (
+              <tbody>
+                {transactions.map((transaction) => {
+                  return (
+                    <tr key={transaction.id}>
+                      <td
+                        className={css({
+                          textAlign: "left",
+                          width: "10%",
+                        })}
+                      >
+                        {transaction.str_date.slice(5)}
+                      </td>
+                      <td
+                        className={css({
+                          textAlign: "left",
+                          width: "20%",
+                        })}
+                      >
+                        <span
+                          className={css({
+                            display: "flex",
+                            width: "100%",
+                          })}
+                        >
+                          <span className={css({ width: "1rem" })}>
+                            {transaction.category.kind[0]}
+                          </span>
+                          <span>{transaction.category.name}</span>
+                        </span>
+                      </td>
+                      <td
+                        className={css({
+                          textAlign: "left",
+                          width: "22.5%",
+                        })}
+                      >
+                        {getPartitionColumn(transaction)}
+                      </td>
+                      <td
+                        className={css({
+                          textAlign: "right",
+                          width: "15%",
+                        })}
+                      >
+                        {formatValue(parseFloat(transaction.value))}
+                      </td>
+                      <td
+                        className={css({
+                          textAlign: "left",
+                          width: "30%",
+                        })}
+                      >
+                        {transaction.description}
+                      </td>
+                      <td
+                        className={css({
+                          width: "2.5%",
+                        })}
+                      >
+                        <button
+                          className={css({
+                            cursor: "pointer",
+                            padding: "0 0.25rem",
+                          })}
+                          onClick={async () => {
+                            setIsDeleting(true);
+                            await rpc.post.deleteTransaction({
+                              transactionId: transaction.id,
+                              userId,
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: ["transactions"],
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: ["user", userId],
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: [
+                                "partitionBalance",
+                                {
+                                  partitionId: transaction.source_partition.id,
+                                },
+                              ],
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: [
+                                "accountBalance",
+                                {
+                                  accountId:
+                                    transaction.source_partition.account.id,
+                                },
+                              ],
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: [
+                                "categoryBalance",
+                                {
+                                  categoryId: transaction.category.id,
+                                },
+                              ],
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: [
+                                "categoryKindBalance",
+                                transaction.category.kind,
+                              ],
+                            });
+                            setIsDeleting(false);
+                          }}
+                          disabled={isDeleting}
+                        >
+                          x
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            )}
+          </QueryResult>
         </table>
-      )}
-    </QueryResult>
+      </div>
+    </>
   );
 }
 

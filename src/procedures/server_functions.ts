@@ -177,13 +177,23 @@ export const getPartitionOptions = withValidation(
 
 export const findTransactions = withValidation(
   object({
+    currentPage: number([minValue(1)]),
+    nPerPage: number([minValue(1)]),
     partitionIds: array(string()),
     categoryIds: array(string()),
     ownerId: string(),
     tssDate: optional(string()),
     tseDate: optional(string()),
   }),
-  async ({ partitionIds, categoryIds, ownerId, tssDate, tseDate }) => {
+  async ({
+    currentPage,
+    nPerPage,
+    partitionIds,
+    categoryIds,
+    ownerId,
+    tssDate,
+    tseDate,
+  }) => {
     const query = e.params(
       { pIds: e.array(e.uuid), cIds: e.array(e.uuid) },
       ({ pIds, cIds }) =>
@@ -273,6 +283,8 @@ export const findTransactions = withValidation(
               expression: transaction.date,
               direction: e.DESC,
             },
+            offset: (currentPage - 1) * nPerPage,
+            limit: nPerPage + 1,
           };
         })
     );
@@ -282,32 +294,38 @@ export const findTransactions = withValidation(
       pIds: partitionIds,
       cIds: categoryIds,
     });
+    const hasNextPage = result.length === nPerPage + 1;
     if (result.length !== 0) {
-      return result.map((tx) => {
-        return {
-          ...tx,
-          source_partition: {
-            ...tx.source_partition,
-            label: `${tx.source_partition.name} (${computeAccountLabel(
-              tx.source_partition.account
-            )})`,
-          },
-          counterpart:
-            tx.counterpart && tx.counterpart.is_visible
-              ? {
-                  ...tx.counterpart,
-                  source_partition: {
-                    ...tx.counterpart.source_partition,
-                    label: `${
-                      tx.counterpart.source_partition.name
-                    } (${computeAccountLabel(
-                      tx.counterpart.source_partition.account
-                    )})`,
-                  },
-                }
-              : null,
-        };
-      });
+      return [
+        result
+          .map((tx) => {
+            return {
+              ...tx,
+              source_partition: {
+                ...tx.source_partition,
+                label: `${tx.source_partition.name} (${computeAccountLabel(
+                  tx.source_partition.account
+                )})`,
+              },
+              counterpart:
+                tx.counterpart && tx.counterpart.is_visible
+                  ? {
+                      ...tx.counterpart,
+                      source_partition: {
+                        ...tx.counterpart.source_partition,
+                        label: `${
+                          tx.counterpart.source_partition.name
+                        } (${computeAccountLabel(
+                          tx.counterpart.source_partition.account
+                        )})`,
+                      },
+                    }
+                  : null,
+            };
+          })
+          .slice(0, nPerPage),
+        hasNextPage,
+      ] as const;
     }
   }
 );
