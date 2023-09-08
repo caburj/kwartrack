@@ -549,10 +549,12 @@ function Transactions({ userId }: { userId: string }) {
             "& td": {
               px: "2",
               py: "1",
+              verticalAlign: "top",
             },
             "& th": {
               px: "2",
               py: "1",
+              verticalAlign: "top",
               whiteSpace: "nowrap",
               borderTop: "1px solid black",
               borderBottom: "3px double black",
@@ -576,7 +578,7 @@ function Transactions({ userId }: { userId: string }) {
               <th
                 className={css({
                   textAlign: "left",
-                  width: "10%",
+                  width: "7.5%",
                 })}
               >
                 Date
@@ -584,7 +586,7 @@ function Transactions({ userId }: { userId: string }) {
               <th
                 className={css({
                   textAlign: "left",
-                  width: "20%",
+                  width: "18%",
                 })}
               >
                 Category
@@ -592,7 +594,7 @@ function Transactions({ userId }: { userId: string }) {
               <th
                 className={css({
                   textAlign: "left",
-                  width: "22.5%",
+                  width: "22%",
                 })}
               >
                 Partition
@@ -600,7 +602,7 @@ function Transactions({ userId }: { userId: string }) {
               <th
                 className={css({
                   textAlign: "right",
-                  width: "15%",
+                  width: "10%",
                 })}
               >
                 Value
@@ -608,7 +610,7 @@ function Transactions({ userId }: { userId: string }) {
               <th
                 className={css({
                   textAlign: "left",
-                  width: "30%",
+                  width: "40%",
                 })}
               >
                 Description
@@ -629,7 +631,7 @@ function Transactions({ userId }: { userId: string }) {
                       <td
                         className={css({
                           textAlign: "left",
-                          width: "10%",
+                          width: "7.5%",
                         })}
                       >
                         {transaction.str_date.slice(5)}
@@ -637,7 +639,7 @@ function Transactions({ userId }: { userId: string }) {
                       <td
                         className={css({
                           textAlign: "left",
-                          width: "20%",
+                          width: "18%",
                         })}
                       >
                         <span
@@ -655,7 +657,7 @@ function Transactions({ userId }: { userId: string }) {
                       <td
                         className={css({
                           textAlign: "left",
-                          width: "22.5%",
+                          width: "22%",
                         })}
                       >
                         {getPartitionColumn(transaction)}
@@ -663,7 +665,7 @@ function Transactions({ userId }: { userId: string }) {
                       <td
                         className={css({
                           textAlign: "right",
-                          width: "15%",
+                          width: "10%",
                         })}
                       >
                         {formatValue(parseFloat(transaction.value))}
@@ -671,7 +673,7 @@ function Transactions({ userId }: { userId: string }) {
                       <td
                         className={css({
                           textAlign: "left",
-                          width: "30%",
+                          width: "40%",
                         })}
                       >
                         {transaction.description}
