@@ -7,6 +7,7 @@ import {
   type UseQueryResult,
   useQuery,
   useQueryClient,
+  useMutation,
 } from "@tanstack/react-query";
 import { number, object, optional, string } from "valibot";
 import { UserPageStoreProvider, UserPageStoreContext } from "./store";
@@ -809,6 +810,7 @@ function TransactionForm({ user }: { user: { id: string } }) {
   const categories = useQuery(["categories", user.id], () => {
     return rpc.post.getUserCategories({ userId: user.id });
   });
+  const createTransaction = useMutation(rpc.post.createTransaction);
   const [inputCategoryKind, setInputCategoryKind] = useState("");
   const [inputCategoryIsPrivate, setInputCategoryIsPrivate] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -857,6 +859,10 @@ function TransactionForm({ user }: { user: { id: string } }) {
     }
   };
 
+  const shouldDisableSubmit = () => {
+    return !value || value <= 0 || isNaN(value) || createTransaction.isLoading;
+  };
+
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const target = event.target as HTMLFormElement;
@@ -875,7 +881,7 @@ function TransactionForm({ user }: { user: { id: string } }) {
       userId: user.id,
       value,
     });
-    const { transaction, counterpart } = await rpc.post.createTransaction(
+    const { transaction, counterpart } = await createTransaction.mutateAsync(
       parsedData
     );
     target.reset();
@@ -951,6 +957,7 @@ function TransactionForm({ user }: { user: { id: string } }) {
                 setInputCategoryKind(selectedCategory.kind);
                 setInputCategoryIsPrivate(selectedCategory.is_private);
               }}
+              disabled={createTransaction.isLoading}
             >
               <optgroup label="Income">
                 {categories.income.map((c) => (
@@ -981,7 +988,10 @@ function TransactionForm({ user }: { user: { id: string } }) {
         <label htmlFor="sourcePartitionId">Source Partition</label>
         <QueryResult query={partitions}>
           {(partitions) => (
-            <select name="sourcePartitionId">
+            <select
+              name="sourcePartitionId"
+              disabled={createTransaction.isLoading}
+            >
               {getPartitionOptions(partitions, inputCategoryIsPrivate)}
             </select>
           )}
@@ -993,7 +1003,10 @@ function TransactionForm({ user }: { user: { id: string } }) {
           <label htmlFor="destinationPartitionId">Destination Partition</label>
           <QueryResult query={partitions}>
             {(partitions) => (
-              <select name="destinationPartitionId">
+              <select
+                name="destinationPartitionId"
+                disabled={createTransaction.isLoading}
+              >
                 {getPartitionOptions(partitions, inputCategoryIsPrivate)}
               </select>
             )}
@@ -1011,13 +1024,41 @@ function TransactionForm({ user }: { user: { id: string } }) {
           onInput={(event) => {
             setInputValue((event.target as HTMLInputElement).value);
           }}
+          disabled={createTransaction.isLoading}
         />
       </FormInput>
       <FormInput flexGrow={4} width="40%">
         <label htmlFor="description">Description</label>
-        <input type="text" name="description" />
+        <input
+          type="text"
+          name="description"
+          disabled={createTransaction.isLoading}
+        />
       </FormInput>
-      <input type="submit" value="Create" hidden />
+      <button
+        className={css({
+          padding: "0.5rem",
+          m: "2",
+          borderRadius: "0.25rem",
+          cursor: "pointer",
+          color: "blue",
+          outline: "1px solid blue",
+          border: "none",
+          "&:focus": {
+            outline: "2px solid blue",
+            color: "blue",
+          },
+          "&:disabled": {
+            outline: "1px solid lightgray",
+            color: "lightgray",
+            border: "none",
+          },
+        })}
+        type="submit"
+        disabled={shouldDisableSubmit()}
+      >
+        Submit
+      </button>
     </form>
   );
 }

@@ -30,3 +30,9 @@
   * Done by setting the width and min-width of the sidebar to be equal.
 
 * [X] Delete button should only be visible to the owner of the transaction.
+
+* [X] Recording a transaction may take time. Show a spinner and deactivate the
+  onSubmit when it's in progress.
+  - Also, maybe disable the form fields when in progress?
+  - [DONE] No spinner, instead disabled submit button. Also the inputs are
+    disabled.
