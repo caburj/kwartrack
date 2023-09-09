@@ -23,6 +23,64 @@
 
 * [ ] Properly handle "undefined" result from rpc, also error.
 
+* [ ] User registration.
+  * [ ] Ask if the user wants a new db or join an existing one.
+    * [ ] If the user wants a new db, then create a new db.
+      * [ ] automatically create a default set of categories.
+        - Income
+          - Initial balance
+          - Salary
+          - Reimbursements
+        - Expense
+          - Groceries
+          - Restaurant
+          - Transportation
+          - Entertainment
+          - Shopping
+          - Health
+        - Transfer
+          - Transfer
+    * [ ] If the user wants to join an existing db, then ask for the db name.
+      * [ ] The new user will be added to the db.
+  * [ ] Create one default account and a corresponding default partition.
+    - Account name: "Default"
+    - Partition name: "Default"
+    - The account section in the sidebar should be replaced with the balance of
+      the default account.
+    - Since there is only one partition, use that partition when creating new
+      transactions. So no need to show the partition selection if there is only
+      one partition.
+
+* [ ] When an account contains one partition:
+  - When selecting a partition, the account should be one of the options.
+    Selecting it will select the single linked partition.
+  - [ ] When creating an account, the form should ask if the user wants to have
+    partitions.
+    - If user chooses to have partitions, then the form should ask for the
+      partition names.
+    - Otherwise, a default partition will be created.
+  - The idea is to hide the notion of partitions until the user needs it.
+  - E.g.
+    - Given the following accounts and partitions:
+      - Account: "Cash"
+        - Partition: "Default"
+      - Account: "Bank"
+        - Partition: "Budget"
+        - Partition: "Personal"
+        - Partition: "Savings"
+    - The partition selection should be:
+      - option: Cash
+      - optgroup: Bank
+        - option: Budget
+        - option: Personal
+        - option: Savings
+    - And the account section in the sidebar should look like:
+      - Cash:        $100
+      - Bank:        $100
+        - Budget:     $50
+        - Personal:   $30
+        - Savings:    $20
+
 # DONE
 
 * [X] It's annoying when the columns change width when the content changes.
