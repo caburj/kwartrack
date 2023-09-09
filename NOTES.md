@@ -19,12 +19,14 @@
 * [ ] Migration.
   - Looks like piecewise migrations are needed when developing new features.
 
-* [ ] Delete button should only be visible to the owner of the transaction.
-
 * [ ] Prettier display for the number-of-items-per-page input.
+
+* [ ] Properly handle "undefined" result from rpc, also error.
 
 # DONE
 
 * [X] It's annoying when the columns change width when the content changes.
   Width of the columns should be fixed.
   * Done by setting the width and min-width of the sidebar to be equal.
+
+* [X] Delete button should only be visible to the owner of the transaction.

@@ -501,6 +501,16 @@ function Transactions({ userId }: { userId: string }) {
     }
   };
 
+  const shouldHideDelete = (transaction: Transaction) => {
+    const partitions = [transaction.source_partition];
+    if (transaction.counterpart) {
+      partitions.push(transaction.counterpart.source_partition);
+    }
+    return !partitions.some((p) =>
+      p.account.owners.map((o) => o.id).includes(userId)
+    );
+  };
+
   return (
     <>
       <div
@@ -684,6 +694,7 @@ function Transactions({ userId }: { userId: string }) {
                         })}
                       >
                         <button
+                          hidden={shouldHideDelete(transaction)}
                           className={css({
                             cursor: "pointer",
                             padding: "0 0.25rem",
