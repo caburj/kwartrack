@@ -24,32 +24,47 @@
 * [ ] Properly handle "undefined" result from rpc, also error.
 
 * [ ] User registration.
-  * [ ] Ask if the user wants a new db or join an existing one.
-    * [ ] If the user wants a new db, then create a new db.
-      * [ ] automatically create a default set of categories.
-        - Income
-          - Initial balance
-          - Salary
-          - Reimbursements
-        - Expense
-          - Groceries
-          - Restaurant
-          - Transportation
-          - Entertainment
-          - Shopping
-          - Health
-        - Transfer
-          - Transfer
-    * [ ] If the user wants to join an existing db, then ask for the db name.
-      * [ ] The new user will be added to the db.
-  * [ ] Create one default account and a corresponding default partition.
-    - Account name: "Default"
-    - Partition name: "Default"
-    - The account section in the sidebar should be replaced with the balance of
-      the default account.
-    - Since there is only one partition, use that partition when creating new
-      transactions. So no need to show the partition selection if there is only
-      one partition.
+  - 2 cases
+    - user will start his own db
+    - user will register to an existing db
+  * [ ] Case 1: User will start his own db
+    * [ ] After registration, show the user a wizard to:
+      * [ ] Create accounts and partitions
+        - Should contain minimal explanations to introduce the concept of
+          accounts and partitions.
+        * [ ] This new user is required to create 1 account and 1 partition.
+      * [ ] Show list of categories to create.
+        - Provide default set of options that can be selected/deselected.
+          - Potential options list:
+            - Income
+              - Initial balance
+              - Salary
+              - Reimbursements
+            - Expense
+              - Groceries
+              - Restaurant
+              - Transportation
+              - Entertainment
+              - Shopping
+              - Health
+            - Transfer
+              - Transfer
+        - Should contain minimal explanations to introduce the concept of
+          "Transfer".
+      * [ ] Afterwards, the user is redirected to the main UI.
+
+  * [ ] Case 2: User will join an existing db.
+    - The owner will invite the new user.
+    * [ ] From the main UI, the owner will have a form to invite the new user.
+    * [ ] The new user will be shown a page to accept the invitation.
+      * [ ] After accepting, the new user will be shown a wizard:
+        * [ ] Show the common (or existing visible) accounts and provide minimal
+          explanation.
+        * [ ] No need to offer creation of new accounts/partitions.
+          - He'll have the chance of creating new records in the main UI.
+        * [ ] Same with categories, show the existing categories and provide
+          simple explanations.
+      * [ ] Then redirect to the main UI.
 
 * [ ] When an account contains one partition:
   - When selecting a partition, the account should be one of the options.
