@@ -83,18 +83,22 @@
         - Partition: "Budget"
         - Partition: "Personal"
         - Partition: "Savings"
+
     - The partition selection should be:
       - option: Cash
       - optgroup: Bank
         - option: Budget
         - option: Personal
         - option: Savings
+
     - And the account section in the sidebar should look like:
       - Cash:        $100
       - Bank:        $100
         - Budget:     $50
         - Personal:   $30
         - Savings:    $20
+
+* [ ] Prettify the date section.
 
 # DONE
 
