@@ -1,8 +1,8 @@
 "use client";
 
 import { ReactHTML, useContext, useState } from "react";
-import { css } from "../../../styled-system/css";
-import { rpc } from "../rpc_client";
+import { css } from "../../../../styled-system/css";
+import { rpc } from "../../rpc_client";
 import {
   type UseQueryResult,
   useQuery,
@@ -13,18 +13,26 @@ import { number, object, optional, string } from "valibot";
 import { UserPageStoreProvider, UserPageStoreContext } from "./store";
 import { Unpacked, formatValue, groupBy } from "@/utils/common";
 
-export default function Main(props: { params: { username: string } }) {
-  const { username } = props.params;
+export default function Main(props: {
+  params: { username: string; dbname: string };
+}) {
+  const { username, dbname } = props.params;
   return (
     <UserPageStoreProvider>
-      <UserPage username={username} />
+      <UserPage username={username} dbname={dbname} />
     </UserPageStoreProvider>
   );
 }
 
-export function UserPage({ username }: { username: string }) {
+export function UserPage({
+  username,
+  dbname,
+}: {
+  username: string;
+  dbname: string;
+}) {
   const user = useQuery(["user", username], () => {
-    return rpc.post.findUser({ username });
+    return rpc.post.findUser({ username, dbname });
   });
   return (
     <QueryResult
@@ -45,7 +53,7 @@ export function UserPage({ username }: { username: string }) {
             })}
           >
             <TransactionForm user={user} />
-            <Transactions userId={user.id} />
+            <Transactions user={user} />
           </div>
         </div>
       )}
@@ -122,19 +130,19 @@ function SideBar({ user }: { user: FindUserResult }) {
         })}
       >
         <SectionLabel>Accounts</SectionLabel>
-        <Accounts userId={user.id} />
+        <Accounts user={user} />
         <SectionLabel>Categories</SectionLabel>
-        <Categories userId={user.id} />
+        <Categories user={user} />
       </div>
-      <DateRange userId={user.id} />
+      <DateRange user={user} />
     </div>
   );
 }
 
-function Accounts({ userId }: { userId: string }) {
+function Accounts({ user }: { user: { id: string; dbname: string } }) {
   const [store, dispatch] = useContext(UserPageStoreContext);
-  const accounts = useQuery(["accounts", userId], () => {
-    return rpc.post.getAccounts({ userId });
+  const accounts = useQuery(["accounts", user.id], () => {
+    return rpc.post.getAccounts({ userId: user.id, dbname: user.dbname });
   });
   return (
     <QueryResult
@@ -176,12 +184,13 @@ function Accounts({ userId }: { userId: string }) {
                 valueLoader={() =>
                   rpc.post.getAccountBalance({
                     accountId: account.id,
-                    userId,
+                    userId: user.id,
+                    dbname: user.dbname,
                   })
                 }
               />
             </div>
-            <Partitions accountId={account.id} userId={userId} />
+            <Partitions accountId={account.id} user={user} />
           </li>
         ))
       }
@@ -189,11 +198,18 @@ function Accounts({ userId }: { userId: string }) {
   );
 }
 
-function Partitions(props: { accountId: string; userId: string }) {
-  const { accountId, userId } = props;
+function Partitions(props: {
+  accountId: string;
+  user: { id: string; dbname: string };
+}) {
+  const { accountId, user } = props;
   const [store, dispatch] = useContext(UserPageStoreContext);
-  const partitions = useQuery(["partitions", userId, accountId], () => {
-    return rpc.post.getPartitions({ accountId, userId });
+  const partitions = useQuery(["partitions", user.id, accountId], () => {
+    return rpc.post.getPartitions({
+      accountId,
+      userId: user.id,
+      dbname: user.dbname,
+    });
   });
   return (
     <QueryResult
@@ -234,7 +250,8 @@ function Partitions(props: { accountId: string; userId: string }) {
                 valueLoader={() =>
                   rpc.post.getPartitionBalance({
                     partitionId: partition.id,
-                    userId,
+                    userId: user.id,
+                    dbname: user.dbname,
                   })
                 }
               />
@@ -246,10 +263,10 @@ function Partitions(props: { accountId: string; userId: string }) {
   );
 }
 
-function Categories({ userId }: { userId: string }) {
+function Categories({ user }: { user: { id: string; dbname: string } }) {
   const queryClient = useQueryClient();
-  const categories = useQuery(["categories", userId], () => {
-    return rpc.post.getUserCategories({ userId });
+  const categories = useQuery(["categories", user.id], () => {
+    return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
   });
   const [store, dispatch] = useContext(UserPageStoreContext);
   const categoryLabelClass = css({
@@ -306,18 +323,15 @@ function Categories({ userId }: { userId: string }) {
                 valueLoader={() =>
                   rpc.post.getCategoryKindBalance({
                     kind: "Income",
-                    userId,
+                    userId: user.id,
+                    dbname: user.dbname,
                   })
                 }
               />
             </div>
             <ul className={categoryListClass}>
               {categories.income.map((category) => (
-                <Category
-                  key={category.id}
-                  category={category}
-                  userId={userId}
-                />
+                <Category key={category.id} category={category} user={user} />
               ))}
             </ul>
             <div
@@ -330,18 +344,15 @@ function Categories({ userId }: { userId: string }) {
                 valueLoader={() =>
                   rpc.post.getCategoryKindBalance({
                     kind: "Expense",
-                    userId,
+                    userId: user.id,
+                    dbname: user.dbname,
                   })
                 }
               />
             </div>
             <ul className={categoryListClass}>
               {categories.expense.map((category) => (
-                <Category
-                  key={category.id}
-                  category={category}
-                  userId={userId}
-                />
+                <Category key={category.id} category={category} user={user} />
               ))}
             </ul>
             <div
@@ -354,18 +365,15 @@ function Categories({ userId }: { userId: string }) {
                 valueLoader={() =>
                   rpc.post.getCategoryKindBalance({
                     kind: "Transfer",
-                    userId,
+                    userId: user.id,
+                    dbname: user.dbname,
                   })
                 }
               />
             </div>
             <ul className={categoryListClass}>
               {categories.transfer.map((category) => (
-                <Category
-                  key={category.id}
-                  category={category}
-                  userId={userId}
-                />
+                <Category key={category.id} category={category} user={user} />
               ))}
             </ul>
           </>
@@ -410,10 +418,10 @@ function Categories({ userId }: { userId: string }) {
 
 function Category({
   category,
-  userId,
+  user,
 }: {
   category: { id: string; name: string };
-  userId: string;
+  user: { id: string; dbname: string };
 }) {
   const queryClient = useQueryClient();
   const [store, dispatch] = useContext(UserPageStoreContext);
@@ -453,8 +461,9 @@ function Category({
         ]}
         valueLoader={() =>
           rpc.post.getCategoryBalance({
-            userId,
+            userId: user.id,
             categoryId: category.id,
+            dbname: user.dbname,
           })
         }
       />
@@ -462,7 +471,7 @@ function Category({
   );
 }
 
-function Transactions({ userId }: { userId: string }) {
+function Transactions({ user }: { user: { id: string; dbname: string } }) {
   const queryClient = useQueryClient();
   const [store, dispatch] = useContext(UserPageStoreContext);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -482,7 +491,8 @@ function Transactions({ userId }: { userId: string }) {
       nPerPage: store.nPerPage,
       partitionIds: store.partitionIds,
       categoryIds: store.categoryIds,
-      ownerId: userId,
+      ownerId: user.id,
+      dbname: user.dbname,
       tssDate: store.tssDate?.toISOString(),
       tseDate: store.tseDate?.toISOString(),
     });
@@ -508,7 +518,7 @@ function Transactions({ userId }: { userId: string }) {
       partitions.push(transaction.counterpart.source_partition);
     }
     return !partitions.some((p) =>
-      p.account.owners.map((o) => o.id).includes(userId)
+      p.account.owners.map((o) => o.id).includes(user.id)
     );
   };
 
@@ -704,13 +714,14 @@ function Transactions({ userId }: { userId: string }) {
                             setIsDeleting(true);
                             await rpc.post.deleteTransaction({
                               transactionId: transaction.id,
-                              userId,
+                              userId: user.id,
+                              dbname: user.dbname,
                             });
                             queryClient.invalidateQueries({
                               queryKey: ["transactions"],
                             });
                             queryClient.invalidateQueries({
-                              queryKey: ["user", userId],
+                              queryKey: ["user", user.id],
                             });
                             queryClient.invalidateQueries({
                               queryKey: [
@@ -801,14 +812,17 @@ function FormInput(props: {
   );
 }
 
-function TransactionForm({ user }: { user: { id: string } }) {
+function TransactionForm({ user }: { user: { id: string; dbname: string } }) {
   const queryClient = useQueryClient();
   const [store] = useContext(UserPageStoreContext);
   const partitions = useQuery(["partitions", user.id], () => {
-    return rpc.post.getPartitionOptions({ userId: user.id });
+    return rpc.post.getPartitionOptions({
+      userId: user.id,
+      dbname: user.dbname,
+    });
   });
   const categories = useQuery(["categories", user.id], () => {
-    return rpc.post.getUserCategories({ userId: user.id });
+    return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
   });
   const createTransaction = useMutation(rpc.post.createTransaction);
   const [inputCategoryKind, setInputCategoryKind] = useState("");
@@ -881,9 +895,10 @@ function TransactionForm({ user }: { user: { id: string } }) {
       userId: user.id,
       value,
     });
-    const { transaction, counterpart } = await createTransaction.mutateAsync(
-      parsedData
-    );
+    const { transaction, counterpart } = await createTransaction.mutateAsync({
+      ...parsedData,
+      dbname: user.dbname,
+    });
     target.reset();
     if (transaction) {
       setInputValue("");
@@ -1063,7 +1078,7 @@ function TransactionForm({ user }: { user: { id: string } }) {
   );
 }
 
-function DateRange({ userId }: { userId: string }) {
+function DateRange({ user }: { user: { id: string; dbname: string } }) {
   const [store, dispatch] = useContext(UserPageStoreContext);
   return (
     <div

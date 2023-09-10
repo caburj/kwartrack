@@ -12,7 +12,7 @@ export async function login(data: FormData) {
   if (user === undefined) {
     throw new Error("User not found");
   }
-  return redirect(`/${user.username}`);
+  return redirect(`/${user.dbname}/${user.username}`);
 }
 
 export default function Home() {

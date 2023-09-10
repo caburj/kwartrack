@@ -21,11 +21,10 @@ function withValidation<S extends BaseSchema, R extends any>(
   };
 }
 
-const baseClient = edgedb.createClient();
-
 export const findUser = withValidation(
-  object({ username: string() }),
-  async ({ username }) => {
+  object({ username: string(), dbname: string() }),
+  async ({ username, dbname }) => {
+    const client = edgedb.createClient({ database: dbname });
     const query = e.select(e.EUser, (user) => ({
       id: true,
       email: true,
@@ -45,9 +44,9 @@ export const findUser = withValidation(
       filter: e.op(user.username, "=", username),
     }));
 
-    const result = await query.run(baseClient);
+    const result = await query.run(client);
     if (result.length !== 0) {
-      return result[0];
+      return { ...result[0], dbname };
     }
   }
 );
@@ -55,15 +54,20 @@ export const findUser = withValidation(
 export const findUserByEmail = withValidation(
   object({ email: string() }),
   async ({ email }) => {
-    const query = e.select(e.EUser, (user) => ({
+    const masterdbClient = edgedb.createClient({ database: "masterdb" });
+
+    const query = e.select(e.masterdb.EUser, (user) => ({
       id: true,
       username: true,
+      dbnames: user["<users[is masterdb::EDatabase]"].name,
       filter: e.op(user.email, "=", email),
     }));
 
-    const result = await query.run(baseClient);
+    const result = await query.run(masterdbClient);
     if (result.length !== 0) {
-      return result[0];
+      const { id, username, dbnames } = result[0];
+      const dbname = dbnames[0];
+      return { id, username, dbname };
     }
   }
 );
@@ -82,8 +86,8 @@ const computeAccountLabel = (acc: Account) => {
 };
 
 export const getAccounts = withValidation(
-  object({ userId: string() }),
-  async ({ userId }) => {
+  object({ userId: string(), dbname: string() }),
+  async ({ userId, dbname }) => {
     // return all accounts
     const query = e.select(e.EAccount, (account) => ({
       id: true,
@@ -99,7 +103,10 @@ export const getAccounts = withValidation(
       },
     }));
 
-    const client = baseClient.withGlobals({ current_user_id: userId });
+    const client = edgedb
+      .createClient({ database: dbname })
+      .withGlobals({ current_user_id: userId });
+
     const result = await query.run(client);
     if (result.length !== 0) {
       return result.map((acc) => {
@@ -110,8 +117,8 @@ export const getAccounts = withValidation(
 );
 
 export const getPartitions = withValidation(
-  object({ userId: string(), accountId: string() }),
-  async ({ userId, accountId }) => {
+  object({ userId: string(), accountId: string(), dbname: string() }),
+  async ({ userId, accountId, dbname }) => {
     const query = e.select(e.EPartition, (partition) => {
       const belongToAccount = e.op(
         partition.account.id,
@@ -131,7 +138,9 @@ export const getPartitions = withValidation(
       };
     });
     const result = await query.run(
-      baseClient.withGlobals({ current_user_id: userId })
+      edgedb
+        .createClient({ database: dbname })
+        .withGlobals({ current_user_id: userId })
     );
     if (result.length !== 0) {
       return result;
@@ -140,8 +149,8 @@ export const getPartitions = withValidation(
 );
 
 export const getPartitionOptions = withValidation(
-  object({ userId: string() }),
-  async ({ userId }) => {
+  object({ userId: string(), dbname: string() }),
+  async ({ userId, dbname }) => {
     const query = e.select(e.EPartition, (partition) => {
       return {
         id: true,
@@ -159,7 +168,9 @@ export const getPartitionOptions = withValidation(
       };
     });
     const result = await query.run(
-      baseClient.withGlobals({ current_user_id: userId })
+      edgedb
+        .createClient({ database: dbname })
+        .withGlobals({ current_user_id: userId })
     );
     if (result.length !== 0) {
       return result.map((p) => {
@@ -182,6 +193,7 @@ export const findTransactions = withValidation(
     partitionIds: array(string()),
     categoryIds: array(string()),
     ownerId: string(),
+    dbname: string(),
     tssDate: optional(string()),
     tseDate: optional(string()),
   }),
@@ -191,6 +203,7 @@ export const findTransactions = withValidation(
     partitionIds,
     categoryIds,
     ownerId,
+    dbname,
     tssDate,
     tseDate,
   }) => {
@@ -289,7 +302,9 @@ export const findTransactions = withValidation(
         })
     );
 
-    const client = baseClient.withGlobals({ current_user_id: ownerId });
+    const client = edgedb
+      .createClient({ database: dbname })
+      .withGlobals({ current_user_id: ownerId });
     const result = await query.run(client, {
       pIds: partitionIds,
       cIds: categoryIds,
@@ -338,6 +353,7 @@ export const createTransaction = withValidation(
     description: optional(string()),
     userId: string(),
     destinationPartitionId: optional(string()),
+    dbname: string(),
   }),
   async ({
     value,
@@ -346,6 +362,7 @@ export const createTransaction = withValidation(
     description,
     userId,
     destinationPartitionId,
+    dbname,
   }) => {
     if (sourcePartitionId === destinationPartitionId) {
       throw new Error("Source and destination partitions cannot be the same.");
@@ -415,7 +432,10 @@ export const createTransaction = withValidation(
         }))
     );
 
-    const client = baseClient.withGlobals({ current_user_id: userId });
+    const client = edgedb
+      .createClient({ database: dbname })
+      .withGlobals({ current_user_id: userId });
+
     const result = await client.transaction(async (tx) => {
       const selectedCategory = await e
         .select(e.ECategory, (category) => ({
@@ -497,8 +517,8 @@ export const createTransaction = withValidation(
 );
 
 export const deleteTransaction = withValidation(
-  object({ transactionId: string(), userId: string() }),
-  async ({ transactionId, userId }) => {
+  object({ transactionId: string(), userId: string(), dbname: string() }),
+  async ({ transactionId, userId, dbname }) => {
     const deleteQuery = e.params({ id: e.uuid }, ({ id }) =>
       e.delete(e.ETransaction, (transaction) => {
         return {
@@ -507,7 +527,8 @@ export const deleteTransaction = withValidation(
       })
     );
 
-    return baseClient
+    return edgedb
+      .createClient({ database: dbname })
       .withGlobals({ current_user_id: userId })
       .transaction(async (tx) => {
         const toDelete = await e
@@ -537,9 +558,9 @@ export const deleteTransaction = withValidation(
 );
 
 export const getUserCategories = withValidation(
-  object({ userId: string() }),
-  async ({ userId }) => {
-    const client = baseClient.withGlobals({
+  object({ userId: string(), dbname: string() }),
+  async ({ userId, dbname }) => {
+    const client = edgedb.createClient({ database: dbname }).withGlobals({
       current_user_id: userId,
     });
     const result = await client.transaction(async (tx) => {
@@ -591,8 +612,8 @@ export const getUserCategories = withValidation(
 
 // TODO: should take into account the user id. Only those that the user owns can be deleted.
 export const deleteCategory = withValidation(
-  object({ categoryId: string() }),
-  async ({ categoryId }) => {
+  object({ categoryId: string(), dbname: string() }),
+  async ({ categoryId, dbname }) => {
     const query = e.params({ id: e.uuid }, ({ id }) =>
       e.delete(e.ECategory, (category) => ({
         filter_single: e.op(
@@ -602,7 +623,9 @@ export const deleteCategory = withValidation(
         ),
       }))
     );
-    const result = await query.run(baseClient, { id: categoryId });
+    const result = await query.run(edgedb.createClient({ database: dbname }), {
+      id: categoryId,
+    });
     return result;
   }
 );
@@ -611,8 +634,9 @@ export const getCategoryBalance = withValidation(
   object({
     categoryId: string(),
     userId: string(),
+    dbname: string(),
   }),
-  async ({ categoryId, userId }) => {
+  async ({ categoryId, userId, dbname }) => {
     const query = e.params({ id: e.uuid }, ({ id }) => {
       const transactions = e.select(e.ETransaction, (transaction) => ({
         filter: e.op(
@@ -623,16 +647,23 @@ export const getCategoryBalance = withValidation(
       }));
       return e.sum(transactions.value);
     });
-    const client = baseClient.withGlobals({
+
+    const client = edgedb.createClient({ database: dbname }).withGlobals({
       current_user_id: userId,
     });
+
     return await query.run(client, { id: categoryId });
   }
 );
 
 export const createUserCategory = withValidation(
-  object({ userId: string(), name: string(), kind: string() }),
-  async ({ userId, name, kind }) => {
+  object({
+    userId: string(),
+    name: string(),
+    kind: string(),
+    dbname: string(),
+  }),
+  async ({ userId, name, kind, dbname }) => {
     const query = e.params({ id: e.uuid, name: e.str }, ({ id, name }) =>
       e.insert(e.ECategory, {
         name,
@@ -644,7 +675,7 @@ export const createUserCategory = withValidation(
             : "Transfer",
       })
     );
-    const result = await query.run(baseClient, {
+    const result = await query.run(edgedb.createClient({ database: dbname }), {
       id: userId,
       name,
     });
@@ -656,8 +687,9 @@ export const getPartitionBalance = withValidation(
   object({
     partitionId: string(),
     userId: string(),
+    dbname: string(),
   }),
-  async ({ partitionId, userId }) => {
+  async ({ partitionId, userId, dbname }) => {
     const balanceQuery = e.params({ id: e.uuid }, ({ id }) => {
       const transactions = e.select(e.ETransaction, (transaction) => ({
         filter: e.op(
@@ -669,7 +701,7 @@ export const getPartitionBalance = withValidation(
       return e.sum(transactions.value);
     });
 
-    const client = baseClient.withGlobals({
+    const client = edgedb.createClient({ database: dbname }).withGlobals({
       current_user_id: userId,
     });
     return await balanceQuery.run(client, { id: partitionId });
@@ -680,8 +712,9 @@ export const getAccountBalance = withValidation(
   object({
     accountId: string(),
     userId: string(),
+    dbname: string(),
   }),
-  async ({ accountId, userId }) => {
+  async ({ accountId, userId, dbname }) => {
     const query = e.params({ id: e.uuid }, ({ id }) => {
       const tx = e.select(e.ETransaction, (transaction) => ({
         filter: e.op(
@@ -692,7 +725,7 @@ export const getAccountBalance = withValidation(
       }));
       return e.sum(tx.value);
     });
-    const client = baseClient.withGlobals({
+    const client = edgedb.createClient({ database: dbname }).withGlobals({
       current_user_id: userId,
     });
     return await query.run(client, { id: accountId });
@@ -703,8 +736,9 @@ export const getCategoryKindBalance = withValidation(
   object({
     userId: string(),
     kind: string(),
+    dbname: string(),
   }),
-  async ({ userId, kind }) => {
+  async ({ userId, kind, dbname }) => {
     const query = e.params({ kind: e.ECategoryKind }, ({ kind }) => {
       const tx = e.select(e.ETransaction, (transaction) => ({
         filter: e.op(
@@ -715,9 +749,137 @@ export const getCategoryKindBalance = withValidation(
       }));
       return e.sum(tx.value);
     });
-    const client = baseClient.withGlobals({
+    const client = edgedb.createClient({ database: dbname }).withGlobals({
       current_user_id: userId,
     });
     return await query.run(client, { kind: kind as any });
+  }
+);
+
+export const createNewUser = withValidation(
+  object({ username: string(), email: string(), name: string() }),
+  async ({ username, email, name }) => {
+    const masterdbClient = edgedb.createClient({
+      database: "masterdb",
+    });
+
+    const result = await e
+      .params(
+        { username: e.str, email: e.str, name: e.str },
+        ({ username, email, name }) =>
+          e.insert(e.masterdb.EUser, {
+            username,
+            email,
+            name,
+          })
+      )
+      .run(masterdbClient, {
+        username,
+        email,
+        name,
+      });
+
+    const createNewDB = async () => {
+      while (true) {
+        try {
+          const random6digitHex = Math.floor(Math.random() * 16777215).toString(
+            16
+          );
+          const dbname = `db_${random6digitHex}`;
+          await masterdbClient.execute(`CREATE DATABASE ${dbname};`);
+          return dbname;
+        } catch (error) {}
+      }
+    };
+
+    const dbname = await createNewDB();
+
+    await e
+      .params(
+        {
+          name: e.str,
+          user_id: e.uuid,
+        },
+        ({ name, user_id }) =>
+          e.insert(e.masterdb.EDatabase, {
+            name,
+            users: e.select(e.masterdb.EUser, (user) => ({
+              filter: e.op(user.id, "=", user_id),
+            })),
+          })
+      )
+      .run(masterdbClient, {
+        name: dbname,
+        user_id: result.id,
+      });
+
+    const migrations = await e
+      .select(e.schema.Migration, (migration) => ({
+        name: true,
+        script: true,
+        parent_names: migration.parents.name,
+        next_migration_names: migration["<parents[is schema::Migration]"].name,
+      }))
+      .run(masterdbClient);
+
+    type Migration = (typeof migrations)[number];
+
+    const migrationByName = new Map<string, Migration>();
+    for (const m of migrations) {
+      migrationByName.set(m.name, m);
+    }
+
+    const firstMigration = migrations.find((m) => m.parent_names.length === 0);
+    if (!firstMigration) {
+      throw new Error("No initial migration found.");
+    }
+    const migrationScripts: string[] = [];
+
+    let currentMigration: Migration | undefined = firstMigration;
+    while (currentMigration) {
+      const onto =
+        firstMigration === currentMigration
+          ? "initial"
+          : currentMigration.parent_names[0];
+
+      const script = `CREATE MIGRATION ${currentMigration.name} ONTO ${onto} {
+        ${currentMigration.script}
+      };`;
+
+      migrationScripts.push(script);
+      const nextMigrationName = currentMigration.next_migration_names[0];
+      if (!nextMigrationName) {
+        break;
+      }
+      currentMigration = migrationByName.get(nextMigrationName);
+    }
+
+    // migrate the new database
+    const dbClient = edgedb.createClient({ database: dbname });
+    await dbClient.execute(migrationScripts.join("\n"));
+
+    const { id: userId } = await e
+      .params(
+        { username: e.str, email: e.str, name: e.str },
+        ({ username, email, name }) =>
+          e.insert(e.EUser, {
+            username,
+            email,
+            name,
+          })
+      )
+      .run(dbClient, {
+        username,
+        email,
+        name,
+      });
+
+    return {
+      dbname,
+      user: {
+        id: userId,
+        username,
+      },
+    };
   }
 );

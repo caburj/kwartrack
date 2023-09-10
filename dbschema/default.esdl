@@ -79,3 +79,22 @@ module default {
     property is_visible := .source_partition.is_visible;
   }
 }
+
+module masterdb {
+  type EUser {
+    required email: str {
+      constraint exclusive;
+    }
+    required username: str {
+      constraint exclusive;
+    }
+    required name: str;
+  }
+
+  type EDatabase {
+    required name: str {
+      constraint exclusive;
+    }
+    multi users: EUser;
+  }
+}
