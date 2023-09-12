@@ -916,3 +916,87 @@ export const createCategory = withValidation(
     return result;
   }
 );
+
+export const createPartition = withValidation(
+  object({
+    userId: string(),
+    name: string(),
+    dbname: string(),
+    isPrivate: boolean(),
+    forNewAccount: boolean(),
+    accountId: string(),
+    isSharedAccount: boolean(),
+    newAccountName: optional(string()),
+  }),
+  async ({
+    userId,
+    name,
+    dbname,
+    isPrivate,
+    accountId: inputAccountId,
+    forNewAccount,
+    isSharedAccount,
+    newAccountName,
+  }) => {
+    const client = edgedb.createClient({ database: dbname });
+
+    const newPartitionQuery = e.params(
+      {
+        name: e.str,
+        isPrivate: e.bool,
+        accountId: e.optional(e.uuid),
+      },
+      ({ name, isPrivate, accountId }) =>
+        e.insert(e.EPartition, {
+          name,
+          is_private: isPrivate,
+          account: e.select(e.EAccount, (account) => ({
+            filter_single: e.op(account.id, "=", accountId),
+          })),
+        })
+    );
+
+    const newAccountQuery = e.params(
+      {
+        name: e.str,
+        userId: e.uuid,
+      },
+      ({ name, userId }) =>
+        e.insert(e.EAccount, {
+          name,
+          owners: isSharedAccount
+            ? e.select(e.EUser)
+            : e.select(e.EUser, (user) => ({
+                filter: e.op(user.id, "=", userId),
+              })),
+        })
+    );
+
+    await client
+      .withGlobals({
+        current_user_id: userId,
+      })
+      .transaction(async (tx) => {
+        let accountId: string;
+        if (forNewAccount) {
+          if (!newAccountName) {
+            throw new Error("New account name is required.");
+          }
+          const { id } = await newAccountQuery.run(tx, {
+            name: newAccountName,
+            userId,
+          });
+          accountId = id;
+        } else {
+          accountId = inputAccountId;
+        }
+        const { id } = await newPartitionQuery.run(tx, {
+          name,
+          isPrivate,
+          accountId,
+        });
+      });
+
+    return true;
+  }
+);
