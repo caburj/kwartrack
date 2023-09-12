@@ -100,6 +100,15 @@
 
 * [ ] Prettify the date section.
 
+* [ ] fix: Resetting the transaction form doesn't work when making a transfer.
+  - It's the same problem in the Partition dialog form, that's why it's many
+    visible input elements at the moment.
+
+* [ ] imp: Allow deleting accounts, partitions and categories.
+  - Only delete them if no linked transactions.
+  - Only delete account if no linked partitions.
+
+
 # DONE
 
 * [X] It's annoying when the columns change width when the content changes.

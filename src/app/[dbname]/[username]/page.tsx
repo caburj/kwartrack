@@ -1032,9 +1032,6 @@ function Transactions({ user }: { user: { id: string; dbname: string } }) {
                             width: "100%",
                           })}
                         >
-                          <span className={css({ width: "1rem" })}>
-                            {transaction.category.kind[0]}
-                          </span>
                           <span>{transaction.category.name}</span>
                         </span>
                       </td>
