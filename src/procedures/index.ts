@@ -13,6 +13,7 @@ import {
   getPartitions,
   getPartitionOptions,
   getCategoryKindBalance,
+  createCategory,
 } from "./server_functions";
 
 /**
@@ -33,6 +34,7 @@ export const procedures = {
   getPartitions,
   getPartitionOptions,
   getCategoryKindBalance,
+  createCategory,
 };
 
 export type Procedures = typeof procedures;

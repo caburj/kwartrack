@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactHTML, useContext, useState } from "react";
+import { ReactHTML, RefObject, useContext, useRef, useState } from "react";
 import { css } from "../../../../styled-system/css";
 import { rpc } from "../../rpc_client";
 import {
@@ -9,9 +9,132 @@ import {
   useQueryClient,
   useMutation,
 } from "@tanstack/react-query";
-import { number, object, optional, string } from "valibot";
+import { boolean, minLength, number, object, optional, string } from "valibot";
 import { UserPageStoreProvider, UserPageStoreContext } from "./store";
 import { Unpacked, formatValue, groupBy } from "@/utils/common";
+import { HiPlus } from "react-icons/hi";
+
+function useDialog<R>(
+  processFormData: (formdata: FormData) => R,
+  dialogForm: (ref: RefObject<HTMLFormElement>) => React.ReactNode
+) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const resolveRef = useRef<any>(null);
+
+  const onConfirm = () => {
+    ref.current?.close();
+    const formEl = formRef.current;
+    if (!formEl) return;
+    const formdata = new FormData(formEl);
+    const data = processFormData(formdata);
+    resolveRef.current?.({ confirmed: true, data });
+    formEl.reset();
+  };
+
+  const onCancel = () => {
+    const formEl = formRef.current;
+    if (!formEl) return;
+    resolveRef.current?.({ confirmed: false });
+    formEl.reset();
+  };
+
+  const element = (
+    <dialog
+      ref={ref}
+      onCancel={onCancel}
+      className={css({
+        "&::backdrop": {
+          backgroundColor: "rgba(0, 0, 0, 0.5)", // Change the backdrop color
+        },
+      })}
+    >
+      <div
+        className={css({
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        })}
+      >
+        <div
+          className={css({
+            maxWidth: "500px",
+            width: "40%",
+            background: "#f5f5f5",
+            borderRadius: "0.5rem",
+            p: "4",
+          })}
+        >
+          {dialogForm(formRef)}
+          <div
+            className={css({
+              display: "flex",
+              flexDirection: "row-reverse",
+              justifyContent: "flex-start",
+              width: "100%",
+              mt: "4",
+              backgroundColor: "#f5f5f5",
+              "& button": {
+                cursor: "pointer",
+                px: "2",
+                py: "1",
+                ms: "2",
+                borderRadius: "0.25rem",
+                outline: "1px solid black",
+                "&:hover": {
+                  backgroundColor: "#e5e5e5",
+                  outline: "1px solid blue",
+                  color: "blue",
+                },
+                "&:focus": {
+                  outline: "1px solid blue",
+                  color: "blue",
+                },
+              },
+            })}
+          >
+            <button formMethod="dialog" onClick={onConfirm}>
+              Confirm
+            </button>
+            <button
+              onClick={() => {
+                ref.current?.close();
+                onCancel();
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+  );
+  const showDialog = async (asModal: boolean) => {
+    if (asModal) {
+      ref.current?.showModal();
+    } else {
+      ref.current?.show();
+    }
+    return new Promise<{ confirmed: true; data: R } | { confirmed: false }>(
+      (resolve) => {
+        resolveRef.current = resolve;
+        const onSubmit = (event: SubmitEvent) => {
+          formRef.current?.removeEventListener("submit", onSubmit);
+          event.preventDefault();
+          onConfirm();
+        };
+        formRef.current?.addEventListener("submit", onSubmit);
+      }
+    );
+  };
+
+  return [showDialog, element] as const;
+}
 
 export default function Main(props: {
   params: { username: string; dbname: string };
@@ -65,28 +188,23 @@ type FindUserResult = NonNullable<
   Unpacked<Awaited<ReturnType<typeof rpc.post.findUser>>>
 >;
 
-function SectionLabel(props: { children: React.ReactNode }) {
+function SectionLabel(props: {
+  children: React.ReactNode;
+  onClickPlus?: () => void;
+}) {
   return (
     <h1
       className={css({
         fontWeight: "bold",
         textAlign: "center",
-        margin: "0.5rem 0",
         fontSize: "1.1rem",
         display: "flex",
+        mt: "2",
       })}
     >
       <span
         className={css({
-          height: "1px",
-          alignSelf: "center",
-          flexGrow: 1,
-          borderBottom: "0.5px solid black",
-        })}
-      ></span>
-      <span
-        className={css({
-          margin: "0 1rem",
+          me: "4",
         })}
       >
         {props.children}
@@ -99,11 +217,108 @@ function SectionLabel(props: { children: React.ReactNode }) {
           borderBottom: "0.5px solid black",
         })}
       ></span>
+      <span
+        className={css({
+          display: "flex",
+          alignItems: "center",
+          cursor: "pointer",
+          fontSize: "1.5rem",
+          ms: 4,
+        })}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (props.onClickPlus) {
+            return props.onClickPlus();
+          }
+        }}
+      >
+        <HiPlus />
+      </span>
     </h1>
   );
 }
 
 function SideBar({ user }: { user: FindUserResult }) {
+  const queryClient = useQueryClient();
+  const [showDialog, dialogEl] = useDialog(
+    (formdata) => {
+      const schema = object({
+        name: string([minLength(1)]),
+        kind: string(),
+        isPrivate: boolean(),
+      });
+      const parsedData = schema.parse({
+        ...Object.fromEntries(formdata.entries()),
+        isPrivate: formdata.get("isPrivate") === "on",
+      });
+      return parsedData;
+    },
+    (formRef) => (
+      <form
+        ref={formRef}
+        className={css({
+          display: "grid",
+          gridTemplateColumns: "1fr 3fr", // Define the width of each column
+          gridGap: "0.5rem", // Add spacing between the rows and columns
+          "& *": {
+            padding: "0.25rem 0.50rem",
+            borderRadius: "0.25rem",
+          },
+          "& *:focus": {
+            outline: "1px solid blue",
+          },
+          "& label": {
+            ps: 0,
+            fontSize: "0.9rem",
+            fontWeight: "medium",
+          },
+          "& select": {
+            appearance: "none",
+            // TODO: Check the security of this background image.
+            backgroundImage: `url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")`,
+            backgroundRepeat: "no-repeat, repeat",
+            backgroundPosition: "right .7em top 50%, 0 0",
+            backgroundSize: ".65em auto, 100%",
+          },
+          "& input[type=checkbox]": {
+            appearance: "none",
+            width: "1.25rem",
+            height: "1.25rem",
+            border: "1px solid gray",
+            borderRadius: "0.25rem",
+            position: "relative",
+            cursor: "pointer",
+            display: "inline-block",
+            ms: "1",
+            "&:checked": {
+              backgroundColor: "black",
+              "&::before": {
+                content: "",
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "0.75rem",
+                height: "0.75rem",
+                borderRadius: "0.5rem",
+              },
+            },
+          },
+        })}
+      >
+        <label htmlFor="name">Name</label>
+        <input type="text" name="name" placeholder="E.g. Salary" />
+        <label htmlFor="kind">Kind</label>
+        <select name="kind" defaultValue="Expense">
+          <option value="Income">Income</option>
+          <option value="Expense">Expense</option>
+          <option value="Transfer">Transfer</option>
+        </select>
+        <label htmlFor="isPrivate">Private</label>
+        <input type="checkbox" name="isPrivate" />
+      </form>
+    )
+  );
   return (
     <div
       className={css({
@@ -131,10 +346,30 @@ function SideBar({ user }: { user: FindUserResult }) {
       >
         <SectionLabel>Accounts</SectionLabel>
         <Accounts user={user} />
-        <SectionLabel>Categories</SectionLabel>
+        <SectionLabel
+          onClickPlus={async () => {
+            const userAction = await showDialog(true);
+            if (userAction.confirmed) {
+              const { name, kind, isPrivate } = userAction.data;
+              await rpc.post.createCategory({
+                userId: user.id,
+                dbname: user.dbname,
+                name,
+                kind,
+                isPrivate,
+              });
+              queryClient.invalidateQueries({
+                queryKey: ["categories", user.id],
+              });
+            }
+          }}
+        >
+          Categories
+        </SectionLabel>
         <Categories user={user} />
       </div>
       <DateRange user={user} />
+      {dialogEl}
     </div>
   );
 }
@@ -147,53 +382,54 @@ function Accounts({ user }: { user: { id: string; dbname: string } }) {
   return (
     <QueryResult
       query={accounts}
-      as="ul"
       onLoading={<>Loading accounts...</>}
       onUndefined={<>No accounts found</>}
     >
-      {(accounts) =>
-        accounts.map((account) => (
-          <li
-            key={account.id}
-            className={css({
-              marginBottom: "0.5rem",
-              cursor: "pointer",
-              fontWeight: "bold",
-            })}
-            onClick={() => {
-              dispatch({
-                type: "TOGGLE_ACCOUNT",
-                payload: account.partitions.map((p) => p.id),
-              });
-            }}
-          >
-            <div
+      {(accounts) => (
+        <ul className={css({ p: "2" })}>
+          {accounts.map((account) => (
+            <li
+              key={account.id}
               className={css({
-                display: "flex",
-                justifyContent: "space-between",
+                marginBottom: "0.5rem",
+                cursor: "pointer",
+                fontWeight: "bold",
               })}
+              onClick={() => {
+                dispatch({
+                  type: "TOGGLE_ACCOUNT",
+                  payload: account.partitions.map((p) => p.id),
+                });
+              }}
             >
-              <span>{account.label}</span>
-              <LoadingValue
-                queryKey={[
-                  "accountBalance",
-                  {
-                    accountId: account.id,
-                  },
-                ]}
-                valueLoader={() =>
-                  rpc.post.getAccountBalance({
-                    accountId: account.id,
-                    userId: user.id,
-                    dbname: user.dbname,
-                  })
-                }
-              />
-            </div>
-            <Partitions accountId={account.id} user={user} />
-          </li>
-        ))
-      }
+              <div
+                className={css({
+                  display: "flex",
+                  justifyContent: "space-between",
+                })}
+              >
+                <span>{account.label}</span>
+                <LoadingValue
+                  queryKey={[
+                    "accountBalance",
+                    {
+                      accountId: account.id,
+                    },
+                  ]}
+                  valueLoader={() =>
+                    rpc.post.getAccountBalance({
+                      accountId: account.id,
+                      userId: user.id,
+                      dbname: user.dbname,
+                    })
+                  }
+                />
+              </div>
+              <Partitions accountId={account.id} user={user} />
+            </li>
+          ))}
+        </ul>
+      )}
     </QueryResult>
   );
 }
@@ -307,12 +543,11 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
     <>
       <QueryResult
         query={categories}
-        as="div"
         onLoading={<>Loading categories...</>}
         onUndefined={<>No categories found</>}
       >
         {(categories) => (
-          <>
+          <div className={css({ p: "2" })}>
             <div
               onClick={() => selectCategories("Income")}
               className={categoryLabelClass}
@@ -376,7 +611,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
                 <Category key={category.id} category={category} user={user} />
               ))}
             </ul>
-          </>
+          </div>
         )}
       </QueryResult>
       {/* <form

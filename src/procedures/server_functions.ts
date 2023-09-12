@@ -9,6 +9,7 @@ import {
   optional,
   number,
   minValue,
+  boolean,
 } from "valibot";
 
 function withValidation<S extends BaseSchema, R extends any>(
@@ -881,5 +882,37 @@ export const createNewUser = withValidation(
         username,
       },
     };
+  }
+);
+
+export const createCategory = withValidation(
+  object({
+    userId: string(),
+    name: string(),
+    dbname: string(),
+    kind: string(),
+    isPrivate: boolean(),
+  }),
+  async ({ userId, name, dbname, kind, isPrivate }) => {
+    const query = e.params(
+      {
+        name: e.str,
+        kind: e.ECategoryKind,
+      },
+      ({ name, kind }) =>
+        e.insert(e.ECategory, {
+          name,
+          kind,
+          is_private: isPrivate,
+          owners: e.select(e.EUser, (user) => ({
+            filter: e.op(user.id, "=", e.uuid(userId)),
+          })),
+        })
+    );
+    const result = await query.run(edgedb.createClient({ database: dbname }), {
+      name,
+      kind: kind as any,
+    });
+    return result;
   }
 );
