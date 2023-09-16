@@ -30,8 +30,6 @@
 * [ ] Allow editing the accounts, partitions, and categories.
   - Always edit mode in the sidebar?
 
-* [ ] Bug: The transaction form is not properly reset.
-
 * [ ] User registration.
   - 2 cases
     - user will start his own db
@@ -113,10 +111,6 @@
   - It's the same problem in the Partition dialog form, that's why it's many
     visible input elements at the moment.
 
-* [ ] imp: Allow deleting accounts, partitions and categories.
-  - Only delete them if no linked transactions.
-  - Only delete account if no linked partitions.
-
 
 # DONE
 
@@ -136,3 +130,7 @@
   - Personally owned accounts at the top.
   - Common accounts in the middle.
   - Other accounts at the bottom.
+
+* [X] imp: Allow deleting accounts, partitions and categories.
+  - Only delete them if no linked transactions.
+  - Only delete account if no linked partitions.

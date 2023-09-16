@@ -792,8 +792,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
     cursor: "pointer",
   });
   const categoryListClass = css({
-    paddingStart: "0.5rem",
-    paddingBottom: "0.5rem",
+    pb: "2",
   });
   const selectCategories = (kind: string) => {
     if (kind === "Income") {
@@ -907,6 +906,7 @@ function Category({
 }) {
   const queryClient = useQueryClient();
   const [store, dispatch] = useContext(UserPageStoreContext);
+  const [name, setName] = useState(category.name);
   const canBeDeleted = useQuery(
     ["categoryCanBeDeleted", { categoryId: category.id }],
     () => {
@@ -931,31 +931,37 @@ function Category({
       },
     }
   );
+  const updateCategory = useMutation((name: string) => {
+    return rpc.post.updateCategory({
+      categoryId: category.id,
+      dbname: user.dbname,
+      userId: user.id,
+      name,
+    });
+  });
+  const color = store.categoryIds.includes(category.id) ? "blue" : "inherit";
   return (
     <li
       key={category.id}
       className={css({
-        cursor: canBeDeleted.data ? "default" : "pointer",
-        color: store.categoryIds.includes(category.id) ? "blue" : "inherit",
+        color,
         fontWeight: "medium",
         display: "flex",
         justifyContent: "space-between",
         verticalAlign: "middle",
       })}
-      onClick={() => {
-        // if the category can't be deleted, no point on toggling it.
-        if (canBeDeleted.data) return;
-        dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
-      }}
     >
       <span>
-        <span
+        <input
           className={css({
             verticalAlign: "middle",
           })}
-        >
-          {category.name}
-        </span>
+          type="checkbox"
+          onClick={() => {
+            dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
+          }}
+          checked={store.categoryIds.includes(category.id)}
+        />
         {canBeDeleted.data && (
           <DeleteButton
             onClick={async (e) => {
@@ -964,6 +970,30 @@ function Category({
             }}
           />
         )}
+        <input
+          className={css({
+            color,
+            backgroundColor: "#f5f5f5",
+            verticalAlign: "middle",
+            ms: "1",
+            "&:focus": {
+              outline: "none",
+            },
+          })}
+          type="text"
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+          }}
+          onBlur={(e) => {
+            updateCategory.mutate(name);
+          }}
+          onKeyUp={async (e) => {
+            if (e.key === "Enter") {
+              updateCategory.mutate(name);
+            }
+          }}
+        />
       </span>
       <LoadingValue
         queryKey={[
@@ -1401,25 +1431,31 @@ function PartitionOptGroup(props: {
 }) {
   const { groupedPartitions, label, onlyPrivate } = props;
   return (
-    <optgroup key={label} label={label}>
+    <optgroup label={label}>
       {Object.entries(groupBy(groupedPartitions, (p) => p.account.id)).map(
         ([accountId, partitions]) => {
           const partitionsToShow = partitions.filter((p) =>
             onlyPrivate ? p.is_private : true
           );
           if (partitionsToShow.length === 0) return null;
-          return (
-            <>
-              <option value={accountId} disabled>
-                {partitions[0].account.label}
-              </option>
-              {partitionsToShow.map((partition) => (
-                <option key={partition.id} value={partition.id}>
-                  {partition.name}
-                </option>
-              ))}
-            </>
-          );
+          const options = [
+            // insert at the beginning the account name
+            {
+              id: accountId,
+              name: partitions[0].account.label,
+              isDisabled: true,
+            },
+            ...partitionsToShow.map((p) => ({
+              id: p.id,
+              name: p.name,
+              isDisabled: false,
+            })),
+          ];
+          return options.map((p) => (
+            <option key={p.id} value={p.id} disabled={p.isDisabled}>
+              {p.name}
+            </option>
+          ));
         }
       )}
     </optgroup>

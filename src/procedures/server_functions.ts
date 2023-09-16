@@ -583,6 +583,10 @@ export const getUserCategories = withValidation(
             "and",
             e.op(category.kind, "=", e.ECategoryKind.Expense)
           ),
+          order_by: {
+            expression: category.name,
+            direction: e.ASC,
+          },
         }))
         .run(tx);
       const income = await e
@@ -593,6 +597,10 @@ export const getUserCategories = withValidation(
             "and",
             e.op(category.kind, "=", e.ECategoryKind.Income)
           ),
+          order_by: {
+            expression: category.name,
+            direction: e.ASC,
+          },
         }))
         .run(tx);
       const transfer = await e
@@ -603,6 +611,10 @@ export const getUserCategories = withValidation(
             "and",
             e.op(category.kind, "=", e.ECategoryKind.Transfer)
           ),
+          order_by: {
+            expression: category.name,
+            direction: e.ASC,
+          },
         }))
         .run(tx);
       return {
@@ -1167,5 +1179,38 @@ export const deleteAccount = withValidation(
         }
         await deleteQuery.run(tx, { id: accountId });
       });
+  }
+);
+
+export const updateCategory = withValidation(
+  object({
+    userId: string(),
+    categoryId: string(),
+    name: string(),
+    dbname: string(),
+  }),
+  async ({ userId, categoryId, name, dbname }) => {
+    const updateNameQuery = e.params(
+      {
+        id: e.uuid,
+        name: e.str,
+      },
+      ({ id, name }) =>
+        e.update(e.ECategory, (category) => ({
+          filter_single: e.op(category.id, "=", id),
+          set: {
+            name,
+          },
+        }))
+    );
+    return updateNameQuery.run(
+      edgedb
+        .createClient({ database: dbname })
+        .withGlobals({ current_user_id: userId }),
+      {
+        id: categoryId,
+        name,
+      }
+    );
   }
 );
