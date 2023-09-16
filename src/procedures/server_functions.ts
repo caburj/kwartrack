@@ -11,6 +11,7 @@ import {
   minValue,
   boolean,
 } from "valibot";
+import { Transaction } from "edgedb/dist/transaction";
 
 function withValidation<S extends BaseSchema, R extends any>(
   paramSchema: S,
@@ -611,11 +612,48 @@ export const getUserCategories = withValidation(
   }
 );
 
-// TODO: should take into account the user id. Only those that the user owns can be deleted.
+const _categoryCanBeDeleted = async (
+  tx: Transaction,
+  categoryId: string
+): Promise<[boolean, string]> => {
+  const findCategory = e.params({ id: e.uuid }, ({ id }) =>
+    e.select(e.ECategory, (category) => ({
+      filter_single: e.op(category.id, "=", id),
+    }))
+  );
+  const linkedTransactions = e.params({ id: e.uuid }, ({ id }) =>
+    e.select(e.ETransaction, (transaction) => ({
+      filter: e.op(transaction.category.id, "=", id),
+    }))
+  );
+  const category = await findCategory.run(tx, { id: categoryId });
+  if (!category) {
+    return [false, "Category not found."];
+  }
+  const transactions = await linkedTransactions.run(tx, { id: categoryId });
+  if (transactions.length !== 0) {
+    return [false, "Category has linked transactions."];
+  }
+  return [true, ""];
+};
+
+export const categoryCanBeDeleted = withValidation(
+  object({ categoryId: string(), userId: string(), dbname: string() }),
+  async ({ categoryId, userId, dbname }) => {
+    const client = edgedb.createClient({ database: dbname }).withGlobals({
+      current_user_id: userId,
+    });
+    const result = await client.transaction(async (tx) =>
+      _categoryCanBeDeleted(tx, categoryId)
+    );
+    return result[0]
+  }
+);
+
 export const deleteCategory = withValidation(
-  object({ categoryId: string(), dbname: string() }),
-  async ({ categoryId, dbname }) => {
-    const query = e.params({ id: e.uuid }, ({ id }) =>
+  object({ categoryId: string(), userId: string(), dbname: string() }),
+  async ({ categoryId, dbname, userId }) => {
+    const deleteQuery = e.params({ id: e.uuid }, ({ id }) =>
       e.delete(e.ECategory, (category) => ({
         filter_single: e.op(
           e.op("not", e.op("exists", category["<category[is ETransaction]"])),
@@ -624,10 +662,16 @@ export const deleteCategory = withValidation(
         ),
       }))
     );
-    const result = await query.run(edgedb.createClient({ database: dbname }), {
-      id: categoryId,
+    const client = edgedb.createClient({ database: dbname }).withGlobals({
+      current_user_id: userId,
     });
-    return result;
+    return client.transaction(async (tx) => {
+      const [canBeDeleted, errMsg] = await _categoryCanBeDeleted(tx, categoryId);
+      if (!canBeDeleted) {
+        throw new Error(errMsg);
+      }
+      return deleteQuery.run(tx, { id: categoryId });
+    });
   }
 );
 

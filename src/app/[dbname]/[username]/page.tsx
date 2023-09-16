@@ -21,6 +21,7 @@ import {
 import { UserPageStoreProvider, UserPageStoreContext } from "./store";
 import { Unpacked, formatValue, groupBy } from "@/utils/common";
 import { HiPlus } from "react-icons/hi";
+import { RxCross2 } from "react-icons/rx";
 import { DialogProvider, useDialog } from "@/utils/useDialog";
 
 export default function Main(props: {
@@ -737,33 +738,72 @@ function Category({
 }) {
   const queryClient = useQueryClient();
   const [store, dispatch] = useContext(UserPageStoreContext);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const canBeDeleted = useQuery(
+    ["categoryCanBeDeleted", { categoryId: category.id }],
+    () => {
+      return rpc.post.categoryCanBeDeleted({
+        categoryId: category.id,
+        dbname: user.dbname,
+        userId: user.id,
+      });
+    }
+  );
+  const deleteCategory = useMutation(
+    () => {
+      return rpc.post.deleteCategory({
+        categoryId: category.id,
+        dbname: user.dbname,
+        userId: user.id,
+      });
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["categories", user.id] });
+      },
+    }
+  );
   return (
     <li
       key={category.id}
       className={css({
-        cursor: "pointer",
+        cursor: canBeDeleted.data ? "default" : "pointer",
         color: store.categoryIds.includes(category.id) ? "blue" : "inherit",
         fontWeight: "medium",
         display: "flex",
         justifyContent: "space-between",
+        verticalAlign: "middle",
       })}
       onClick={() => {
+        // if the category can't be deleted, no point on toggling it.
+        if (canBeDeleted.data) return;
         dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
       }}
     >
-      {/* TODO: This delete button should be conditionally shown. Only categories without linked transactions can be deleted. */}
-      {/* <button
-        onClick={async (event) => {
-          event.stopPropagation();
-          setIsDeleting(true);
-          await rpc.post.deleteCategory({ categoryId: category.id });
-          queryClient.invalidateQueries({ queryKey: ["categories", userId] });
-        }}
-      >
-        x
-      </button>{" "} */}
-      <span>{category.name}</span>
+      <span>
+        <span
+          className={css({
+            verticalAlign: "middle",
+          })}
+        >
+          {category.name}
+        </span>
+        {canBeDeleted.data && (
+          <button
+            className={css({
+              cursor: "pointer",
+              verticalAlign: "middle",
+              color: "red",
+            })}
+            onClick={async (e) => {
+              e.stopPropagation();
+              await deleteCategory.mutateAsync();
+            }}
+          >
+            <RxCross2 />
+          </button>
+        )}
+      </span>
+
       <LoadingValue
         queryKey={[
           "categoryBalance",
@@ -1051,6 +1091,12 @@ function Transactions({ user }: { user: { id: string; dbname: string } }) {
                             });
                             queryClient.invalidateQueries({
                               queryKey: [
+                                "categoryCanBeDeleted",
+                                { categoryId: transaction.category.id },
+                              ],
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: [
                                 "categoryBalance",
                                 {
                                   categoryId: transaction.category.id,
@@ -1213,27 +1259,24 @@ function TransactionForm({ user }: { user: { id: string; dbname: string } }) {
       setInputValue("");
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({
+        queryKey: ["categoryBalance", { categoryId: parsedData.categoryId }],
+      });
+      queryClient.invalidateQueries({
         queryKey: [
-          "categoryBalance",
-          {
-            categoryId: parsedData.categoryId,
-          },
+          "categoryCanBeDeleted",
+          { categoryId: parsedData.categoryId },
         ],
       });
       queryClient.invalidateQueries({
         queryKey: [
           "partitionBalance",
-          {
-            partitionId: parsedData.sourcePartitionId,
-          },
+          { partitionId: parsedData.sourcePartitionId },
         ],
       });
       queryClient.invalidateQueries({
         queryKey: [
           "accountBalance",
-          {
-            accountId: transaction.source_partition.account.id,
-          },
+          { accountId: transaction.source_partition.account.id },
         ],
       });
       queryClient.invalidateQueries({
@@ -1244,17 +1287,13 @@ function TransactionForm({ user }: { user: { id: string; dbname: string } }) {
       queryClient.invalidateQueries({
         queryKey: [
           "partitionBalance",
-          {
-            partitionId: parsedData.destinationPartitionId,
-          },
+          { partitionId: parsedData.destinationPartitionId },
         ],
       });
       queryClient.invalidateQueries({
         queryKey: [
           "accountBalance",
-          {
-            accountId: counterpart.source_partition.account.id,
-          },
+          { accountId: counterpart.source_partition.account.id },
         ],
       });
       queryClient.invalidateQueries({
