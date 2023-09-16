@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  ForwardedRef,
-  ReactHTML,
-  RefObject,
-  forwardRef,
-  useContext,
-  useRef,
-  useState,
-} from "react";
+import { ReactHTML, ReactNode, useContext, useState } from "react";
 import { css } from "../../../../styled-system/css";
 import { rpc } from "../../rpc_client";
 import {
@@ -17,147 +9,19 @@ import {
   useQueryClient,
   useMutation,
 } from "@tanstack/react-query";
-import { boolean, minLength, number, object, optional, string } from "valibot";
+import {
+  boolean,
+  minLength,
+  number,
+  object,
+  optional,
+  string,
+  type Input,
+} from "valibot";
 import { UserPageStoreProvider, UserPageStoreContext } from "./store";
 import { Unpacked, formatValue, groupBy } from "@/utils/common";
 import { HiPlus } from "react-icons/hi";
-
-function useDialog<R>(
-  processFormData: (formdata: FormData) => R,
-  dialogForm: (ref: RefObject<HTMLFormElement>) => React.ReactNode
-) {
-  const ref = useRef<HTMLDialogElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
-  const resolveRef = useRef<
-    (
-      val:
-        | { confirmed: true; data: R }
-        | { confirmed: false }
-        | PromiseLike<
-            | {
-                confirmed: true;
-                data: R;
-              }
-            | {
-                confirmed: false;
-              }
-          >
-    ) => void
-  >();
-
-  const onConfirm = () => {
-    ref.current?.close();
-    const formEl = formRef.current;
-    if (!formEl) return;
-    const formdata = new FormData(formEl);
-    const data = processFormData(formdata);
-    resolveRef.current?.({ confirmed: true, data });
-    formEl.reset();
-  };
-
-  const onCancel = () => {
-    const formEl = formRef.current;
-    if (!formEl) return;
-    resolveRef.current?.({ confirmed: false });
-    formEl.reset();
-  };
-
-  const element = (
-    <dialog
-      ref={ref}
-      onCancel={onCancel}
-      className={css({
-        "&::backdrop": {
-          backgroundColor: "rgba(0, 0, 0, 0.5)",
-        },
-      })}
-    >
-      <div
-        className={css({
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        })}
-      >
-        <div
-          className={css({
-            maxWidth: "500px",
-            width: "40%",
-            background: "#f5f5f5",
-            borderRadius: "0.5rem",
-            p: "4",
-          })}
-        >
-          {dialogForm(formRef)}
-          <div
-            className={css({
-              display: "flex",
-              flexDirection: "row-reverse",
-              justifyContent: "flex-start",
-              width: "100%",
-              mt: "4",
-              backgroundColor: "#f5f5f5",
-              "& button": {
-                cursor: "pointer",
-                px: "2",
-                py: "1",
-                ms: "2",
-                borderRadius: "0.25rem",
-                outline: "1px solid black",
-                "&:hover": {
-                  backgroundColor: "#e5e5e5",
-                  outline: "1px solid blue",
-                  color: "blue",
-                },
-                "&:focus": {
-                  outline: "1px solid blue",
-                  color: "blue",
-                },
-              },
-            })}
-          >
-            <button formMethod="dialog" onClick={onConfirm}>
-              Confirm
-            </button>
-            <button
-              onClick={() => {
-                ref.current?.close();
-                onCancel();
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    </dialog>
-  );
-  const showDialog = async (asModal: boolean) => {
-    if (asModal) {
-      ref.current?.showModal();
-    } else {
-      ref.current?.show();
-    }
-    return new Promise<{ confirmed: true; data: R } | { confirmed: false }>(
-      (resolve) => {
-        resolveRef.current = resolve;
-        const onSubmit = (event: SubmitEvent) => {
-          formRef.current?.removeEventListener("submit", onSubmit);
-          event.preventDefault();
-          onConfirm();
-        };
-        formRef.current?.addEventListener("submit", onSubmit);
-      }
-    );
-  };
-
-  return [showDialog, element] as const;
-}
+import { DialogProvider, useDialog } from "@/utils/useDialog";
 
 export default function Main(props: {
   params: { username: string; dbname: string };
@@ -188,7 +52,9 @@ export function UserPage({
     >
       {(user) => (
         <div className={css({ display: "flex", height: "100%" })}>
-          <SideBar user={user} />
+          <DialogProvider>
+            <SideBar user={user} />
+          </DialogProvider>
           <div
             className={css({
               height: "100%",
@@ -261,120 +127,217 @@ function SectionLabel(props: {
   );
 }
 
-const DialogForm = forwardRef(function DialogForm(
-  props: {
-    children: React.ReactNode;
-  },
-  ref: ForwardedRef<HTMLFormElement>
-) {
+const DialogLayout = (props: { children: ReactNode }) => {
   return (
-    <form
-      ref={ref}
+    <div
       className={css({
-        display: "grid",
-        gridTemplateColumns: "1fr 3fr", // Define the width of each column
-        gridGap: "0.5rem", // Add spacing between the rows and columns
-        "& *": {
-          padding: "0.25rem 0.50rem",
-          borderRadius: "0.25rem",
-        },
-        "& *:focus": {
-          outline: "1px solid blue",
-        },
-        "& label": {
-          ps: 0,
-          fontSize: "0.8rem",
-          fontWeight: "medium",
-        },
-        "& select": {
-          appearance: "none",
-          // TODO: Check the security of this background image.
-          backgroundImage: `url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")`,
-          backgroundRepeat: "no-repeat, repeat",
-          backgroundPosition: "right .7em top 50%, 0 0",
-          backgroundSize: ".65em auto, 100%",
-        },
-        "& input[type=checkbox]": {
-          appearance: "none",
-          width: "1.25rem",
-          height: "1.25rem",
-          border: "1px solid gray",
-          borderRadius: "0.25rem",
-          position: "relative",
-          cursor: "pointer",
-          display: "inline-block",
-          ms: "1",
-          "&:checked": {
-            backgroundColor: "black",
-            "&::before": {
-              content: "",
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: "0.75rem",
-              height: "0.75rem",
-              borderRadius: "0.5rem",
-            },
-          },
-        },
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
       })}
     >
-      {props.children}
-    </form>
+      <div
+        className={css({
+          maxWidth: "500px",
+          width: "40%",
+          background: "#f5f5f5",
+          borderRadius: "0.5rem",
+          p: "4",
+        })}
+      >
+        {props.children}
+      </div>
+    </div>
   );
+};
+
+const dialogFormClass = css({
+  display: "grid",
+  gridTemplateColumns: "1fr 3fr",
+  gridGap: "0.5rem",
+  "& *": {
+    padding: "0.25rem 0.50rem",
+    borderRadius: "0.25rem",
+  },
+  "& *:focus": {
+    outline: "1px solid blue",
+  },
+  "& label": {
+    ps: 0,
+    fontSize: "0.8rem",
+    fontWeight: "medium",
+  },
+  "& select": {
+    appearance: "none",
+    // TODO: Check the security of this background image.
+    backgroundImage: `url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")`,
+    backgroundRepeat: "no-repeat, repeat",
+    backgroundPosition: "right .7em top 50%, 0 0",
+    backgroundSize: ".65em auto, 100%",
+  },
+  "& input[type=checkbox]": {
+    appearance: "none",
+    width: "1.25rem",
+    height: "1.25rem",
+    border: "1px solid gray",
+    borderRadius: "0.25rem",
+    position: "relative",
+    cursor: "pointer",
+    display: "inline-block",
+    ms: "1",
+    "&:checked": {
+      backgroundColor: "black",
+      "&::before": {
+        content: "",
+        position: "absolute",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        width: "0.75rem",
+        height: "0.75rem",
+        borderRadius: "0.5rem",
+      },
+    },
+  },
 });
 
-const PartitionForm = forwardRef(function PartitionForm(
-  props: {
-    user: FindUserResult;
+const dialogButtonsClass = css({
+  display: "flex",
+  flexDirection: "row-reverse",
+  justifyContent: "flex-start",
+  width: "100%",
+  mt: "4",
+  backgroundColor: "#f5f5f5",
+  "& button": {
+    cursor: "pointer",
+    px: "2",
+    py: "1",
+    ms: "2",
+    borderRadius: "0.25rem",
+    outline: "1px solid black",
+    "&:hover": {
+      backgroundColor: "#e5e5e5",
+      outline: "1px solid blue",
+      color: "blue",
+    },
+    "&:focus": {
+      outline: "1px solid blue",
+      color: "blue",
+    },
   },
-  ref: ForwardedRef<HTMLFormElement>
-) {
-  const { user } = props;
+});
+
+const newPartitionSchema = object({
+  name: string([minLength(1)]),
+  isPrivate: boolean(),
+  accountId: string(),
+  accountName: optional(string()),
+  isSharedAccount: boolean(),
+});
+
+function PartitionForm(props: {
+  close: () => void;
+  confirm: (data: Input<typeof newPartitionSchema>) => void;
+  user: FindUserResult;
+}) {
+  const { user, close, confirm } = props;
   const ownedAccounts = user.accounts.filter((a) =>
     a.owners.map((o) => o.id).includes(user.id)
   );
-  return (
-    <DialogForm ref={ref}>
-      <label htmlFor="name">Partition Name</label>
-      <input type="text" name="name" placeholder="E.g. Savings" />
-      <label htmlFor="isPrivate">Private</label>
-      <input type="checkbox" name="isPrivate" />
-      <label htmlFor="accountId">Account</label>
-      <select name="accountId">
-        <option value="for-new-account">For New Account</option>
-        {ownedAccounts.map((account) => (
-          <option key={account.id} value={account.id}>
-            {account.name}
-          </option>
-        ))}
-      </select>
-      <label htmlFor="accountName">Account Name</label>
-      <input type="text" name="accountName" placeholder="E.g. InterBank" />
-      <label htmlFor="isSharedAccount">Shared Account</label>
-      <input type="checkbox" name="isSharedAccount" />
-    </DialogForm>
+  const [accountId, setAccountId] = useState(
+    ownedAccounts[0]?.id || "for-new-account"
   );
+  return (
+    <DialogLayout>
+      <form
+        id="partition-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const formdata = new FormData(e.target as HTMLFormElement);
+          const parsedData = newPartitionSchema.parse({
+            ...Object.fromEntries(formdata.entries()),
+            isPrivate: formdata.get("isPrivate") === "on",
+            isSharedAccount: formdata.get("isSharedAccount") === "on",
+          });
+          confirm(parsedData);
+        }}
+        className={dialogFormClass}
+      >
+        <label htmlFor="name">Partition Name</label>
+        <input type="text" name="name" placeholder="E.g. Savings" />
+        <label htmlFor="isPrivate">Private</label>
+        <input type="checkbox" name="isPrivate" />
+        <label htmlFor="accountId">Account</label>
+        <select
+          name="accountId"
+          onChange={(e) => {
+            setAccountId(e.target.value);
+          }}
+          defaultValue={accountId}
+        >
+          <option value="for-new-account">Create New Account</option>
+          <optgroup label="My Accounts">
+            {ownedAccounts.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.name}
+              </option>
+            ))}
+          </optgroup>
+        </select>
+        {accountId === "for-new-account" && (
+          <>
+            <label htmlFor="accountName">Account Name</label>
+            <input
+              type="text"
+              name="accountName"
+              placeholder="E.g. InterBank"
+            />
+            <label htmlFor="isSharedAccount">Shared Account</label>
+            <input type="checkbox" name="isSharedAccount" />
+          </>
+        )}
+      </form>
+      <div className={dialogButtonsClass}>
+        <button type="submit" form="partition-form">
+          Confirm
+        </button>
+        <button onClick={close}>Cancel</button>
+      </div>
+    </DialogLayout>
+  );
+}
+
+const newCategorySchema = object({
+  name: string([minLength(1)]),
+  kind: string(),
+  isPrivate: boolean(),
 });
 
-function SideBar({ user }: { user: FindUserResult }) {
-  const queryClient = useQueryClient();
-  const [showCategoryDialog, categoryDialogEl] = useDialog(
-    (formdata) => {
-      const schema = object({
-        name: string([minLength(1)]),
-        kind: string(),
-        isPrivate: boolean(),
-      });
-      const parsedData = schema.parse({
-        ...Object.fromEntries(formdata.entries()),
-        isPrivate: formdata.get("isPrivate") === "on",
-      });
-      return parsedData;
-    },
-    (formRef) => (
-      <DialogForm ref={formRef}>
+function CategoryModal(props: {
+  close: () => void;
+  confirm: (data: Input<typeof newCategorySchema>) => void;
+}) {
+  const { close, confirm } = props;
+  return (
+    <DialogLayout>
+      <form
+        id="category-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const formdata = new FormData(e.target as HTMLFormElement);
+          const parsedData = newCategorySchema.parse({
+            ...Object.fromEntries(formdata.entries()),
+            isPrivate: formdata.get("isPrivate") === "on",
+          });
+          confirm(parsedData);
+        }}
+        className={dialogFormClass}
+      >
         <label htmlFor="name">Name</label>
         <input type="text" name="name" placeholder="E.g. Salary" />
         <label htmlFor="kind">Kind</label>
@@ -385,28 +348,21 @@ function SideBar({ user }: { user: FindUserResult }) {
         </select>
         <label htmlFor="isPrivate">Private</label>
         <input type="checkbox" name="isPrivate" />
-      </DialogForm>
-    )
+      </form>
+      <div className={dialogButtonsClass}>
+        <button type="submit" form="category-form">
+          Confirm
+        </button>
+        <button onClick={close}>Cancel</button>
+      </div>
+    </DialogLayout>
   );
+}
 
-  const [showPartitionDialog, partitionDialogEl] = useDialog(
-    (formdata) => {
-      const schema = object({
-        name: string([minLength(1)]),
-        isPrivate: boolean(),
-        accountId: string(),
-        accountName: optional(string()),
-        isSharedAccount: boolean(),
-      });
-      const parsedData = schema.parse({
-        ...Object.fromEntries(formdata.entries()),
-        isPrivate: formdata.get("isPrivate") === "on",
-        isSharedAccount: formdata.get("isSharedAccount") === "on",
-      });
-      return parsedData;
-    },
-    (formRef) => <PartitionForm ref={formRef} user={user} />
-  );
+function SideBar({ user }: { user: FindUserResult }) {
+  const queryClient = useQueryClient();
+  const showCategoryDialog = useDialog(CategoryModal);
+  const showPartitionDialog = useDialog(PartitionForm, { user });
 
   return (
     <div
@@ -435,39 +391,34 @@ function SideBar({ user }: { user: FindUserResult }) {
       >
         <SectionLabel
           onClickPlus={async () => {
-            const userAction = await showPartitionDialog(true);
-            if (userAction.confirmed) {
-              const {
-                name,
-                isPrivate,
-                accountId,
-                accountName,
-                isSharedAccount,
-              } = userAction.data;
-              let forNewAccount = false;
-              if (accountId === "for-new-account") {
-                forNewAccount = true;
-                if (!accountName?.trim()) {
-                  throw new Error("Account name is required");
-                }
+            const response = await showPartitionDialog(true);
+            if (!response) return;
+
+            const { name, isPrivate, accountId, accountName, isSharedAccount } =
+              response;
+            let forNewAccount = false;
+            if (accountId === "for-new-account") {
+              forNewAccount = true;
+              if (!accountName?.trim()) {
+                throw new Error("Account name is required");
               }
-              await rpc.post.createPartition({
-                userId: user.id,
-                dbname: user.dbname,
-                name,
-                isPrivate,
-                forNewAccount,
-                accountId,
-                isSharedAccount,
-                newAccountName: accountName,
-              });
-              queryClient.invalidateQueries({
-                queryKey: ["accounts", user.id],
-              });
-              queryClient.invalidateQueries({
-                queryKey: ["partitions", user.id],
-              });
             }
+            await rpc.post.createPartition({
+              userId: user.id,
+              dbname: user.dbname,
+              name,
+              isPrivate,
+              forNewAccount,
+              accountId,
+              isSharedAccount,
+              newAccountName: accountName,
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["accounts", user.id],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["partitions", user.id],
+            });
           }}
         >
           Accounts
@@ -475,9 +426,9 @@ function SideBar({ user }: { user: FindUserResult }) {
         <Accounts user={user} />
         <SectionLabel
           onClickPlus={async () => {
-            const userAction = await showCategoryDialog(true);
-            if (userAction.confirmed) {
-              const { name, kind, isPrivate } = userAction.data;
+            const userAction = await showCategoryDialog();
+            if (userAction) {
+              const { name, kind, isPrivate } = userAction;
               await rpc.post.createCategory({
                 userId: user.id,
                 dbname: user.dbname,
@@ -496,8 +447,6 @@ function SideBar({ user }: { user: FindUserResult }) {
         <Categories user={user} />
       </div>
       <DateRange user={user} />
-      {categoryDialogEl}
-      {partitionDialogEl}
     </div>
   );
 }
