@@ -19,6 +19,8 @@
 * [ ] Migration.
   - Looks like piecewise migrations are needed when developing new features.
 
+* [ ] Prepare a script to migrate all db in a given edgedb instance.
+
 * [ ] Prettier display for the number-of-items-per-page input.
 
 * [ ] Properly handle "undefined" result from rpc, also error.

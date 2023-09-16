@@ -25,6 +25,7 @@ module default {
     multi owners: EUser;
 
     multi link partitions := .<account[is EPartition];
+    property is_owned := any(.owners = global current_user);
   }
 
   # Represents a partition of an account.
@@ -39,7 +40,8 @@ module default {
     }
 
     multi link owners := .account.owners;
-    property is_visible := not .is_private or global current_user.is_admin or any(.owners = global current_user);
+    property is_owned := .account.is_owned;
+    property is_visible := not .is_private or global current_user.is_admin or .is_owned;
   }
 
   type ECategory {
@@ -56,7 +58,8 @@ module default {
       "
     }
 
-    property is_visible := not .is_private or global current_user.is_admin or any(.owners = global current_user)
+    property is_owned := any(.owners = global current_user);
+    property is_visible := not .is_private or global current_user.is_admin or .is_owned;
   }
 
   # Represents a transaction.
@@ -76,6 +79,7 @@ module default {
 
     property is_counterpart := exists .<counterpart[is ETransaction];
     multi link owners := .source_partition.owners;
+    property is_owned := .source_partition.is_owned;
     property is_visible := .source_partition.is_visible;
   }
 }

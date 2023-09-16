@@ -135,6 +135,9 @@ export const getPartitions = withValidation(
           id: true,
           username: true,
         },
+        account: {
+          id: true,
+        },
         is_private: true,
         filter: e.op(belongToAccount, "and", partition.is_visible),
       };
@@ -621,17 +624,19 @@ const _categoryCanBeDeleted = async (
       filter_single: e.op(category.id, "=", id),
     }))
   );
-  const linkedTransactions = e.params({ id: e.uuid }, ({ id }) =>
-    e.select(e.ETransaction, (transaction) => ({
-      filter: e.op(transaction.category.id, "=", id),
-    }))
+  const transactionsCount = e.params({ id: e.uuid }, ({ id }) =>
+    e.count(
+      e.select(e.ETransaction, (transaction) => ({
+        filter: e.op(transaction.category.id, "=", id),
+      }))
+    )
   );
   const category = await findCategory.run(tx, { id: categoryId });
   if (!category) {
     return [false, "Category not found."];
   }
-  const transactions = await linkedTransactions.run(tx, { id: categoryId });
-  if (transactions.length !== 0) {
+  const count = await transactionsCount.run(tx, { id: categoryId });
+  if (count !== 0) {
     return [false, "Category has linked transactions."];
   }
   return [true, ""];
@@ -646,7 +651,7 @@ export const categoryCanBeDeleted = withValidation(
     const result = await client.transaction(async (tx) =>
       _categoryCanBeDeleted(tx, categoryId)
     );
-    return result[0]
+    return result[0];
   }
 );
 
@@ -666,7 +671,10 @@ export const deleteCategory = withValidation(
       current_user_id: userId,
     });
     return client.transaction(async (tx) => {
-      const [canBeDeleted, errMsg] = await _categoryCanBeDeleted(tx, categoryId);
+      const [canBeDeleted, errMsg] = await _categoryCanBeDeleted(
+        tx,
+        categoryId
+      );
       if (!canBeDeleted) {
         throw new Error(errMsg);
       }
@@ -1042,5 +1050,67 @@ export const createPartition = withValidation(
       });
 
     return true;
+  }
+);
+
+const _canDeletePartition = async (
+  partitionId: string,
+  tx: Transaction | edgedb.Client
+) => {
+  const transactionsCountQuery = e.params({ id: e.uuid }, ({ id }) =>
+    e.count(
+      e.select(e.ETransaction, (transaction) => ({
+        filter: e.op(transaction.source_partition.id, "=", id),
+      }))
+    )
+  );
+  const isOwnedQuery = e.params({ id: e.uuid }, ({ id }) =>
+    e.select(e.EPartition, (partition) => ({
+      filter_single: e.op(
+        e.op(partition.id, "=", id),
+        "and",
+        partition.is_owned
+      ),
+      is_private: true,
+    }))
+  );
+
+  const isOwned = await isOwnedQuery.run(tx, { id: partitionId });
+  const count = await transactionsCountQuery.run(tx, { id: partitionId });
+  return isOwned && count === 0;
+};
+
+export const partitionCanBeDeleted = withValidation(
+  object({ partitionId: string(), userId: string(), dbname: string() }),
+  async ({ partitionId, userId, dbname }) => {
+    return _canDeletePartition(
+      partitionId,
+      edgedb.createClient({ database: dbname }).withGlobals({
+        current_user_id: userId,
+      })
+    );
+  }
+);
+
+export const deletePartition = withValidation(
+  object({ partitionId: string(), userId: string(), dbname: string() }),
+  async ({ partitionId, userId, dbname }) => {
+    const deleteQuery = e.params({ id: e.uuid }, ({ id }) =>
+      e.delete(e.EPartition, (partition) => ({
+        filter_single: e.op(partition.id, "=", id),
+      }))
+    );
+    return edgedb
+      .createClient({ database: dbname })
+      .withGlobals({
+        current_user_id: userId,
+      })
+      .transaction(async (tx) => {
+        const canDelete = await _canDeletePartition(partitionId, tx);
+        if (!canDelete) {
+          throw new Error("Partition has linked transactions.");
+        }
+        await deleteQuery.run(tx, { id: partitionId });
+      });
   }
 );

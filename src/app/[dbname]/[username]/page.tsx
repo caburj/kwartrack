@@ -1,6 +1,12 @@
 "use client";
 
-import { ReactHTML, ReactNode, useContext, useState } from "react";
+import {
+  MouseEventHandler,
+  ReactHTML,
+  ReactNode,
+  useContext,
+  useState,
+} from "react";
 import { css } from "../../../../styled-system/css";
 import { rpc } from "../../rpc_client";
 import {
@@ -512,12 +518,122 @@ function Accounts({ user }: { user: { id: string; dbname: string } }) {
   );
 }
 
+function DeleteButton(props: {
+  onClick: MouseEventHandler<HTMLButtonElement>;
+}) {
+  return (
+    <button
+      className={css({
+        cursor: "pointer",
+        verticalAlign: "middle",
+        color: "red",
+        ms: "1",
+      })}
+      onClick={props.onClick}
+    >
+      <RxCross2 />
+    </button>
+  );
+}
+
+type Partition = Unpacked<
+  NonNullable<Awaited<ReturnType<typeof rpc.post.getPartitions>>>
+>;
+
+function PartitionLI({
+  partition,
+  user,
+}: {
+  partition: Partition;
+  user: { id: string; dbname: string };
+}) {
+  const queryClient = useQueryClient();
+  const [store, dispatch] = useContext(UserPageStoreContext);
+  const deletePartition = useMutation(
+    () => {
+      return rpc.post.deletePartition({
+        partitionId: partition.id,
+        dbname: user.dbname,
+        userId: user.id,
+      });
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: ["partitions", user.id, partition.account.id],
+        });
+      },
+    }
+  );
+  const canBeDeleted = useQuery(
+    ["partitionCanBeDeleted", { partitionId: partition.id }],
+    () => {
+      return rpc.post.partitionCanBeDeleted({
+        partitionId: partition.id,
+        dbname: user.dbname,
+        userId: user.id,
+      });
+    }
+  );
+  return (
+    <li
+      className={css({
+        cursor: canBeDeleted.data ? "default" : "pointer",
+        display: "flex",
+        justifyContent: "space-between",
+        fontWeight: "medium",
+        color: store.partitionIds.includes(partition.id) ? "blue" : "inherit",
+      })}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (canBeDeleted.data) return;
+        dispatch({
+          type: "TOGGLE_PARTITIONS",
+          payload: [partition.id],
+        });
+      }}
+    >
+      <span>
+        <span
+          className={css({
+            verticalAlign: "middle",
+          })}
+        >
+          {partition.name}
+        </span>
+        {canBeDeleted.data && (
+          <DeleteButton
+            onClick={async (e) => {
+              e.stopPropagation();
+              await deletePartition.mutateAsync();
+            }}
+          />
+        )}
+      </span>
+      <LoadingValue
+        queryKey={[
+          "partitionBalance",
+          {
+            partitionId: partition.id,
+          },
+        ]}
+        valueLoader={() =>
+          rpc.post.getPartitionBalance({
+            partitionId: partition.id,
+            userId: user.id,
+            dbname: user.dbname,
+          })
+        }
+      />
+    </li>
+  );
+}
+
 function Partitions(props: {
   accountId: string;
   user: { id: string; dbname: string };
 }) {
   const { accountId, user } = props;
-  const [store, dispatch] = useContext(UserPageStoreContext);
   const partitions = useQuery(["partitions", user.id, accountId], () => {
     return rpc.post.getPartitions({
       accountId,
@@ -534,42 +650,7 @@ function Partitions(props: {
       {(partitions) => (
         <ul className={css({ paddingStart: "0.5rem" })}>
           {partitions.map((partition) => (
-            <li
-              key={partition.id}
-              className={css({
-                display: "flex",
-                justifyContent: "space-between",
-                fontWeight: "medium",
-                cursor: "pointer",
-                color: store.partitionIds.includes(partition.id)
-                  ? "blue"
-                  : "inherit",
-              })}
-              onClick={(event) => {
-                event.stopPropagation();
-                dispatch({
-                  type: "TOGGLE_PARTITIONS",
-                  payload: [partition.id],
-                });
-              }}
-            >
-              <span>{partition.name}</span>
-              <LoadingValue
-                queryKey={[
-                  "partitionBalance",
-                  {
-                    partitionId: partition.id,
-                  },
-                ]}
-                valueLoader={() =>
-                  rpc.post.getPartitionBalance({
-                    partitionId: partition.id,
-                    userId: user.id,
-                    dbname: user.dbname,
-                  })
-                }
-              />
-            </li>
+            <PartitionLI partition={partition} user={user} key={partition.id} />
           ))}
         </ul>
       )}
@@ -692,39 +773,6 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
           </div>
         )}
       </QueryResult>
-      {/* <form
-        className={css({
-          margin: "1rem 0",
-          display: "flex",
-          flexDirection: "column",
-        })}
-        onSubmit={async (event) => {
-          event.preventDefault();
-          const target = event.target as HTMLFormElement;
-          const formdata = new FormData(target as HTMLFormElement);
-          const formObj = Object.fromEntries(formdata.entries());
-          const dataSchema = object({ name: string(), kind: string() });
-          const parsedData = dataSchema.parse(formObj);
-          await rpc.post.createUserCategory({
-            userId,
-            name: parsedData.name,
-            kind: parsedData.kind,
-          });
-          target.reset();
-          queryClient.invalidateQueries({ queryKey: ["categories", userId] });
-        }}
-      >
-        <h1>Create Category</h1>
-        <label htmlFor="name">Name:</label>
-        <input type="text" name="name" placeholder="E.g. Salary" />
-        <label htmlFor="kind">Kind: </label>
-        <select name="kind" defaultValue="Expense">
-          <option value="Income">Income</option>
-          <option value="Expense">Expense</option>
-          <option value="Transfer">Transfer</option>
-        </select>
-        <input type="submit" value="Create"></input>
-      </form> */}
     </>
   );
 }
@@ -788,22 +836,14 @@ function Category({
           {category.name}
         </span>
         {canBeDeleted.data && (
-          <button
-            className={css({
-              cursor: "pointer",
-              verticalAlign: "middle",
-              color: "red",
-            })}
+          <DeleteButton
             onClick={async (e) => {
               e.stopPropagation();
               await deleteCategory.mutateAsync();
             }}
-          >
-            <RxCross2 />
-          </button>
+          />
         )}
       </span>
-
       <LoadingValue
         queryKey={[
           "categoryBalance",
@@ -1082,6 +1122,14 @@ function Transactions({ user }: { user: { id: string; dbname: string } }) {
                             });
                             queryClient.invalidateQueries({
                               queryKey: [
+                                "partitionCanBeDeleted",
+                                {
+                                  partitionId: transaction.source_partition.id,
+                                },
+                              ],
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: [
                                 "accountBalance",
                                 {
                                   accountId:
@@ -1109,6 +1157,39 @@ function Transactions({ user }: { user: { id: string; dbname: string } }) {
                                 transaction.category.kind,
                               ],
                             });
+                            if (transaction.counterpart) {
+                              queryClient.invalidateQueries({
+                                queryKey: [
+                                  "partitionBalance",
+                                  {
+                                    partitionId:
+                                      transaction.counterpart.source_partition
+                                        .id,
+                                  },
+                                ],
+                              });
+
+                              queryClient.invalidateQueries({
+                                queryKey: [
+                                  "partitionCanBeDeleted",
+                                  {
+                                    partitionId:
+                                      transaction.counterpart.source_partition
+                                        .id,
+                                  },
+                                ],
+                              });
+                              queryClient.invalidateQueries({
+                                queryKey: [
+                                  "accountBalance",
+                                  {
+                                    accountId:
+                                      transaction.counterpart.source_partition
+                                        .account.id,
+                                  },
+                                ],
+                              });
+                            }
                             setIsDeleting(false);
                           }}
                           disabled={isDeleting}
