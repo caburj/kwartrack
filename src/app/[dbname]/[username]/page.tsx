@@ -458,8 +458,103 @@ function SideBar({ user }: { user: FindUserResult }) {
   );
 }
 
-function Accounts({ user }: { user: { id: string; dbname: string } }) {
+type Account = Unpacked<
+  NonNullable<Awaited<ReturnType<typeof rpc.post.getAccounts>>>
+>;
+
+function AccountLI({
+  account,
+  user,
+}: {
+  account: Account;
+  user: { id: string; dbname: string };
+}) {
+  const queryClient = useQueryClient();
+  const canBeDeleted = useQuery(
+    ["accountCanBeDeleted", { accountId: account.id }],
+    () => {
+      return rpc.post.accountCanBeDeleted({
+        accountId: account.id,
+        dbname: user.dbname,
+        userId: user.id,
+      });
+    }
+  );
+  const deleteAccount = useMutation(
+    () => {
+      return rpc.post.deleteAccount({
+        accountId: account.id,
+        dbname: user.dbname,
+        userId: user.id,
+      });
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["accounts", user.id] });
+      },
+    }
+  );
   const [store, dispatch] = useContext(UserPageStoreContext);
+  return (
+    <li
+      key={account.id}
+      className={css({
+        marginBottom: "0.5rem",
+        cursor: "pointer",
+        fontWeight: "bold",
+      })}
+      onClick={() => {
+        dispatch({
+          type: "TOGGLE_ACCOUNT",
+          payload: account.partitions.map((p) => p.id),
+        });
+      }}
+    >
+      <div
+        className={css({
+          display: "flex",
+          justifyContent: "space-between",
+        })}
+      >
+        <span>
+          <span
+            className={css({
+              verticalAlign: "middle",
+            })}
+          >
+            {account.label}
+          </span>
+          {canBeDeleted.data && (
+            <DeleteButton
+              onClick={async (e) => {
+                e.stopPropagation();
+                await deleteAccount.mutateAsync();
+              }}
+            />
+          )}
+        </span>
+        <LoadingValue
+          queryKey={[
+            "accountBalance",
+            {
+              accountId: account.id,
+            },
+          ]}
+          valueLoader={() =>
+            rpc.post.getAccountBalance({
+              accountId: account.id,
+              userId: user.id,
+              dbname: user.dbname,
+            })
+          }
+        />
+      </div>
+      <Partitions accountId={account.id} user={user} />
+    </li>
+  );
+}
+
+function Accounts({ user }: { user: { id: string; dbname: string } }) {
   const accounts = useQuery(["accounts", user.id], () => {
     return rpc.post.getAccounts({ userId: user.id, dbname: user.dbname });
   });
@@ -472,45 +567,7 @@ function Accounts({ user }: { user: { id: string; dbname: string } }) {
       {(accounts) => (
         <ul className={css({ p: "2" })}>
           {accounts.map((account) => (
-            <li
-              key={account.id}
-              className={css({
-                marginBottom: "0.5rem",
-                cursor: "pointer",
-                fontWeight: "bold",
-              })}
-              onClick={() => {
-                dispatch({
-                  type: "TOGGLE_ACCOUNT",
-                  payload: account.partitions.map((p) => p.id),
-                });
-              }}
-            >
-              <div
-                className={css({
-                  display: "flex",
-                  justifyContent: "space-between",
-                })}
-              >
-                <span>{account.label}</span>
-                <LoadingValue
-                  queryKey={[
-                    "accountBalance",
-                    {
-                      accountId: account.id,
-                    },
-                  ]}
-                  valueLoader={() =>
-                    rpc.post.getAccountBalance({
-                      accountId: account.id,
-                      userId: user.id,
-                      dbname: user.dbname,
-                    })
-                  }
-                />
-              </div>
-              <Partitions accountId={account.id} user={user} />
-            </li>
+            <AccountLI account={account} user={user} key={account.id} />
           ))}
         </ul>
       )}
@@ -561,6 +618,12 @@ function PartitionLI({
       onSuccess: () => {
         queryClient.invalidateQueries({
           queryKey: ["partitions", user.id, partition.account.id],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [
+            "accountCanBeDeleted",
+            { accountId: partition.account.id },
+          ],
         });
       },
     }
@@ -1130,6 +1193,15 @@ function Transactions({ user }: { user: { id: string; dbname: string } }) {
                             });
                             queryClient.invalidateQueries({
                               queryKey: [
+                                "accountCanBeDeleted",
+                                {
+                                  accountId:
+                                    transaction.source_partition.account.id,
+                                },
+                              ],
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: [
                                 "accountBalance",
                                 {
                                   accountId:
@@ -1176,6 +1248,17 @@ function Transactions({ user }: { user: { id: string; dbname: string } }) {
                                     partitionId:
                                       transaction.counterpart.source_partition
                                         .id,
+                                  },
+                                ],
+                              });
+
+                              queryClient.invalidateQueries({
+                                queryKey: [
+                                  "accountCanBeDeleted",
+                                  {
+                                    accountId:
+                                      transaction.counterpart.source_partition
+                                        .account.id,
                                   },
                                 ],
                               });
@@ -1356,6 +1439,18 @@ function TransactionForm({ user }: { user: { id: string; dbname: string } }) {
       });
       queryClient.invalidateQueries({
         queryKey: [
+          "partitionCanBeDeleted",
+          { partitionId: parsedData.sourcePartitionId },
+        ],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [
+          "accountCanBeDeleted",
+          { accountId: transaction.source_partition.account.id },
+        ],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [
           "accountBalance",
           { accountId: transaction.source_partition.account.id },
         ],
@@ -1369,6 +1464,18 @@ function TransactionForm({ user }: { user: { id: string; dbname: string } }) {
         queryKey: [
           "partitionBalance",
           { partitionId: parsedData.destinationPartitionId },
+        ],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [
+          "partitionCanBeDeleted",
+          { partitionId: counterpart.source_partition.id },
+        ],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [
+          "accountCanBeDeleted",
+          { accountId: counterpart.source_partition.account.id },
         ],
       });
       queryClient.invalidateQueries({

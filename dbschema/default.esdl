@@ -26,6 +26,7 @@ module default {
 
     multi link partitions := .<account[is EPartition];
     property is_owned := any(.owners = global current_user);
+    property is_empty := all(.partitions.is_empty);
   }
 
   # Represents a partition of an account.
@@ -33,7 +34,9 @@ module default {
   # An example is a savings partition, and a spending partition.
   type EPartition {
     required name: str;
-    required account: EAccount;
+    required account: EAccount {
+      on target delete delete source;
+    }
     required property is_private: bool {
       default := false;
       annotation description := "Only the owners can see this partition and its transactions."
@@ -42,6 +45,7 @@ module default {
     multi link owners := .account.owners;
     property is_owned := .account.is_owned;
     property is_visible := not .is_private or global current_user.is_admin or .is_owned;
+    property is_empty := not exists .<source_partition[is ETransaction];
   }
 
   type ECategory {
@@ -60,6 +64,7 @@ module default {
 
     property is_owned := any(.owners = global current_user);
     property is_visible := not .is_private or global current_user.is_admin or .is_owned;
+    property is_empty := not exists .<category[is ETransaction];
   }
 
   # Represents a transaction.

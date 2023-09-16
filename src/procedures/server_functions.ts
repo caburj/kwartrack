@@ -1071,13 +1071,12 @@ const _canDeletePartition = async (
         "and",
         partition.is_owned
       ),
-      is_private: true,
     }))
   );
 
   const isOwned = await isOwnedQuery.run(tx, { id: partitionId });
   const count = await transactionsCountQuery.run(tx, { id: partitionId });
-  return isOwned && count === 0;
+  return Boolean(isOwned) && count === 0;
 };
 
 export const partitionCanBeDeleted = withValidation(
@@ -1111,6 +1110,62 @@ export const deletePartition = withValidation(
           throw new Error("Partition has linked transactions.");
         }
         await deleteQuery.run(tx, { id: partitionId });
+      });
+  }
+);
+
+const _canDeleteAccount = async (
+  accountId: string,
+  tx: Transaction | edgedb.Client
+) => {
+  const count = await e
+    .params({ accountId: e.uuid }, ({ accountId }) =>
+      e.count(
+        e.select(e.EAccount, (account) => ({
+          filter: e.op(
+            e.op(account.id, "=", accountId),
+            "and",
+            e.op(account.is_empty, "and", account.is_owned)
+          ),
+        }))
+      )
+    )
+    .run(tx, { accountId });
+
+  return count === 1;
+};
+
+export const accountCanBeDeleted = withValidation(
+  object({ accountId: string(), userId: string(), dbname: string() }),
+  async ({ accountId, userId, dbname }) => {
+    return _canDeleteAccount(
+      accountId,
+      edgedb.createClient({ database: dbname }).withGlobals({
+        current_user_id: userId,
+      })
+    );
+  }
+);
+
+export const deleteAccount = withValidation(
+  object({ accountId: string(), userId: string(), dbname: string() }),
+  async ({ accountId, userId, dbname }) => {
+    const deleteQuery = e.params({ id: e.uuid }, ({ id }) =>
+      e.delete(e.EAccount, (account) => ({
+        filter_single: e.op(account.id, "=", id),
+      }))
+    );
+    return edgedb
+      .createClient({ database: dbname })
+      .withGlobals({
+        current_user_id: userId,
+      })
+      .transaction(async (tx) => {
+        const canDelete = await _canDeleteAccount(accountId, tx);
+        if (!canDelete) {
+          throw new Error("Account has linked transactions.");
+        }
+        await deleteQuery.run(tx, { id: accountId });
       });
   }
 );

@@ -25,6 +25,13 @@
 
 * [ ] Properly handle "undefined" result from rpc, also error.
 
+* [ ] Simpler way to declare invalidated queries.
+
+* [ ] Rearrange the accounts.
+  - Personally owned accounts at the top.
+  - Common accounts in the middle.
+  - Other accounts at the bottom.
+
 * [ ] User registration.
   - 2 cases
     - user will start his own db
