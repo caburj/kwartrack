@@ -554,6 +554,47 @@ function AccountLI({
   );
 }
 
+const getAccountGroup = (
+  account: Account,
+  userId: string
+): "owned" | "common" | "others" => {
+  if (account.owners.length === 1 && account.owners[0].id === userId) {
+    return "owned";
+  } else if (
+    account.owners.length > 1 &&
+    account.owners.map((o) => o.id).includes(userId)
+  ) {
+    return "common";
+  } else {
+    return "others";
+  }
+};
+
+function GroupedAccounts(props: {
+  title: string;
+  accounts: Account[];
+  user: { id: string; dbname: string };
+}) {
+  const { title, accounts, user } = props;
+  return (
+    <>
+      <h1
+        className={css({
+          textAlign: "center",
+          fontWeight: "bold",
+        })}
+      >
+        - {title} -
+      </h1>
+      <ul className={css({ p: "2" })}>
+        {accounts.map((account) => (
+          <AccountLI account={account} user={user} key={account.id} />
+        ))}
+      </ul>
+    </>
+  );
+}
+
 function Accounts({ user }: { user: { id: string; dbname: string } }) {
   const accounts = useQuery(["accounts", user.id], () => {
     return rpc.post.getAccounts({ userId: user.id, dbname: user.dbname });
@@ -564,13 +605,30 @@ function Accounts({ user }: { user: { id: string; dbname: string } }) {
       onLoading={<>Loading accounts...</>}
       onUndefined={<>No accounts found</>}
     >
-      {(accounts) => (
-        <ul className={css({ p: "2" })}>
-          {accounts.map((account) => (
-            <AccountLI account={account} user={user} key={account.id} />
-          ))}
-        </ul>
-      )}
+      {(accounts) => {
+        const groupedAccounts = groupBy(accounts, (account) => {
+          return getAccountGroup(account, user.id);
+        });
+        return (
+          <>
+            <GroupedAccounts
+              title="Owned"
+              accounts={groupedAccounts.owned || []}
+              user={user}
+            />
+            <GroupedAccounts
+              title="Common"
+              accounts={groupedAccounts.common || []}
+              user={user}
+            />
+            <GroupedAccounts
+              title="Others"
+              accounts={groupedAccounts.others || []}
+              user={user}
+            />
+          </>
+        );
+      }}
     </QueryResult>
   );
 }
@@ -1161,6 +1219,7 @@ function Transactions({ user }: { user: { id: string; dbname: string } }) {
                           className={css({
                             cursor: "pointer",
                             padding: "0 0.25rem",
+                            color: "red",
                           })}
                           onClick={async () => {
                             setIsDeleting(true);
@@ -1277,7 +1336,7 @@ function Transactions({ user }: { user: { id: string; dbname: string } }) {
                           }}
                           disabled={isDeleting}
                         >
-                          x
+                          <RxCross2 />
                         </button>
                       </td>
                     </tr>
@@ -1331,6 +1390,42 @@ function FormInput(props: {
   );
 }
 
+type PartitionOption = Unpacked<
+  NonNullable<Awaited<ReturnType<typeof rpc.post.getPartitionOptions>>>
+>;
+
+function PartitionOptGroup(props: {
+  groupedPartitions: PartitionOption[];
+  label: string;
+  onlyPrivate: boolean;
+}) {
+  const { groupedPartitions, label, onlyPrivate } = props;
+  return (
+    <optgroup key={label} label={label}>
+      {Object.entries(groupBy(groupedPartitions, (p) => p.account.id)).map(
+        ([accountId, partitions]) => {
+          const partitionsToShow = partitions.filter((p) =>
+            onlyPrivate ? p.is_private : true
+          );
+          if (partitionsToShow.length === 0) return null;
+          return (
+            <>
+              <option value={accountId} disabled>
+                {partitions[0].account.label}
+              </option>
+              {partitionsToShow.map((partition) => (
+                <option key={partition.id} value={partition.id}>
+                  {partition.name}
+                </option>
+              ))}
+            </>
+          );
+        }
+      )}
+    </optgroup>
+  );
+}
+
 function TransactionForm({ user }: { user: { id: string; dbname: string } }) {
   const queryClient = useQueryClient();
   const [store] = useContext(UserPageStoreContext);
@@ -1360,26 +1455,42 @@ function TransactionForm({ user }: { user: { id: string; dbname: string } }) {
 
   const getPartitionOptions = (
     partitions: Partition[],
+    userId: string,
     onlyPrivate: boolean
   ) => {
-    const groupedPartitions = groupBy(partitions, (p) => p.account.id);
+    const groupedPartitions = groupBy(partitions, (p) => {
+      if (p.account.owners.length === 1 && p.account.owners[0].id === userId) {
+        return "owned";
+      } else if (
+        p.account.owners.length > 1 &&
+        p.account.owners.map((o) => o.id).includes(userId)
+      ) {
+        return "common";
+      } else {
+        return "others";
+      }
+    });
+
+    const ownedPartitions = groupedPartitions.owned || [];
+    const commonPartitions = groupedPartitions.common || [];
+    const othersPartitions = groupedPartitions.others || [];
     return (
       <>
-        {Object.entries(groupedPartitions).map(([accountId, partitions]) => {
-          const partitionsToShow = partitions.filter((p) =>
-            onlyPrivate ? p.is_private : true
-          );
-          if (partitionsToShow.length === 0) return null;
-          return (
-            <optgroup key={accountId} label={partitions[0].account.label}>
-              {partitionsToShow.map((partition) => (
-                <option key={partition.id} value={partition.id}>
-                  {partition.name}
-                </option>
-              ))}
-            </optgroup>
-          );
-        })}
+        <PartitionOptGroup
+          label="-- Owned --"
+          groupedPartitions={ownedPartitions}
+          onlyPrivate={onlyPrivate}
+        />
+        <PartitionOptGroup
+          label="-- Common --"
+          groupedPartitions={commonPartitions}
+          onlyPrivate={onlyPrivate}
+        />
+        <PartitionOptGroup
+          label="-- Others --"
+          groupedPartitions={othersPartitions}
+          onlyPrivate={onlyPrivate}
+        />
       </>
     );
   };
@@ -1543,7 +1654,7 @@ function TransactionForm({ user }: { user: { id: string; dbname: string } }) {
               name="sourcePartitionId"
               disabled={createTransaction.isLoading}
             >
-              {getPartitionOptions(partitions, inputCategoryIsPrivate)}
+              {getPartitionOptions(partitions, user.id, inputCategoryIsPrivate)}
             </select>
           )}
         </QueryResult>
@@ -1558,7 +1669,11 @@ function TransactionForm({ user }: { user: { id: string; dbname: string } }) {
                 name="destinationPartitionId"
                 disabled={createTransaction.isLoading}
               >
-                {getPartitionOptions(partitions, inputCategoryIsPrivate)}
+                {getPartitionOptions(
+                  partitions,
+                  user.id,
+                  inputCategoryIsPrivate
+                )}
               </select>
             )}
           </QueryResult>

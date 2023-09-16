@@ -27,10 +27,10 @@
 
 * [ ] Simpler way to declare invalidated queries.
 
-* [ ] Rearrange the accounts.
-  - Personally owned accounts at the top.
-  - Common accounts in the middle.
-  - Other accounts at the bottom.
+* [ ] Allow editing the accounts, partitions, and categories.
+  - Always edit mode in the sidebar?
+
+* [ ] Bug: The transaction form is not properly reset.
 
 * [ ] User registration.
   - 2 cases
@@ -131,3 +131,8 @@
   - Also, maybe disable the form fields when in progress?
   - [DONE] No spinner, instead disabled submit button. Also the inputs are
     disabled.
+
+* [X] Rearrange the accounts.
+  - Personally owned accounts at the top.
+  - Common accounts in the middle.
+  - Other accounts at the bottom.
