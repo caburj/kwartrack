@@ -580,18 +580,22 @@ function GroupedAccounts(props: {
   title: string;
   accounts: Account[];
   user: { id: string; dbname: string };
+  showTitle: boolean;
 }) {
-  const { title, accounts, user } = props;
+  const { title, accounts, user, showTitle } = props;
   return (
     <>
-      <h1
-        className={css({
-          textAlign: "center",
-          fontWeight: "bold",
-        })}
-      >
-        - {title} -
-      </h1>
+      {showTitle && (
+        <h1
+          className={css({
+            textAlign: "center",
+            fontWeight: "bold",
+          })}
+        >
+          - {title} -
+        </h1>
+      )}
+
       <ul className={css({ p: "2" })}>
         {accounts.map((account) => (
           <AccountLI account={account} user={user} key={account.id} />
@@ -619,23 +623,36 @@ function Accounts({ user }: { user: { id: string; dbname: string } }) {
         const groupedAccounts = groupBy(accounts, (account) => {
           return getAccountGroup(account, user.id);
         });
+        const showTitle =
+          Object.values(groupedAccounts).filter(
+            (accounts) => accounts.length > 0
+          ).length > 1;
         return (
           <>
-            <GroupedAccounts
-              title="Owned"
-              accounts={groupedAccounts.owned || []}
-              user={user}
-            />
-            <GroupedAccounts
-              title="Common"
-              accounts={groupedAccounts.common || []}
-              user={user}
-            />
-            <GroupedAccounts
-              title="Others"
-              accounts={groupedAccounts.others || []}
-              user={user}
-            />
+            {groupedAccounts.owned && (
+              <GroupedAccounts
+                title="Owned"
+                accounts={groupedAccounts.owned || []}
+                user={user}
+                showTitle={showTitle}
+              />
+            )}
+            {groupedAccounts.common && (
+              <GroupedAccounts
+                title="Common"
+                accounts={groupedAccounts.common || []}
+                user={user}
+                showTitle={showTitle}
+              />
+            )}
+            {groupedAccounts.others && (
+              <GroupedAccounts
+                title="Others"
+                accounts={groupedAccounts.others || []}
+                user={user}
+                showTitle={showTitle}
+              />
+            )}
           </>
         );
       }}
