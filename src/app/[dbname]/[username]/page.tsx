@@ -506,21 +506,21 @@ function AccountLI({
       key={account.id}
       className={css({
         marginBottom: "0.5rem",
-        cursor: "pointer",
         fontWeight: "bold",
       })}
-      onClick={() => {
-        dispatch({
-          type: "TOGGLE_ACCOUNT",
-          payload: account.partitions.map((p) => p.id),
-        });
-      }}
     >
       <div
         className={css({
           display: "flex",
           justifyContent: "space-between",
+          cursor: "pointer",
         })}
+        onClick={() => {
+          dispatch({
+            type: "TOGGLE_ACCOUNT",
+            payload: account.partitions.map((p) => p.id),
+          });
+        }}
       >
         <span>
           <span
@@ -596,7 +596,7 @@ function GroupedAccounts(props: {
         </h1>
       )}
 
-      <ul className={css({ p: "2" })}>
+      <ul className={css({ py: "2" })}>
         {accounts.map((account) => (
           <AccountLI account={account} user={user} key={account.id} />
         ))}
@@ -691,6 +691,7 @@ function PartitionLI({
 }) {
   const queryClient = useQueryClient();
   const [store, dispatch] = useContext(UserPageStoreContext);
+  const [name, setName] = useState(partition.name);
   const deletePartition = useMutation(
     () => {
       return rpc.post.deletePartition({
@@ -723,32 +724,42 @@ function PartitionLI({
       });
     }
   );
+  const updatePartition = useMutation((name: string) => {
+    return rpc.post.updatePartition({
+      partitionId: partition.id,
+      dbname: user.dbname,
+      userId: user.id,
+      name,
+    });
+  });
+  const isSelected = store.partitionIds.includes(partition.id);
+  const color = isSelected ? "blue" : "inherit";
   return (
     <li
       className={css({
-        cursor: canBeDeleted.data ? "default" : "pointer",
+        color,
+        fontWeight: "medium",
         display: "flex",
         justifyContent: "space-between",
-        fontWeight: "medium",
-        color: store.partitionIds.includes(partition.id) ? "blue" : "inherit",
+        verticalAlign: "middle",
+        '&:hover input[type="checkbox"]': {
+          opacity: "1",
+        },
       })}
-      onClick={(event) => {
-        event.stopPropagation();
-        if (canBeDeleted.data) return;
-        dispatch({
-          type: "TOGGLE_PARTITIONS",
-          payload: [partition.id],
-        });
-      }}
     >
       <span>
-        <span
+        <input
           className={css({
             verticalAlign: "middle",
+            opacity: isSelected ? "1" : "0",
           })}
-        >
-          {partition.name}
-        </span>
+          type="checkbox"
+          onClick={() => {
+            dispatch({ type: "TOGGLE_PARTITIONS", payload: [partition.id] });
+          }}
+          checked={isSelected}
+          readOnly
+        />
         {canBeDeleted.data && (
           <DeleteButton
             onClick={async (e) => {
@@ -756,6 +767,43 @@ function PartitionLI({
               await deletePartition.mutateAsync();
             }}
           />
+        )}
+        {partition.is_owned ? (
+          <input
+            className={css({
+              color,
+              backgroundColor: "#f5f5f5",
+              verticalAlign: "middle",
+              ms: "1",
+              "&:focus": {
+                outline: "none",
+              },
+            })}
+            type="text"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+            }}
+            onBlur={(e) => {
+              updatePartition.mutate(name);
+            }}
+            onKeyUp={async (e) => {
+              if (e.key === "Enter") {
+                updatePartition.mutate(name);
+              }
+            }}
+          />
+        ) : (
+          <span
+            className={css({
+              color,
+              backgroundColor: "#f5f5f5",
+              verticalAlign: "middle",
+              ms: "1",
+            })}
+          >
+            {partition.name}
+          </span>
         )}
       </span>
       <LoadingValue
@@ -796,7 +844,7 @@ function Partitions(props: {
       onUndefined={<>No partitions found</>}
     >
       {(partitions) => (
-        <ul className={css({ paddingStart: "0.5rem" })}>
+        <ul>
           {partitions.map((partition) => (
             <PartitionLI partition={partition} user={user} key={partition.id} />
           ))}
@@ -853,7 +901,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
         onUndefined={<>No categories found</>}
       >
         {(categories) => (
-          <div className={css({ p: "2" })}>
+          <div className={css({ py: "2" })}>
             <div
               onClick={() => selectCategories("Income")}
               className={categoryLabelClass}
@@ -970,7 +1018,6 @@ function Category({
   const isSelected = store.categoryIds.includes(category.id);
   return (
     <li
-      key={category.id}
       className={css({
         color,
         fontWeight: "medium",
@@ -1898,8 +1945,4 @@ function QueryResult<T>(props: {
   }
   if (Tag === undefined) return <>{node}</>;
   return <Tag className={props.className}>{node}</Tag>;
-}
-
-function isSubset(subset: string[], superset: string[]) {
-  return subset.every((item) => superset.includes(item));
 }

@@ -140,6 +140,7 @@ export const getPartitions = withValidation(
           id: true,
         },
         is_private: true,
+        is_owned: true,
         filter: e.op(belongToAccount, "and", partition.is_visible),
       };
     });
@@ -1124,6 +1125,43 @@ export const deletePartition = withValidation(
         }
         await deleteQuery.run(tx, { id: partitionId });
       });
+  }
+);
+
+export const updatePartition = withValidation(
+  object({
+    userId: string(),
+    partitionId: string(),
+    name: string(),
+    dbname: string(),
+  }),
+  async ({ userId, partitionId, name, dbname }) => {
+    const updateNameQuery = e.params(
+      {
+        id: e.uuid,
+        name: e.str,
+      },
+      ({ id, name }) =>
+        e.update(e.EPartition, (partition) => ({
+          filter_single: e.op(
+            partition.is_owned,
+            "and",
+            e.op(partition.id, "=", id)
+          ),
+          set: {
+            name,
+          },
+        }))
+    );
+    return updateNameQuery.run(
+      edgedb
+        .createClient({ database: dbname })
+        .withGlobals({ current_user_id: userId }),
+      {
+        id: partitionId,
+        name: name.trim(),
+      }
+    );
   }
 );
 
