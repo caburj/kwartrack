@@ -79,10 +79,11 @@ type Account = {
   owners: {
     name: string;
   }[];
+  is_owned: boolean;
 };
 
 const computeAccountLabel = (acc: Account) => {
-  return acc.owners.length === 1
+  return acc.owners.length === 1 && !acc.is_owned
     ? `${acc.owners[0].name}'s ${acc.name}`
     : acc.name;
 };
@@ -103,6 +104,7 @@ export const getAccounts = withValidation(
         id: true,
         name: true,
       },
+      is_owned: true,
       filter: owned ? account.is_owned : undefined,
     }));
 
@@ -169,6 +171,7 @@ export const getPartitionOptions = withValidation(
             id: true,
             name: true,
           },
+          is_owned: true,
         },
         is_private: true,
         filter: partition.is_visible,
@@ -277,6 +280,7 @@ export const findTransactions = withValidation(
                 id: true,
                 name: true,
               },
+              is_owned: true,
             },
           } as const;
 
