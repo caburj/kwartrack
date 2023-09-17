@@ -106,6 +106,10 @@ export const getAccounts = withValidation(
       },
       is_owned: true,
       filter: owned ? account.is_owned : undefined,
+      order_by: {
+        expression: account.name,
+        direction: e.ASC,
+      },
     }));
 
     const client = edgedb
