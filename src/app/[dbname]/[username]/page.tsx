@@ -253,12 +253,14 @@ function PartitionForm(props: {
   user: FindUserResult;
 }) {
   const { user, close, confirm } = props;
-  const ownedAccounts = user.accounts.filter((a) =>
-    a.owners.map((o) => o.id).includes(user.id)
-  );
-  const [accountId, setAccountId] = useState(
-    ownedAccounts[0]?.id || "for-new-account"
-  );
+  const ownedAccounts = useQuery(["accounts", user.id, true], () => {
+    return rpc.post.getAccounts({
+      userId: user.id,
+      dbname: user.dbname,
+      owned: true,
+    });
+  });
+  const [accountId, setAccountId] = useState("for-new-account");
   return (
     <DialogLayout>
       <form
@@ -288,13 +290,15 @@ function PartitionForm(props: {
           defaultValue={accountId}
         >
           <option value="for-new-account">Create New Account</option>
-          <optgroup label="My Accounts">
-            {ownedAccounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name}
-              </option>
-            ))}
-          </optgroup>
+          {ownedAccounts.data && (
+            <optgroup label="My Accounts">
+              {ownedAccounts.data.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name}
+                </option>
+              ))}
+            </optgroup>
+          )}
         </select>
         {accountId === "for-new-account" && (
           <>
@@ -490,7 +494,9 @@ function AccountLI({
     },
     {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["accounts", user.id] });
+        queryClient.invalidateQueries({
+          queryKey: ["accounts", user.id],
+        });
       },
     }
   );
@@ -596,8 +602,12 @@ function GroupedAccounts(props: {
 }
 
 function Accounts({ user }: { user: { id: string; dbname: string } }) {
-  const accounts = useQuery(["accounts", user.id], () => {
-    return rpc.post.getAccounts({ userId: user.id, dbname: user.dbname });
+  const accounts = useQuery(["accounts", user.id, false], () => {
+    return rpc.post.getAccounts({
+      userId: user.id,
+      dbname: user.dbname,
+      owned: false,
+    });
   });
   return (
     <QueryResult
@@ -967,6 +977,7 @@ function Category({
             dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
           }}
           checked={isSelected}
+          readOnly
         />
         {canBeDeleted.data && (
           <DeleteButton

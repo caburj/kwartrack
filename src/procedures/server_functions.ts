@@ -88,8 +88,8 @@ const computeAccountLabel = (acc: Account) => {
 };
 
 export const getAccounts = withValidation(
-  object({ userId: string(), dbname: string() }),
-  async ({ userId, dbname }) => {
+  object({ userId: string(), dbname: string(), owned: boolean() }),
+  async ({ userId, dbname, owned }) => {
     // return all accounts
     const query = e.select(e.EAccount, (account) => ({
       id: true,
@@ -103,6 +103,7 @@ export const getAccounts = withValidation(
         id: true,
         name: true,
       },
+      filter: owned ? account.is_owned : undefined,
     }));
 
     const client = edgedb
