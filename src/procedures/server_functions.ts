@@ -148,6 +148,10 @@ export const getPartitions = withValidation(
         is_private: true,
         is_owned: true,
         filter: e.op(belongToAccount, "and", partition.is_visible),
+        order_by: {
+          expression: partition.name,
+          direction: e.ASC,
+        },
       };
     });
     const result = await query.run(

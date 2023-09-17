@@ -724,14 +724,23 @@ function PartitionLI({
       });
     }
   );
-  const updatePartition = useMutation((name: string) => {
-    return rpc.post.updatePartition({
-      partitionId: partition.id,
-      dbname: user.dbname,
-      userId: user.id,
-      name,
-    });
-  });
+  const updatePartition = useMutation(
+    (name: string) => {
+      return rpc.post.updatePartition({
+        partitionId: partition.id,
+        dbname: user.dbname,
+        userId: user.id,
+        name,
+      });
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: ["partitions", user.id],
+        });
+      },
+    }
+  );
   const isSelected = store.partitionIds.includes(partition.id);
   const color = isSelected ? "blue" : "inherit";
   return (

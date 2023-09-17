@@ -30,6 +30,11 @@
 * [ ] Allow editing the accounts, partitions, and categories.
   - Always edit mode in the sidebar?
 
+* [ ] Allow hiding emptied accounts.
+  - Maybe show the delete button, but instead of completely deleting the
+    account, only archive it.
+    - And archived accounts should be hidden.
+
 * [ ] User registration.
   - 2 cases
     - user will start his own db
