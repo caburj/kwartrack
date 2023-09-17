@@ -940,6 +940,7 @@ function Category({
     });
   });
   const color = store.categoryIds.includes(category.id) ? "blue" : "inherit";
+  const isSelected = store.categoryIds.includes(category.id);
   return (
     <li
       key={category.id}
@@ -949,18 +950,23 @@ function Category({
         display: "flex",
         justifyContent: "space-between",
         verticalAlign: "middle",
+        '&:hover input[type="checkbox"]': {
+          opacity: 1,
+        },
       })}
     >
       <span>
         <input
           className={css({
             verticalAlign: "middle",
+            opacity: isSelected ? 1 : 0,
+            transition: "opacity 0.2s ease-in-out",
           })}
           type="checkbox"
           onClick={() => {
             dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
           }}
-          checked={store.categoryIds.includes(category.id)}
+          checked={isSelected}
         />
         {canBeDeleted.data && (
           <DeleteButton
