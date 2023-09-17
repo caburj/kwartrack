@@ -978,7 +978,7 @@ function Category({
         justifyContent: "space-between",
         verticalAlign: "middle",
         '&:hover input[type="checkbox"]': {
-          opacity: 1,
+          opacity: "1",
         },
       })}
     >
@@ -986,8 +986,7 @@ function Category({
         <input
           className={css({
             verticalAlign: "middle",
-            opacity: isSelected ? 1 : 0,
-            transition: "opacity 0.2s ease-in-out",
+            opacity: isSelected ? "1" : "0",
           })}
           type="checkbox"
           onClick={() => {
