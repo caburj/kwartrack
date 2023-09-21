@@ -7,7 +7,6 @@ import {
   useContext,
   useState,
 } from "react";
-import { css } from "../../../../styled-system/css";
 import { rpc } from "../../rpc_client";
 import {
   type UseQueryResult,
@@ -26,9 +25,19 @@ import {
 } from "valibot";
 import { UserPageStoreProvider, UserPageStoreContext } from "./store";
 import { Unpacked, formatValue, groupBy } from "@/utils/common";
-import { HiPlus } from "react-icons/hi";
-import { RxCross2 } from "react-icons/rx";
 import { DialogProvider, useDialog } from "@/utils/useDialog";
+import {
+  Box,
+  Flex,
+  IconButton,
+  ScrollArea,
+  Table,
+  Text,
+  Checkbox,
+  Separator,
+  textPropDefs,
+} from "@radix-ui/themes";
+import { Cross1Icon, PlusIcon } from "@radix-ui/react-icons";
 
 export default function Main(props: {
   params: { username: string; dbname: string };
@@ -58,23 +67,27 @@ export function UserPage({
       onUndefined={<>{`${username}'s data`} not found</>}
     >
       {(user) => (
-        <div className={css({ display: "flex", height: "100%" })}>
+        <Flex gap="3">
           <DialogProvider>
             <SideBar user={user} />
           </DialogProvider>
-          <div
-            className={css({
-              height: "100%",
-              display: "flex",
-              backgroundColor: "#f5f5f5",
-              flexDirection: "column",
-              flexGrow: 1,
-            })}
+          <Box
+            position="fixed"
+            top="0"
+            right="0"
+            bottom="0"
+            style={{
+              left: "350px",
+            }}
           >
-            <TransactionForm user={user} />
-            <Transactions user={user} />
-          </div>
-        </div>
+            <ScrollArea type="always" scrollbars="vertical">
+              <Flex direction="column" p="2" pr="4">
+                <TransactionForm user={user} />
+                <Transactions user={user} />
+              </Flex>
+            </ScrollArea>
+          </Box>
+        </Flex>
       )}
     </QueryResult>
   );
@@ -89,38 +102,13 @@ function SectionLabel(props: {
   onClickPlus?: () => void;
 }) {
   return (
-    <h1
-      className={css({
-        fontWeight: "bold",
-        textAlign: "center",
-        fontSize: "1.1rem",
-        display: "flex",
-        mt: "2",
-      })}
-    >
-      <span
-        className={css({
-          me: "4",
-        })}
-      >
+    <Flex align="center" justify="between" p="2" px="4">
+      <Text size="4" weight="bold">
         {props.children}
-      </span>
-      <span
-        className={css({
-          height: "1px",
-          alignSelf: "center",
-          flexGrow: 1,
-          borderBottom: "0.5px solid black",
-        })}
-      ></span>
-      <span
-        className={css({
-          display: "flex",
-          alignItems: "center",
-          cursor: "pointer",
-          fontSize: "1.5rem",
-          ms: 4,
-        })}
+      </Text>
+      <IconButton
+        mr="2"
+        variant="ghost"
         onClick={(event) => {
           event.stopPropagation();
           if (props.onClickPlus) {
@@ -128,116 +116,19 @@ function SectionLabel(props: {
           }
         }}
       >
-        <HiPlus />
-      </span>
-    </h1>
+        <PlusIcon width="18" height="18" />
+      </IconButton>
+    </Flex>
   );
 }
 
 const DialogLayout = (props: { children: ReactNode }) => {
   return (
-    <div
-      className={css({
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      })}
-    >
-      <div
-        className={css({
-          maxWidth: "500px",
-          width: "40%",
-          background: "#f5f5f5",
-          borderRadius: "0.5rem",
-          p: "4",
-        })}
-      >
-        {props.children}
-      </div>
+    <div>
+      <div>{props.children}</div>
     </div>
   );
 };
-
-const dialogFormClass = css({
-  display: "grid",
-  gridTemplateColumns: "1fr 3fr",
-  gridGap: "0.5rem",
-  "& *": {
-    padding: "0.25rem 0.50rem",
-    borderRadius: "0.25rem",
-  },
-  "& *:focus": {
-    outline: "1px solid blue",
-  },
-  "& label": {
-    ps: 0,
-    fontSize: "0.8rem",
-    fontWeight: "medium",
-  },
-  "& select": {
-    appearance: "none",
-    // TODO: Check the security of this background image.
-    backgroundImage: `url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")`,
-    backgroundRepeat: "no-repeat, repeat",
-    backgroundPosition: "right .7em top 50%, 0 0",
-    backgroundSize: ".65em auto, 100%",
-  },
-  "& input[type=checkbox]": {
-    appearance: "none",
-    width: "1.25rem",
-    height: "1.25rem",
-    border: "1px solid gray",
-    borderRadius: "0.25rem",
-    position: "relative",
-    cursor: "pointer",
-    display: "inline-block",
-    ms: "1",
-    "&:checked": {
-      backgroundColor: "black",
-      "&::before": {
-        content: "",
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        width: "0.75rem",
-        height: "0.75rem",
-        borderRadius: "0.5rem",
-      },
-    },
-  },
-});
-
-const dialogButtonsClass = css({
-  display: "flex",
-  flexDirection: "row-reverse",
-  justifyContent: "flex-start",
-  width: "100%",
-  mt: "4",
-  backgroundColor: "#f5f5f5",
-  "& button": {
-    cursor: "pointer",
-    px: "2",
-    py: "1",
-    ms: "2",
-    borderRadius: "0.25rem",
-    outline: "1px solid black",
-    "&:hover": {
-      backgroundColor: "#e5e5e5",
-      outline: "1px solid blue",
-      color: "blue",
-    },
-    "&:focus": {
-      outline: "1px solid blue",
-      color: "blue",
-    },
-  },
-});
 
 const newPartitionSchema = object({
   name: string([minLength(1)]),
@@ -275,7 +166,6 @@ function PartitionForm(props: {
           });
           confirm(parsedData);
         }}
-        className={dialogFormClass}
       >
         <label htmlFor="name">Partition Name</label>
         <input type="text" name="name" placeholder="E.g. Savings" />
@@ -313,7 +203,7 @@ function PartitionForm(props: {
           </>
         )}
       </form>
-      <div className={dialogButtonsClass}>
+      <div>
         <button type="submit" form="partition-form">
           Confirm
         </button>
@@ -347,7 +237,6 @@ function CategoryModal(props: {
           });
           confirm(parsedData);
         }}
-        className={dialogFormClass}
       >
         <label htmlFor="name">Name</label>
         <input type="text" name="name" placeholder="E.g. Salary" />
@@ -360,7 +249,7 @@ function CategoryModal(props: {
         <label htmlFor="isPrivate">Private</label>
         <input type="checkbox" name="isPrivate" />
       </form>
-      <div className={dialogButtonsClass}>
+      <div>
         <button type="submit" form="category-form">
           Confirm
         </button>
@@ -376,89 +265,79 @@ function SideBar({ user }: { user: FindUserResult }) {
   const showPartitionDialog = useDialog(PartitionForm, { user });
 
   return (
-    <div
-      className={css({
-        width: "25%",
-        minWidth: "25%",
-        height: "100%",
-        display: "flex",
-        backgroundColor: "#f5f5f5",
-        flexDirection: "column",
-        justifyContent: "space-between",
-      })}
+    <Box
+      position="fixed"
+      top="0"
+      left="0"
+      bottom="0"
+      style={{ minWidth: "350px" }}
     >
-      <div
-        className={css({
-          flexGrow: 1,
-          overflowY: "scroll",
-          padding: "1rem 0.75rem 1rem 1rem",
-          "&::-webkit-scrollbar": {
-            width: "0.25rem",
-          },
-          "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "lightgray",
-          },
-        })}
-      >
-        <SectionLabel
-          onClickPlus={async () => {
-            const response = await showPartitionDialog(true);
-            if (!response) return;
-
-            const { name, isPrivate, accountId, accountName, isSharedAccount } =
-              response;
-            let forNewAccount = false;
-            if (accountId === "for-new-account") {
-              forNewAccount = true;
-              if (!accountName?.trim()) {
-                throw new Error("Account name is required");
+      <Flex direction="column" height="100%">
+        <ScrollArea type="always" scrollbars="vertical">
+          <SectionLabel
+            onClickPlus={async () => {
+              const response = await showPartitionDialog(true);
+              if (!response) return;
+              const {
+                name,
+                isPrivate,
+                accountId,
+                accountName,
+                isSharedAccount,
+              } = response;
+              let forNewAccount = false;
+              if (accountId === "for-new-account") {
+                forNewAccount = true;
+                if (!accountName?.trim()) {
+                  throw new Error("Account name is required");
+                }
               }
-            }
-            await rpc.post.createPartition({
-              userId: user.id,
-              dbname: user.dbname,
-              name,
-              isPrivate,
-              forNewAccount,
-              accountId,
-              isSharedAccount,
-              newAccountName: accountName,
-            });
-            queryClient.invalidateQueries({
-              queryKey: ["accounts", user.id],
-            });
-            queryClient.invalidateQueries({
-              queryKey: ["partitions", user.id],
-            });
-          }}
-        >
-          Accounts
-        </SectionLabel>
-        <Accounts user={user} />
-        <SectionLabel
-          onClickPlus={async () => {
-            const userAction = await showCategoryDialog();
-            if (userAction) {
-              const { name, kind, isPrivate } = userAction;
-              await rpc.post.createCategory({
+              await rpc.post.createPartition({
                 userId: user.id,
                 dbname: user.dbname,
                 name,
-                kind,
                 isPrivate,
+                forNewAccount,
+                accountId,
+                isSharedAccount,
+                newAccountName: accountName,
               });
               queryClient.invalidateQueries({
-                queryKey: ["categories", user.id],
+                queryKey: ["accounts", user.id],
               });
-            }
-          }}
-        >
-          Categories
-        </SectionLabel>
-        <Categories user={user} />
-      </div>
-      <DateRange user={user} />
-    </div>
+              queryClient.invalidateQueries({
+                queryKey: ["partitions", user.id],
+              });
+            }}
+          >
+            Accounts
+          </SectionLabel>
+          <Accounts user={user} />
+          <SectionLabel
+            onClickPlus={async () => {
+              const userAction = await showCategoryDialog();
+              if (userAction) {
+                const { name, kind, isPrivate } = userAction;
+                await rpc.post.createCategory({
+                  userId: user.id,
+                  dbname: user.dbname,
+                  name,
+                  kind,
+                  isPrivate,
+                });
+                queryClient.invalidateQueries({
+                  queryKey: ["categories", user.id],
+                });
+              }
+            }}
+          >
+            Categories
+          </SectionLabel>
+          <Categories user={user} />
+        </ScrollArea>
+        <DateRange user={user} />
+      </Flex>
+    </Box>
   );
 }
 
@@ -502,19 +381,10 @@ function AccountLI({
   );
   const [store, dispatch] = useContext(UserPageStoreContext);
   return (
-    <li
-      key={account.id}
-      className={css({
-        marginBottom: "0.5rem",
-        fontWeight: "bold",
-      })}
-    >
-      <div
-        className={css({
-          display: "flex",
-          justifyContent: "space-between",
-          cursor: "pointer",
-        })}
+    <Box px="4" mb="1" key={account.id}>
+      <Flex
+        pr="2"
+        justify="between"
         onClick={() => {
           dispatch({
             type: "TOGGLE_ACCOUNT",
@@ -522,14 +392,10 @@ function AccountLI({
           });
         }}
       >
-        <span>
-          <span
-            className={css({
-              verticalAlign: "middle",
-            })}
-          >
+        <Flex align="center" gap="1">
+          <Text style={{ cursor: "pointer" }} weight="medium">
             {account.label}
-          </span>
+          </Text>
           {canBeDeleted.data && (
             <DeleteButton
               onClick={async (e) => {
@@ -538,7 +404,7 @@ function AccountLI({
               }}
             />
           )}
-        </span>
+        </Flex>
         <LoadingValue
           queryKey={[
             "accountBalance",
@@ -554,9 +420,9 @@ function AccountLI({
             })
           }
         />
-      </div>
+      </Flex>
       <Partitions accountId={account.id} user={user} />
-    </li>
+    </Box>
   );
 }
 
@@ -586,21 +452,21 @@ function GroupedAccounts(props: {
   return (
     <>
       {showTitle && (
-        <h1
-          className={css({
-            textAlign: "center",
-            fontWeight: "bold",
-          })}
-        >
-          - {title} -
-        </h1>
+        <Flex justify="center" align="center" mb="1">
+          <Separator size="3" />
+          <Box px="4">
+            <Text size="1" weight="medium">
+              {title.toUpperCase()}
+            </Text>
+          </Box>
+          <Separator size="3" />
+        </Flex>
       )}
-
-      <ul className={css({ py: "2" })}>
+      <Box>
         {accounts.map((account) => (
           <AccountLI account={account} user={user} key={account.id} />
         ))}
-      </ul>
+      </Box>
     </>
   );
 }
@@ -664,17 +530,9 @@ function DeleteButton(props: {
   onClick: MouseEventHandler<HTMLButtonElement>;
 }) {
   return (
-    <button
-      className={css({
-        cursor: "pointer",
-        verticalAlign: "middle",
-        color: "red",
-        ms: "1",
-      })}
-      onClick={props.onClick}
-    >
-      <RxCross2 />
-    </button>
+    <IconButton color="crimson" variant="ghost" onClick={props.onClick}>
+      <Cross1Icon />
+    </IconButton>
   );
 }
 
@@ -742,80 +600,34 @@ function PartitionLI({
     }
   );
   const isSelected = store.partitionIds.includes(partition.id);
-  const color = isSelected ? "blue" : "inherit";
+  const color = isSelected ? "blue" : undefined;
   return (
-    <li
-      className={css({
-        color,
-        fontWeight: "medium",
-        display: "flex",
-        justifyContent: "space-between",
-        verticalAlign: "middle",
-        '&:hover input[type="checkbox"]': {
-          opacity: "1",
-        },
-      })}
-    >
-      <span>
-        <input
-          className={css({
-            verticalAlign: "middle",
-            opacity: isSelected ? "1" : "0",
-          })}
-          type="checkbox"
-          onClick={() => {
-            dispatch({ type: "TOGGLE_PARTITIONS", payload: [partition.id] });
-          }}
-          checked={isSelected}
-          readOnly
-        />
-        {canBeDeleted.data && (
-          <DeleteButton
-            onClick={async (e) => {
-              e.stopPropagation();
-              await deletePartition.mutateAsync();
+    <Flex pr="2" justify="between">
+      <Box grow="1">
+        <Flex gap="1" align="center">
+          <Checkbox
+            mr="1"
+            onClick={() => {
+              dispatch({ type: "TOGGLE_PARTITIONS", payload: [partition.id] });
             }}
+            checked={isSelected}
           />
-        )}
-        {partition.is_owned ? (
-          <input
-            className={css({
-              color,
-              backgroundColor: "#f5f5f5",
-              verticalAlign: "middle",
-              ms: "1",
-              "&:focus": {
-                outline: "none",
-              },
-            })}
-            type="text"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-            }}
-            onBlur={(e) => {
-              updatePartition.mutate(name);
-            }}
-            onKeyUp={async (e) => {
-              if (e.key === "Enter") {
-                updatePartition.mutate(name);
-              }
-            }}
-          />
-        ) : (
-          <span
-            className={css({
-              color,
-              backgroundColor: "#f5f5f5",
-              verticalAlign: "middle",
-              ms: "1",
-            })}
-          >
+          {/* TODO: Allow editing the partition. */}
+          <Text align="center" color={color}>
             {partition.name}
-          </span>
-        )}
-      </span>
+          </Text>
+          {canBeDeleted.data && (
+            <DeleteButton
+              onClick={async (e) => {
+                e.stopPropagation();
+                await deletePartition.mutateAsync();
+              }}
+            />
+          )}
+        </Flex>
+      </Box>
       <LoadingValue
+        color={color}
         queryKey={[
           "partitionBalance",
           {
@@ -830,7 +642,7 @@ function PartitionLI({
           })
         }
       />
-    </li>
+    </Flex>
   );
 }
 
@@ -853,11 +665,11 @@ function Partitions(props: {
       onUndefined={<>No partitions found</>}
     >
       {(partitions) => (
-        <ul>
+        <Box>
           {partitions.map((partition) => (
             <PartitionLI partition={partition} user={user} key={partition.id} />
           ))}
-        </ul>
+        </Box>
       )}
     </QueryResult>
   );
@@ -869,15 +681,6 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
     return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
   });
   const [store, dispatch] = useContext(UserPageStoreContext);
-  const categoryLabelClass = css({
-    display: "flex",
-    justifyContent: "space-between",
-    fontWeight: "bold",
-    cursor: "pointer",
-  });
-  const categoryListClass = css({
-    pb: "2",
-  });
   const selectCategories = (kind: string) => {
     if (kind === "Income") {
       if (categories?.data?.income) {
@@ -910,12 +713,13 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
         onUndefined={<>No categories found</>}
       >
         {(categories) => (
-          <div className={css({ py: "2" })}>
-            <div
+          <Flex direction="column" px="4">
+            <Flex
+              pr="2"
+              justify="between"
               onClick={() => selectCategories("Income")}
-              className={categoryLabelClass}
             >
-              <span>Income</span>
+              <Text>Income</Text>
               <LoadingValue
                 queryKey={["categoryKindBalance", "Income"]}
                 valueLoader={() =>
@@ -926,17 +730,18 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
                   })
                 }
               />
-            </div>
-            <ul className={categoryListClass}>
+            </Flex>
+            <Box mb="2">
               {categories.income.map((category) => (
                 <Category key={category.id} category={category} user={user} />
               ))}
-            </ul>
-            <div
+            </Box>
+            <Flex
+              pr="2"
+              justify="between"
               onClick={() => selectCategories("Expense")}
-              className={categoryLabelClass}
             >
-              <span>Expense</span>
+              <Text>Expense</Text>
               <LoadingValue
                 queryKey={["categoryKindBalance", "Expense"]}
                 valueLoader={() =>
@@ -947,17 +752,18 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
                   })
                 }
               />
-            </div>
-            <ul className={categoryListClass}>
+            </Flex>
+            <Box mb="2">
               {categories.expense.map((category) => (
                 <Category key={category.id} category={category} user={user} />
               ))}
-            </ul>
-            <div
+            </Box>
+            <Flex
+              pr="2"
+              justify="between"
               onClick={() => selectCategories("Transfer")}
-              className={categoryLabelClass}
             >
-              <span>Transfer</span>
+              <Text>Transfer</Text>
               <LoadingValue
                 queryKey={["categoryKindBalance", "Transfer"]}
                 valueLoader={() =>
@@ -968,13 +774,13 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
                   })
                 }
               />
-            </div>
-            <ul className={categoryListClass}>
+            </Flex>
+            <Box mb="2">
               {categories.transfer.map((category) => (
                 <Category key={category.id} category={category} user={user} />
               ))}
-            </ul>
-          </div>
+            </Box>
+          </Flex>
         )}
       </QueryResult>
     </>
@@ -1023,34 +829,21 @@ function Category({
       name,
     });
   });
-  const color = store.categoryIds.includes(category.id) ? "blue" : "inherit";
+  const color = store.categoryIds.includes(category.id) ? "blue" : undefined;
   const isSelected = store.categoryIds.includes(category.id);
   return (
-    <li
-      className={css({
-        color,
-        fontWeight: "medium",
-        display: "flex",
-        justifyContent: "space-between",
-        verticalAlign: "middle",
-        '&:hover input[type="checkbox"]': {
-          opacity: "1",
-        },
-      })}
-    >
-      <span>
-        <input
-          className={css({
-            verticalAlign: "middle",
-            opacity: isSelected ? "1" : "0",
-          })}
-          type="checkbox"
+    <Flex justify="between" pr="2">
+      <Flex gap="1" align="center">
+        <Checkbox
+          mr="1"
           onClick={() => {
             dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
           }}
           checked={isSelected}
-          readOnly
         />
+        <Text align="center" color={color}>
+          {category.name}
+        </Text>
         {canBeDeleted.data && (
           <DeleteButton
             onClick={async (e) => {
@@ -1059,31 +852,7 @@ function Category({
             }}
           />
         )}
-        <input
-          className={css({
-            color,
-            backgroundColor: "#f5f5f5",
-            verticalAlign: "middle",
-            ms: "1",
-            "&:focus": {
-              outline: "none",
-            },
-          })}
-          type="text"
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value);
-          }}
-          onBlur={(e) => {
-            updateCategory.mutate(name);
-          }}
-          onKeyUp={async (e) => {
-            if (e.key === "Enter") {
-              updateCategory.mutate(name);
-            }
-          }}
-        />
-      </span>
+      </Flex>
       <LoadingValue
         queryKey={[
           "categoryBalance",
@@ -1099,7 +868,7 @@ function Category({
           })
         }
       />
-    </li>
+    </Flex>
   );
 }
 
@@ -1156,17 +925,7 @@ function Transactions({ user }: { user: { id: string; dbname: string } }) {
 
   return (
     <>
-      <div
-        className={css({
-          display: "flex",
-          justifyContent: "flex-end",
-          padding: "0.5rem",
-          "& button": {
-            cursor: "pointer",
-            padding: "0 0.50rem",
-          },
-        })}
-      >
+      <div>
         <span>Items per page</span>
         <input
           type="number"
@@ -1193,153 +952,46 @@ function Transactions({ user }: { user: { id: string; dbname: string } }) {
           Next
         </button>
       </div>
-      <div className={css({ margin: "0.5rem", overflowY: "scroll" })}>
-        <table
-          className={css({
-            width: "100%",
-            borderCollapse: "separate",
-            borderSpacing: "0",
-            "& td": {
-              px: "2",
-              py: "1",
-              verticalAlign: "top",
-            },
-            "& th": {
-              px: "2",
-              py: "1",
-              verticalAlign: "top",
-              whiteSpace: "nowrap",
-              borderTop: "1px solid black",
-              borderBottom: "3px double black",
-            },
-            "& thead tr": {
-              fontWeight: "bold",
-            },
-            "& tbody tr:nth-child(odd)": {
-              backgroundColor: "#e5e5e5",
-            },
-          })}
-        >
-          <thead
-            className={css({
-              position: "sticky",
-              top: 0,
-              backgroundColor: "#f5f5f5",
-            })}
-          >
-            <tr>
-              <th
-                className={css({
-                  textAlign: "left",
-                  width: "7.5%",
-                })}
-              >
-                Date
-              </th>
-              <th
-                className={css({
-                  textAlign: "left",
-                  width: "18%",
-                })}
-              >
+      <div>
+        <Table.Root variant="surface" size="1">
+          <Table.Header>
+            <Table.Row>
+              <Table.ColumnHeaderCell width="7%">Date</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell width="13%">
                 Category
-              </th>
-              <th
-                className={css({
-                  textAlign: "left",
-                  width: "22%",
-                })}
-              >
+              </Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell width="37%">
                 Partition
-              </th>
-              <th
-                className={css({
-                  textAlign: "right",
-                  width: "10%",
-                })}
-              >
+              </Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell width="10%" justify="end">
                 Value
-              </th>
-              <th
-                className={css({
-                  textAlign: "left",
-                  width: "40%",
-                })}
-              >
-                Description
-              </th>
-              <th
-                className={css({
-                  width: "2.5%",
-                })}
-              ></th>
-            </tr>
-          </thead>
+              </Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell width="3%"></Table.ColumnHeaderCell>
+            </Table.Row>
+          </Table.Header>
           <QueryResult query={transactions}>
             {([transactions]) => (
-              <tbody>
+              <Table.Body>
                 {transactions.map((transaction) => {
                   return (
-                    <tr key={transaction.id}>
-                      <td
-                        className={css({
-                          textAlign: "left",
-                          width: "7.5%",
-                        })}
-                      >
-                        {transaction.str_date.slice(5)}
-                      </td>
-                      <td
-                        className={css({
-                          textAlign: "left",
-                          width: "18%",
-                        })}
-                      >
-                        <span
-                          className={css({
-                            display: "flex",
-                            width: "100%",
-                          })}
-                        >
+                    <Table.Row key={transaction.id}>
+                      <Table.Cell>{transaction.str_date.slice(5)}</Table.Cell>
+                      <Table.Cell>
+                        <span>
                           <span>{transaction.category.name}</span>
                         </span>
-                      </td>
-                      <td
-                        className={css({
-                          textAlign: "left",
-                          width: "22%",
-                        })}
-                      >
-                        {getPartitionColumn(transaction)}
-                      </td>
-                      <td
-                        className={css({
-                          textAlign: "right",
-                          width: "10%",
-                        })}
-                      >
+                      </Table.Cell>
+                      <Table.Cell>{getPartitionColumn(transaction)}</Table.Cell>
+                      <Table.Cell justify="end">
                         {formatValue(parseFloat(transaction.value))}
-                      </td>
-                      <td
-                        className={css({
-                          textAlign: "left",
-                          width: "40%",
-                        })}
-                      >
-                        {transaction.description}
-                      </td>
-                      <td
-                        className={css({
-                          width: "2.5%",
-                        })}
-                      >
-                        <button
+                      </Table.Cell>
+                      <Table.Cell>{transaction.description}</Table.Cell>
+                      <Table.Cell>
+                        <IconButton
+                          variant="ghost"
+                          color="crimson"
                           hidden={shouldHideDelete(transaction)}
-                          className={css({
-                            cursor: "pointer",
-                            padding: "0 0.25rem",
-                            color: "red",
-                          })}
                           onClick={async () => {
                             setIsDeleting(true);
                             await rpc.post.deleteTransaction({
@@ -1455,16 +1107,16 @@ function Transactions({ user }: { user: { id: string; dbname: string } }) {
                           }}
                           disabled={isDeleting}
                         >
-                          <RxCross2 />
-                        </button>
-                      </td>
-                    </tr>
+                          <Cross1Icon width="16" height="16" />
+                        </IconButton>
+                      </Table.Cell>
+                    </Table.Row>
                   );
                 })}
-              </tbody>
+              </Table.Body>
             )}
           </QueryResult>
-        </table>
+        </Table.Root>
       </div>
     </>
   );
@@ -1475,38 +1127,7 @@ function FormInput(props: {
   flexGrow?: number;
   width: string;
 }) {
-  return (
-    <div
-      className={css({
-        display: "flex",
-        flexDirection: "column",
-        flexGrow: props.flexGrow,
-        width: props.width,
-        padding: "0.5rem",
-        "& *": {
-          padding: "0.25rem 0.50rem",
-          borderRadius: "0.25rem",
-        },
-        "& *:focus": {
-          outline: "1px solid blue",
-        },
-        "& label": {
-          fontSize: "0.8rem",
-          fontWeight: "medium",
-        },
-        "& select": {
-          appearance: "none",
-          // TODO: Check the security of this background image.
-          backgroundImage: `url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")`,
-          backgroundRepeat: "no-repeat, repeat",
-          backgroundPosition: "right .7em top 50%, 0 0",
-          backgroundSize: ".65em auto, 100%",
-        },
-      })}
-    >
-      {props.children}
-    </div>
-  );
+  return <div>{props.children}</div>;
 }
 
 type PartitionOption = Unpacked<
@@ -1727,7 +1348,7 @@ function TransactionForm({ user }: { user: { id: string; dbname: string } }) {
   };
 
   return (
-    <form onSubmit={onSubmit} className={css({ display: "flex" })}>
+    <form onSubmit={onSubmit}>
       <FormInput flexGrow={2} width="20%">
         <label htmlFor="categoryId">Category</label>
         <QueryResult query={categories}>
@@ -1807,7 +1428,6 @@ function TransactionForm({ user }: { user: { id: string; dbname: string } }) {
       <FormInput flexGrow={1} width="10%">
         <label htmlFor="value">Value</label>
         <input
-          className={css({ textAlign: "right" })}
           type="text"
           inputMode="numeric"
           name="value"
@@ -1826,28 +1446,7 @@ function TransactionForm({ user }: { user: { id: string; dbname: string } }) {
           disabled={createTransaction.isLoading}
         />
       </FormInput>
-      <button
-        className={css({
-          padding: "0.5rem",
-          m: "2",
-          borderRadius: "0.25rem",
-          cursor: "pointer",
-          color: "blue",
-          outline: "1px solid blue",
-          border: "none",
-          "&:focus": {
-            outline: "2px solid blue",
-            color: "blue",
-          },
-          "&:disabled": {
-            outline: "1px solid lightgray",
-            color: "lightgray",
-            border: "none",
-          },
-        })}
-        type="submit"
-        disabled={shouldDisableSubmit()}
-      >
+      <button type="submit" disabled={shouldDisableSubmit()}>
         Submit
       </button>
     </form>
@@ -1857,13 +1456,8 @@ function TransactionForm({ user }: { user: { id: string; dbname: string } }) {
 function DateRange({ user }: { user: { id: string; dbname: string } }) {
   const [store, dispatch] = useContext(UserPageStoreContext);
   return (
-    <div
-      className={css({
-        borderTop: "1px solid lightgray",
-        padding: "1rem",
-      })}
-    >
-      <div>
+    <Flex direction="column" gap="1" px="4" py="2">
+      <Flex justify="between">
         <label htmlFor="startDate">Start Date</label>
         <input
           type="date"
@@ -1878,8 +1472,8 @@ function DateRange({ user }: { user: { id: string; dbname: string } }) {
             });
           }}
         />
-      </div>
-      <div>
+      </Flex>
+      <Flex justify="between">
         <label htmlFor="endDate">End Date</label>
         <input
           type="date"
@@ -1894,12 +1488,15 @@ function DateRange({ user }: { user: { id: string; dbname: string } }) {
             });
           }}
         />
-      </div>
-    </div>
+      </Flex>
+    </Flex>
   );
 }
 
+type Color = (typeof textPropDefs)["color"]["values"][number];
+
 function LoadingValue(props: {
+  color?: Color;
   queryKey: [string, ...any];
   valueLoader: () => Promise<string>;
 }) {
@@ -1917,15 +1514,7 @@ function LoadingValue(props: {
         } else {
           result = formatValue(parsedValue);
         }
-        return (
-          <span
-            className={css({
-              marginLeft: "0.5rem",
-            })}
-          >
-            {result}
-          </span>
-        );
+        return <Text color={props.color}>{result}</Text>;
       }}
     </QueryResult>
   );

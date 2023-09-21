@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { css } from "../../styled-system/css";
 
 function makePromise<R, E = unknown>() {
   let resolve: (result: R) => void;
@@ -54,11 +53,6 @@ export function DialogProvider<D>({ children }: { children: ReactNode }) {
       {dProps && (
         <dialog
           ref={dialogRef}
-          className={css({
-            "&::backdrop": {
-              backgroundColor: "rgba(0,0,0,0.5)",
-            },
-          })}
           onClose={() => {
             setDialogProps(undefined);
             dProps.resolve(undefined);
