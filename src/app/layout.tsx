@@ -16,7 +16,13 @@ export default function RootLayout(props: { children: React.ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <Providers>
-          <Theme scaling="95%" accentColor="cyan" radius="small">
+          <Theme
+            scaling="95%"
+            grayColor="gray"
+            accentColor="cyan"
+            radius="medium"
+            panelBackground="translucent"
+          >
             {props.children}
           </Theme>
         </Providers>
