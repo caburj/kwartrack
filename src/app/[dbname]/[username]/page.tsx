@@ -3,9 +3,9 @@
 import {
   MouseEventHandler,
   ReactHTML,
-  ReactNode,
   useContext,
   useState,
+  useRef,
 } from "react";
 import { rpc } from "../../rpc_client";
 import {
@@ -14,18 +14,9 @@ import {
   useQueryClient,
   useMutation,
 } from "@tanstack/react-query";
-import {
-  boolean,
-  minLength,
-  number,
-  object,
-  optional,
-  string,
-  type Input,
-} from "valibot";
+import { boolean, minLength, number, object, optional, string } from "valibot";
 import { UserPageStoreProvider, UserPageStoreContext } from "./store";
 import { Unpacked, formatValue, groupBy } from "@/utils/common";
-import { DialogProvider, useDialog } from "@/utils/useDialog";
 import {
   Box,
   Flex,
@@ -36,6 +27,10 @@ import {
   Checkbox,
   Separator,
   textPropDefs,
+  Dialog,
+  TextField,
+  Button,
+  Select,
 } from "@radix-ui/themes";
 import { Cross1Icon, PlusIcon } from "@radix-ui/react-icons";
 
@@ -68,9 +63,7 @@ export function UserPage({
     >
       {(user) => (
         <Flex gap="3">
-          <DialogProvider>
-            <SideBar user={user} />
-          </DialogProvider>
+          <SideBar user={user} />
           <Box
             position="fixed"
             top="0"
@@ -97,38 +90,23 @@ type FindUserResult = NonNullable<
   Unpacked<Awaited<ReturnType<typeof rpc.post.findUser>>>
 >;
 
-function SectionLabel(props: {
-  children: React.ReactNode;
-  onClickPlus?: () => void;
-}) {
+function SectionLabel(props: { children: React.ReactNode; label: string }) {
   return (
-    <Flex align="center" justify="between" p="2" px="4">
-      <Text size="4" weight="bold">
+    <Dialog.Root>
+      <Flex align="center" justify="between" p="2" px="4">
+        <Text size="4" weight="bold">
+          {props.label}
+        </Text>
+        <Dialog.Trigger>
+          <IconButton mr="2" variant="ghost">
+            <PlusIcon width="18" height="18" />
+          </IconButton>
+        </Dialog.Trigger>
         {props.children}
-      </Text>
-      <IconButton
-        mr="2"
-        variant="ghost"
-        onClick={(event) => {
-          event.stopPropagation();
-          if (props.onClickPlus) {
-            return props.onClickPlus();
-          }
-        }}
-      >
-        <PlusIcon width="18" height="18" />
-      </IconButton>
-    </Flex>
+      </Flex>
+    </Dialog.Root>
   );
 }
-
-const DialogLayout = (props: { children: ReactNode }) => {
-  return (
-    <div>
-      <div>{props.children}</div>
-    </div>
-  );
-};
 
 const newPartitionSchema = object({
   name: string([minLength(1)]),
@@ -138,12 +116,16 @@ const newPartitionSchema = object({
   isSharedAccount: boolean(),
 });
 
-function PartitionForm(props: {
-  close: () => void;
-  confirm: (data: Input<typeof newPartitionSchema>) => void;
-  user: FindUserResult;
-}) {
-  const { user, close, confirm } = props;
+const newCategorySchema = object({
+  name: string([minLength(1)]),
+  kind: string(),
+  isPrivate: boolean(),
+});
+
+function SideBar({ user }: { user: FindUserResult }) {
+  const queryClient = useQueryClient();
+  const categoryFormRef = useRef<HTMLFormElement>(null);
+  const partitionFormRef = useRef<HTMLFormElement>(null);
   const ownedAccounts = useQuery(["accounts", user.id, true], () => {
     return rpc.post.getAccounts({
       userId: user.id,
@@ -152,118 +134,6 @@ function PartitionForm(props: {
     });
   });
   const [accountId, setAccountId] = useState("for-new-account");
-  return (
-    <DialogLayout>
-      <form
-        id="partition-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const formdata = new FormData(e.target as HTMLFormElement);
-          const parsedData = newPartitionSchema.parse({
-            ...Object.fromEntries(formdata.entries()),
-            isPrivate: formdata.get("isPrivate") === "on",
-            isSharedAccount: formdata.get("isSharedAccount") === "on",
-          });
-          confirm(parsedData);
-        }}
-      >
-        <label htmlFor="name">Partition Name</label>
-        <input type="text" name="name" placeholder="E.g. Savings" />
-        <label htmlFor="isPrivate">Private</label>
-        <input type="checkbox" name="isPrivate" />
-        <label htmlFor="accountId">Account</label>
-        <select
-          name="accountId"
-          onChange={(e) => {
-            setAccountId(e.target.value);
-          }}
-          defaultValue={accountId}
-        >
-          <option value="for-new-account">Create New Account</option>
-          {ownedAccounts.data && (
-            <optgroup label="My Accounts">
-              {ownedAccounts.data.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))}
-            </optgroup>
-          )}
-        </select>
-        {accountId === "for-new-account" && (
-          <>
-            <label htmlFor="accountName">Account Name</label>
-            <input
-              type="text"
-              name="accountName"
-              placeholder="E.g. InterBank"
-            />
-            <label htmlFor="isSharedAccount">Shared Account</label>
-            <input type="checkbox" name="isSharedAccount" />
-          </>
-        )}
-      </form>
-      <div>
-        <button type="submit" form="partition-form">
-          Confirm
-        </button>
-        <button onClick={close}>Cancel</button>
-      </div>
-    </DialogLayout>
-  );
-}
-
-const newCategorySchema = object({
-  name: string([minLength(1)]),
-  kind: string(),
-  isPrivate: boolean(),
-});
-
-function CategoryModal(props: {
-  close: () => void;
-  confirm: (data: Input<typeof newCategorySchema>) => void;
-}) {
-  const { close, confirm } = props;
-  return (
-    <DialogLayout>
-      <form
-        id="category-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const formdata = new FormData(e.target as HTMLFormElement);
-          const parsedData = newCategorySchema.parse({
-            ...Object.fromEntries(formdata.entries()),
-            isPrivate: formdata.get("isPrivate") === "on",
-          });
-          confirm(parsedData);
-        }}
-      >
-        <label htmlFor="name">Name</label>
-        <input type="text" name="name" placeholder="E.g. Salary" />
-        <label htmlFor="kind">Kind</label>
-        <select name="kind" defaultValue="Expense">
-          <option value="Income">Income</option>
-          <option value="Expense">Expense</option>
-          <option value="Transfer">Transfer</option>
-        </select>
-        <label htmlFor="isPrivate">Private</label>
-        <input type="checkbox" name="isPrivate" />
-      </form>
-      <div>
-        <button type="submit" form="category-form">
-          Confirm
-        </button>
-        <button onClick={close}>Cancel</button>
-      </div>
-    </DialogLayout>
-  );
-}
-
-function SideBar({ user }: { user: FindUserResult }) {
-  const queryClient = useQueryClient();
-  const showCategoryDialog = useDialog(CategoryModal);
-  const showPartitionDialog = useDialog(PartitionForm, { user });
-
   return (
     <Box
       position="fixed"
@@ -274,64 +144,210 @@ function SideBar({ user }: { user: FindUserResult }) {
     >
       <Flex direction="column" height="100%">
         <ScrollArea type="always" scrollbars="vertical">
-          <SectionLabel
-            onClickPlus={async () => {
-              const response = await showPartitionDialog(true);
-              if (!response) return;
-              const {
-                name,
-                isPrivate,
-                accountId,
-                accountName,
-                isSharedAccount,
-              } = response;
-              let forNewAccount = false;
-              if (accountId === "for-new-account") {
-                forNewAccount = true;
-                if (!accountName?.trim()) {
-                  throw new Error("Account name is required");
-                }
-              }
-              await rpc.post.createPartition({
-                userId: user.id,
-                dbname: user.dbname,
-                name,
-                isPrivate,
-                forNewAccount,
-                accountId,
-                isSharedAccount,
-                newAccountName: accountName,
-              });
-              queryClient.invalidateQueries({
-                queryKey: ["accounts", user.id],
-              });
-              queryClient.invalidateQueries({
-                queryKey: ["partitions", user.id],
-              });
-            }}
-          >
-            Accounts
+          <SectionLabel label="Accounts">
+            <Dialog.Content style={{ maxWidth: 500 }}>
+              <Dialog.Title>New Partition</Dialog.Title>
+              <Dialog.Description size="2" mb="4">
+                Create new partition
+              </Dialog.Description>
+              <Flex direction="column" gap="3" asChild>
+                <form
+                  id="partition-form"
+                  ref={partitionFormRef}
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+
+                    const formdata = new FormData(e.target as HTMLFormElement);
+
+                    const parsedData = newPartitionSchema.parse({
+                      ...Object.fromEntries(formdata.entries()),
+                      isPrivate: formdata.get("isPrivate") === "on",
+                      isSharedAccount: formdata.get("isSharedAccount") === "on",
+                    });
+
+                    const {
+                      name,
+                      isPrivate,
+                      accountId,
+                      accountName,
+                      isSharedAccount,
+                    } = parsedData;
+
+                    let forNewAccount = false;
+                    if (accountId === "for-new-account") {
+                      forNewAccount = true;
+                      if (!accountName?.trim()) {
+                        throw new Error("Account name is required");
+                      }
+                    }
+                    await rpc.post.createPartition({
+                      userId: user.id,
+                      dbname: user.dbname,
+                      name,
+                      isPrivate,
+                      forNewAccount,
+                      accountId,
+                      isSharedAccount,
+                      newAccountName: accountName,
+                    });
+                    queryClient.invalidateQueries({
+                      queryKey: ["accounts", user.id],
+                    });
+                    queryClient.invalidateQueries({
+                      queryKey: ["partitions", user.id],
+                    });
+                  }}
+                >
+                  <label>
+                    <Text as="div" size="2" mb="1" weight="bold">
+                      Name
+                    </Text>
+                    <TextField.Input
+                      name="name"
+                      placeholder="Enter partition name"
+                    />
+                  </label>
+                  <label>
+                    <Text as="div" size="2" mb="1" weight="bold">
+                      Private
+                    </Text>
+                    <Checkbox name="isPrivate" />
+                  </label>
+
+                  <label>
+                    <Text as="div" size="2" mb="1" weight="bold">
+                      Account
+                    </Text>
+                    <Select.Root
+                      name="accountId"
+                      value={accountId}
+                      onValueChange={(value) => {
+                        setAccountId(value);
+                      }}
+                    >
+                      <Select.Trigger variant="surface" />
+                      <Select.Content>
+                        <Select.Item value="for-new-account">
+                          Create New Account
+                        </Select.Item>
+                        {ownedAccounts.data && (
+                          <Select.Group>
+                            <Select.Label>My Accounts</Select.Label>
+                            {ownedAccounts.data.map((acc) => (
+                              <Select.Item value={acc.id} key={acc.id}>
+                                {acc.name}
+                              </Select.Item>
+                            ))}
+                          </Select.Group>
+                        )}
+                      </Select.Content>
+                    </Select.Root>
+                  </label>
+                  {accountId === "for-new-account" && (
+                    <>
+                      <label>
+                        <Text as="div" size="2" mb="1" weight="bold">
+                          New Account Name
+                        </Text>
+                        <TextField.Input
+                          name="accountName"
+                          placeholder="E.g. InterBank"
+                        />
+                      </label>
+                      <label>
+                        <Text as="div" size="2" mb="1" weight="bold">
+                          Shared Account
+                        </Text>
+                        <Checkbox name="isSharedAccount" />
+                      </label>
+                    </>
+                  )}
+                </form>
+              </Flex>
+              <Flex gap="3" mt="4" justify="start" direction="row-reverse">
+                <Dialog.Close type="submit" form="partition-form">
+                  <Button>Save</Button>
+                </Dialog.Close>
+                <Dialog.Close>
+                  <Button variant="soft" color="gray">
+                    Cancel
+                  </Button>
+                </Dialog.Close>
+              </Flex>
+            </Dialog.Content>
           </SectionLabel>
           <Accounts user={user} />
-          <SectionLabel
-            onClickPlus={async () => {
-              const userAction = await showCategoryDialog();
-              if (userAction) {
-                const { name, kind, isPrivate } = userAction;
-                await rpc.post.createCategory({
-                  userId: user.id,
-                  dbname: user.dbname,
-                  name,
-                  kind,
-                  isPrivate,
-                });
-                queryClient.invalidateQueries({
-                  queryKey: ["categories", user.id],
-                });
-              }
-            }}
-          >
-            Categories
+          <SectionLabel label="Categories">
+            <Dialog.Content style={{ maxWidth: 500 }}>
+              <Dialog.Title>New Category</Dialog.Title>
+              <Dialog.Description size="2" mb="4">
+                Create new category
+              </Dialog.Description>
+              <Flex direction="column" gap="3" asChild>
+                <form
+                  id="category-form"
+                  ref={categoryFormRef}
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const formdata = new FormData(e.target as HTMLFormElement);
+                    const parsedData = newCategorySchema.parse({
+                      ...Object.fromEntries(formdata.entries()),
+                      isPrivate: formdata.get("isPrivate") === "on",
+                    });
+                    const { name, kind, isPrivate } = parsedData;
+                    await rpc.post.createCategory({
+                      userId: user.id,
+                      dbname: user.dbname,
+                      name,
+                      kind,
+                      isPrivate,
+                    });
+                    queryClient.invalidateQueries({
+                      queryKey: ["categories", user.id],
+                    });
+                  }}
+                >
+                  <label>
+                    <Text as="div" size="2" mb="1" weight="bold">
+                      Name
+                    </Text>
+                    <TextField.Input
+                      name="name"
+                      placeholder="Enter category name"
+                    />
+                  </label>
+                  <label>
+                    <Text as="div" size="2" mb="1" weight="bold">
+                      Kind
+                    </Text>
+                    <Select.Root defaultValue="Income" name="kind">
+                      <Select.Trigger variant="surface" />
+                      <Select.Content>
+                        <Select.Item value="Income">Income</Select.Item>
+                        <Select.Item value="Expense">Expense</Select.Item>
+                        <Select.Item value="Transfer">Transfer</Select.Item>
+                      </Select.Content>
+                    </Select.Root>
+                  </label>
+                  <label>
+                    <Text as="div" size="2" mb="1" weight="bold">
+                      Private
+                    </Text>
+                    <Checkbox name="isPrivate" />
+                  </label>
+                </form>
+              </Flex>
+              <Flex gap="3" mt="4" justify="start" direction="row-reverse">
+                <Dialog.Close type="submit" form="category-form">
+                  <Button>Save</Button>
+                </Dialog.Close>
+                <Dialog.Close>
+                  <Button variant="soft" color="gray">
+                    Cancel
+                  </Button>
+                </Dialog.Close>
+              </Flex>
+            </Dialog.Content>
           </SectionLabel>
           <Categories user={user} />
         </ScrollArea>
