@@ -31,6 +31,8 @@ import {
   TextField,
   Button,
   Select,
+  Switch,
+  Grid,
 } from "@radix-ui/themes";
 import { Cross1Icon, PlusIcon } from "@radix-ui/react-icons";
 
@@ -122,6 +124,14 @@ const newCategorySchema = object({
   isPrivate: boolean(),
 });
 
+function TwoColumnInput(props: { children: React.ReactNode }) {
+  return (
+    <Grid asChild columns="125px 1fr" align="center">
+      <label>{props.children}</label>
+    </Grid>
+  );
+}
+
 function SideBar({ user }: { user: FindUserResult }) {
   const queryClient = useQueryClient();
   const categoryFormRef = useRef<HTMLFormElement>(null);
@@ -147,9 +157,7 @@ function SideBar({ user }: { user: FindUserResult }) {
           <SectionLabel label="Accounts">
             <Dialog.Content style={{ maxWidth: 500 }}>
               <Dialog.Title>New Partition</Dialog.Title>
-              <Dialog.Description size="2" mb="4">
-                Create new partition
-              </Dialog.Description>
+              <Separator size="4" mb="4" />
               <Flex direction="column" gap="3" asChild>
                 <form
                   id="partition-form"
@@ -198,7 +206,7 @@ function SideBar({ user }: { user: FindUserResult }) {
                     });
                   }}
                 >
-                  <label>
+                  <TwoColumnInput>
                     <Text as="div" size="2" mb="1" weight="bold">
                       Name
                     </Text>
@@ -206,15 +214,16 @@ function SideBar({ user }: { user: FindUserResult }) {
                       name="name"
                       placeholder="Enter partition name"
                     />
-                  </label>
-                  <label>
+                  </TwoColumnInput>
+
+                  <TwoColumnInput>
                     <Text as="div" size="2" mb="1" weight="bold">
                       Private
                     </Text>
-                    <Checkbox name="isPrivate" />
-                  </label>
+                    <Switch name="isPrivate" />
+                  </TwoColumnInput>
 
-                  <label>
+                  <TwoColumnInput>
                     <Text as="div" size="2" mb="1" weight="bold">
                       Account
                     </Text>
@@ -242,28 +251,30 @@ function SideBar({ user }: { user: FindUserResult }) {
                         )}
                       </Select.Content>
                     </Select.Root>
-                  </label>
+                  </TwoColumnInput>
+
                   {accountId === "for-new-account" && (
                     <>
-                      <label>
+                      <TwoColumnInput>
                         <Text as="div" size="2" mb="1" weight="bold">
-                          New Account Name
+                          Account Name
                         </Text>
                         <TextField.Input
                           name="accountName"
                           placeholder="E.g. InterBank"
                         />
-                      </label>
-                      <label>
+                      </TwoColumnInput>
+                      <TwoColumnInput>
                         <Text as="div" size="2" mb="1" weight="bold">
-                          Shared Account
+                          Shared?
                         </Text>
-                        <Checkbox name="isSharedAccount" />
-                      </label>
+                        <Switch name="isSharedAccount" />
+                      </TwoColumnInput>
                     </>
                   )}
                 </form>
               </Flex>
+              <Separator size="4" mt="4" />
               <Flex gap="3" mt="4" justify="start" direction="row-reverse">
                 <Dialog.Close type="submit" form="partition-form">
                   <Button>Save</Button>
@@ -280,9 +291,7 @@ function SideBar({ user }: { user: FindUserResult }) {
           <SectionLabel label="Categories">
             <Dialog.Content style={{ maxWidth: 500 }}>
               <Dialog.Title>New Category</Dialog.Title>
-              <Dialog.Description size="2" mb="4">
-                Create new category
-              </Dialog.Description>
+              <Separator size="4" mb="4" />
               <Flex direction="column" gap="3" asChild>
                 <form
                   id="category-form"
@@ -307,7 +316,7 @@ function SideBar({ user }: { user: FindUserResult }) {
                     });
                   }}
                 >
-                  <label>
+                  <TwoColumnInput>
                     <Text as="div" size="2" mb="1" weight="bold">
                       Name
                     </Text>
@@ -315,8 +324,8 @@ function SideBar({ user }: { user: FindUserResult }) {
                       name="name"
                       placeholder="Enter category name"
                     />
-                  </label>
-                  <label>
+                  </TwoColumnInput>
+                  <TwoColumnInput>
                     <Text as="div" size="2" mb="1" weight="bold">
                       Kind
                     </Text>
@@ -328,15 +337,16 @@ function SideBar({ user }: { user: FindUserResult }) {
                         <Select.Item value="Transfer">Transfer</Select.Item>
                       </Select.Content>
                     </Select.Root>
-                  </label>
-                  <label>
+                  </TwoColumnInput>
+                  <TwoColumnInput>
                     <Text as="div" size="2" mb="1" weight="bold">
                       Private
                     </Text>
-                    <Checkbox name="isPrivate" />
-                  </label>
+                    <Switch name="isPrivate" />
+                  </TwoColumnInput>
                 </form>
               </Flex>
+              <Separator size="4" mt="4" />
               <Flex gap="3" mt="4" justify="start" direction="row-reverse">
                 <Dialog.Close type="submit" form="category-form">
                   <Button>Save</Button>
