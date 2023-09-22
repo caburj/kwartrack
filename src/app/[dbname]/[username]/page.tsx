@@ -100,7 +100,7 @@ function SectionLabel(props: { children: React.ReactNode; label: string }) {
           {props.label}
         </Text>
         <Dialog.Trigger>
-          <IconButton mr="2" variant="ghost">
+          <IconButton radius="full" mr="2" variant="ghost">
             <PlusIcon width="18" height="18" />
           </IconButton>
         </Dialog.Trigger>
