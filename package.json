@@ -23,7 +23,6 @@
     "jotai": "^2.4.2",
     "next": "13.4.12",
     "next-themes": "^0.2.1",
-    "radix-themes-tw": "^0.0.8",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-icons": "^4.11.0",
@@ -32,9 +31,6 @@
     "valibot": "^0.8.0"
   },
   "devDependencies": {
-    "@edgedb/generate": "^0.3.2",
-    "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.30",
-    "tailwindcss": "^3.3.3"
+    "@edgedb/generate": "^0.3.2"
   }
 }

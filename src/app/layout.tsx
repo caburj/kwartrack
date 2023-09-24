@@ -1,4 +1,3 @@
-import "./globals.css";
 import "@radix-ui/themes/styles.css";
 import "../linear.scss";
 import { Providers } from "./providers";
