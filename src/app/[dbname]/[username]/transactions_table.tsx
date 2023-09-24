@@ -40,7 +40,11 @@ function PartitionBadge({
     const color = PARTITION_COLOR[_type];
     return <Badge color={color}>{partition.label}</Badge>;
   } else {
-    return <Badge color="gray" variant="outline">Private Partition</Badge>;
+    return (
+      <Badge color="gray" variant="outline">
+        Private Partition
+      </Badge>
+    );
   }
 }
 
@@ -99,16 +103,11 @@ export function TransactionsTable({
     }
   };
 
-  const shouldHideDelete = (transaction: Transaction) => {
-    if (!transaction.source_partition) return true;
-
-    const partitions = [transaction.source_partition];
-    if (transaction.counterpart) {
-      partitions.push(transaction.counterpart.source_partition);
-    }
-    return !partitions.some((p) =>
-      p.account.owners.map((o) => o.id).includes(user.id)
-    );
+  const shouldShowDelete = (transaction: Transaction) => {
+    const transactions = [transaction, transaction.counterpart].filter(
+      Boolean
+    ) as Transaction[];
+    return transactions.some((t) => t.source_partition?.account.is_owned);
   };
 
   return (
@@ -178,131 +177,132 @@ export function TransactionsTable({
                       </Table.Cell>
                       <Table.Cell>{transaction.description}</Table.Cell>
                       <Table.Cell>
-                        <IconButton
-                          variant="ghost"
-                          color="crimson"
-                          hidden={shouldHideDelete(transaction)}
-                          onClick={async () => {
-                            setIsDeleting(true);
-                            await rpc.post.deleteTransaction({
-                              transactionId: transaction.id,
-                              userId: user.id,
-                              dbname: user.dbname,
-                            });
-                            queryClient.invalidateQueries({
-                              queryKey: ["transactions"],
-                            });
-                            queryClient.invalidateQueries({
-                              queryKey: ["user", user.id],
-                            });
-                            queryClient.invalidateQueries({
-                              queryKey: [
-                                "categoryCanBeDeleted",
-                                { categoryId: transaction.category.id },
-                              ],
-                            });
-                            queryClient.invalidateQueries({
-                              queryKey: [
-                                "categoryBalance",
-                                {
-                                  categoryId: transaction.category.id,
-                                },
-                              ],
-                            });
-                            queryClient.invalidateQueries({
-                              queryKey: [
-                                "categoryKindBalance",
-                                transaction.category.kind,
-                              ],
-                            });
-                            if (transaction.source_partition) {
+                        {shouldShowDelete(transaction) && (
+                          <IconButton
+                            variant="ghost"
+                            color="crimson"
+                            onClick={async () => {
+                              setIsDeleting(true);
+                              await rpc.post.deleteTransaction({
+                                transactionId: transaction.id,
+                                userId: user.id,
+                                dbname: user.dbname,
+                              });
+                              queryClient.invalidateQueries({
+                                queryKey: ["transactions"],
+                              });
+                              queryClient.invalidateQueries({
+                                queryKey: ["user", user.id],
+                              });
                               queryClient.invalidateQueries({
                                 queryKey: [
-                                  "partitionBalance",
+                                  "categoryCanBeDeleted",
+                                  { categoryId: transaction.category.id },
+                                ],
+                              });
+                              queryClient.invalidateQueries({
+                                queryKey: [
+                                  "categoryBalance",
                                   {
-                                    partitionId:
-                                      transaction.source_partition.id,
+                                    categoryId: transaction.category.id,
                                   },
                                 ],
                               });
                               queryClient.invalidateQueries({
                                 queryKey: [
-                                  "partitionCanBeDeleted",
-                                  {
-                                    partitionId:
-                                      transaction.source_partition.id,
-                                  },
+                                  "categoryKindBalance",
+                                  transaction.category.kind,
                                 ],
                               });
-                              queryClient.invalidateQueries({
-                                queryKey: [
-                                  "accountCanBeDeleted",
-                                  {
-                                    accountId:
-                                      transaction.source_partition.account.id,
-                                  },
-                                ],
-                              });
-                              queryClient.invalidateQueries({
-                                queryKey: [
-                                  "accountBalance",
-                                  {
-                                    accountId:
-                                      transaction.source_partition.account.id,
-                                  },
-                                ],
-                              });
-                            }
-                            if (transaction.counterpart) {
-                              queryClient.invalidateQueries({
-                                queryKey: [
-                                  "partitionBalance",
-                                  {
-                                    partitionId:
-                                      transaction.counterpart.source_partition
-                                        .id,
-                                  },
-                                ],
-                              });
+                              if (transaction.source_partition) {
+                                queryClient.invalidateQueries({
+                                  queryKey: [
+                                    "partitionBalance",
+                                    {
+                                      partitionId:
+                                        transaction.source_partition.id,
+                                    },
+                                  ],
+                                });
+                                queryClient.invalidateQueries({
+                                  queryKey: [
+                                    "partitionCanBeDeleted",
+                                    {
+                                      partitionId:
+                                        transaction.source_partition.id,
+                                    },
+                                  ],
+                                });
+                                queryClient.invalidateQueries({
+                                  queryKey: [
+                                    "accountCanBeDeleted",
+                                    {
+                                      accountId:
+                                        transaction.source_partition.account.id,
+                                    },
+                                  ],
+                                });
+                                queryClient.invalidateQueries({
+                                  queryKey: [
+                                    "accountBalance",
+                                    {
+                                      accountId:
+                                        transaction.source_partition.account.id,
+                                    },
+                                  ],
+                                });
+                              }
+                              if (transaction.counterpart) {
+                                queryClient.invalidateQueries({
+                                  queryKey: [
+                                    "partitionBalance",
+                                    {
+                                      partitionId:
+                                        transaction.counterpart.source_partition
+                                          .id,
+                                    },
+                                  ],
+                                });
 
-                              queryClient.invalidateQueries({
-                                queryKey: [
-                                  "partitionCanBeDeleted",
-                                  {
-                                    partitionId:
-                                      transaction.counterpart.source_partition
-                                        .id,
-                                  },
-                                ],
-                              });
+                                queryClient.invalidateQueries({
+                                  queryKey: [
+                                    "partitionCanBeDeleted",
+                                    {
+                                      partitionId:
+                                        transaction.counterpart.source_partition
+                                          .id,
+                                    },
+                                  ],
+                                });
 
-                              queryClient.invalidateQueries({
-                                queryKey: [
-                                  "accountCanBeDeleted",
-                                  {
-                                    accountId:
-                                      transaction.counterpart.source_partition
-                                        .account.id,
-                                  },
-                                ],
-                              });
-                              queryClient.invalidateQueries({
-                                queryKey: [
-                                  "accountBalance",
-                                  {
-                                    accountId:
-                                      transaction.counterpart.source_partition
-                                        .account.id,
-                                  },
-                                ],
-                              });
-                            }
-                            setIsDeleting(false);
-                          }}
-                          disabled={isDeleting}
-                        >
-                          <Cross1Icon width="16" height="16" />
-                        </IconButton>
+                                queryClient.invalidateQueries({
+                                  queryKey: [
+                                    "accountCanBeDeleted",
+                                    {
+                                      accountId:
+                                        transaction.counterpart.source_partition
+                                          .account.id,
+                                    },
+                                  ],
+                                });
+                                queryClient.invalidateQueries({
+                                  queryKey: [
+                                    "accountBalance",
+                                    {
+                                      accountId:
+                                        transaction.counterpart.source_partition
+                                          .account.id,
+                                    },
+                                  ],
+                                });
+                              }
+                              setIsDeleting(false);
+                            }}
+                            disabled={isDeleting}
+                          >
+                            <Cross1Icon width="16" height="16" />
+                          </IconButton>
+                        )}
                       </Table.Cell>
                     </Table.Row>
                   );

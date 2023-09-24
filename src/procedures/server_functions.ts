@@ -323,6 +323,7 @@ export const findTransactions = withValidation(
             description: true,
             kind: transaction.category.kind,
             str_date: e.to_str(transaction.date, "YYYY-mm-dd"),
+            is_owned: true,
             filter,
             order_by: {
               expression: transaction.date,
