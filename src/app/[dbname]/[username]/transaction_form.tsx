@@ -287,7 +287,7 @@ export function TransactionForm(props: {
                 Partition
               </Text>
               <PartitionCombobox
-                partitions={partitions}
+                partitions={partitions.filter((p) => p.account.is_owned)}
                 user={user}
                 selectedCategory={selectedCategory}
                 selectedPartitionId={selectedSourcePartitionId}
