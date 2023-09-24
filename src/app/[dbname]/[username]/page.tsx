@@ -423,6 +423,7 @@ function AccountLI({
           )}
         </Flex>
         <LoadingValue
+          expect={(value) => value > 0}
           queryKey={[
             "accountBalance",
             {
@@ -648,7 +649,7 @@ function PartitionLI({
         </Flex>
       </Box>
       <LoadingValue
-        color={color}
+        expect={(value) => value > 0}
         queryKey={[
           "partitionBalance",
           {
@@ -696,6 +697,10 @@ function Partitions(props: {
   );
 }
 
+type Category = Awaited<
+  ReturnType<typeof rpc.post.getUserCategories>
+>["income"][number];
+
 function Categories({ user }: { user: { id: string; dbname: string } }) {
   const queryClient = useQueryClient();
   const categories = useQuery(["categories", user.id], () => {
@@ -742,6 +747,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
             >
               <Text>Income</Text>
               <LoadingValue
+                expect={(value) => value > 0}
                 queryKey={["categoryKindBalance", "Income"]}
                 valueLoader={() =>
                   rpc.post.getCategoryKindBalance({
@@ -764,6 +770,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
             >
               <Text>Expense</Text>
               <LoadingValue
+                expect={(value) => value < 0}
                 queryKey={["categoryKindBalance", "Expense"]}
                 valueLoader={() =>
                   rpc.post.getCategoryKindBalance({
@@ -786,6 +793,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
             >
               <Text>Transfer</Text>
               <LoadingValue
+                expect={(value) => value === 0}
                 queryKey={["categoryKindBalance", "Transfer"]}
                 valueLoader={() =>
                   rpc.post.getCategoryKindBalance({
@@ -812,7 +820,7 @@ function Category({
   category,
   user,
 }: {
-  category: { id: string; name: string };
+  category: Category;
   user: { id: string; dbname: string };
 }) {
   const queryClient = useQueryClient();
@@ -875,6 +883,15 @@ function Category({
         )}
       </Flex>
       <LoadingValue
+        expect={(value) => {
+          if (category.kind === "Income") {
+            return value > 0;
+          } else if (category.kind === "Expense") {
+            return value < 0;
+          } else {
+            return value === 0;
+          }
+        }}
         queryKey={[
           "categoryBalance",
           {
@@ -936,7 +953,7 @@ function DateRange({ user }: { user: { id: string; dbname: string } }) {
 type Color = (typeof textPropDefs)["color"]["values"][number];
 
 function LoadingValue(props: {
-  color?: Color;
+  expect: (value: number) => boolean;
   queryKey: [string, ...any];
   valueLoader: () => Promise<string>;
 }) {
@@ -948,13 +965,20 @@ function LoadingValue(props: {
     >
       {(value) => {
         const parsedValue = parseFloat(value);
+        let color: Color | undefined;
+        const asExpected = props.expect(parsedValue);
+        if (!asExpected) {
+          color = "red";
+        }
         let result;
         if (isNaN(parsedValue)) {
           result = value;
         } else {
-          result = formatValue(parsedValue);
+          result = formatValue(
+            asExpected ? Math.abs(parsedValue) : parsedValue
+          );
         }
-        return <Text color={props.color}>{result}</Text>;
+        return <Text color={color}>{result}</Text>;
       }}
     </QueryResult>
   );
