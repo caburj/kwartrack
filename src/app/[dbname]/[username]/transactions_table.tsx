@@ -42,7 +42,7 @@ function PartitionBadge({
   } else {
     return (
       <Badge color="gray" variant="outline">
-        Private Partition
+        Private
       </Badge>
     );
   }

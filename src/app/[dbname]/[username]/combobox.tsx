@@ -22,7 +22,6 @@ export function Combobox<I extends { id: string }>(props: {
         <Command loop className="linear">
           <Flex
             p="2"
-            px="4"
             gap="1"
             className={css({
               borderBottom: "1px solid var(--gray-6)",
@@ -37,7 +36,7 @@ export function Combobox<I extends { id: string }>(props: {
             scrollbars="vertical"
             className={css({ maxHeight: "200px" })}
           >
-            <Box px="4" pb="4">
+            <Box px="5" pb="4">
               <Command.List>
                 {Object.entries(props.groupedItems).map(([key, items]) => {
                   const itemsToDisplay = items.filter(pred);
@@ -74,7 +73,7 @@ export function Combobox<I extends { id: string }>(props: {
 export function ComboboxTrigger(props: { children: React.ReactNode }) {
   return (
     <Popover.Trigger>
-      <Button variant="outline">
+      <Button variant="outline" color="gray">
         <Text>{props.children}</Text>
         <CaretSortIcon
           width="18"
