@@ -165,6 +165,7 @@ export const getPartitions = withValidation(
   }
 );
 
+// TODO: Match type of getPartitions, getPartitionOptions and findTransactions.
 export const getPartitionOptions = withValidation(
   object({ userId: string(), dbname: string() }),
   async ({ userId, dbname }) => {
@@ -292,6 +293,7 @@ export const findTransactions = withValidation(
               },
               is_owned: true,
             },
+            is_private: true,
           } as const;
 
           return {
@@ -342,6 +344,10 @@ export const findTransactions = withValidation(
                 label: `${tx.source_partition.name} (${computeAccountLabel(
                   tx.source_partition.account
                 )})`,
+                account: {
+                  ...tx.source_partition.account,
+                  label: computeAccountLabel(tx.source_partition.account),
+                },
               },
               counterpart:
                 tx.counterpart && tx.counterpart.is_visible
@@ -354,6 +360,12 @@ export const findTransactions = withValidation(
                         } (${computeAccountLabel(
                           tx.counterpart.source_partition.account
                         )})`,
+                        account: {
+                          ...tx.counterpart.source_partition.account,
+                          label: computeAccountLabel(
+                            tx.counterpart.source_partition.account
+                          ),
+                        },
                       },
                     }
                   : null,

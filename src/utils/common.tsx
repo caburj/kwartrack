@@ -1,3 +1,4 @@
+import { rpc } from "@/app/rpc_client";
 import { UseQueryResult } from "@tanstack/react-query";
 import { ReactHTML } from "react";
 
@@ -28,7 +29,6 @@ export function formatValue(value: number) {
   return nf.format(Math.abs(value));
 }
 
-
 export function QueryResult<T>(props: {
   as?: keyof ReactHTML;
   className?: string;
@@ -52,4 +52,24 @@ export function QueryResult<T>(props: {
   }
   if (Tag === undefined) return <>{node}</>;
   return <Tag className={props.className}>{node}</Tag>;
+}
+
+export type Partitions = Awaited<
+  ReturnType<typeof rpc.post.getPartitionOptions>
+>;
+export type PartitionOption = Unpacked<NonNullable<Partitions>>;
+
+export function getPartitionType(
+  p: PartitionOption,
+  userId: string
+): "owned" | "common" | "others" {
+  if (p.account.owners.length === 1 && p.account.owners[0].id === userId) {
+    return "owned";
+  } else if (
+    p.account.owners.length > 1 &&
+    p.account.owners.map((o) => o.id).includes(userId)
+  ) {
+    return "common";
+  }
+  return "others";
 }
