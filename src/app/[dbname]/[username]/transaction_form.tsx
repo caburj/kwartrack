@@ -1,6 +1,12 @@
 import { css } from "../../../../styled-system/css";
 import { rpc } from "@/app/rpc_client";
-import { QueryResult, Unpacked, groupBy } from "@/utils/common";
+import {
+  Partitions,
+  QueryResult,
+  Unpacked,
+  getPartitionType,
+  groupBy,
+} from "@/utils/common";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { number, object, optional, string } from "valibot";
@@ -11,8 +17,6 @@ import { Combobox, ComboboxTrigger } from "./combobox";
 
 type Categories = Awaited<ReturnType<typeof rpc.post.getUserCategories>>;
 type Category = Unpacked<Categories["expense"]>;
-type Partitions = Awaited<ReturnType<typeof rpc.post.getPartitionOptions>>;
-type PartitionOption = Unpacked<NonNullable<Partitions>>;
 
 const selectedCategoryIdAtom = atom("");
 const selectedSourcePartitionIdAtom = atom("");
@@ -57,21 +61,6 @@ function CategoryComboBox(props: { categories: Categories }) {
       <ComboboxTrigger>{categoryName}</ComboboxTrigger>
     </Combobox>
   );
-}
-
-function getPartitionType(
-  p: PartitionOption,
-  userId: string
-): "owned" | "common" | "others" {
-  if (p.account.owners.length === 1 && p.account.owners[0].id === userId) {
-    return "owned";
-  } else if (
-    p.account.owners.length > 1 &&
-    p.account.owners.map((o) => o.id).includes(userId)
-  ) {
-    return "common";
-  }
-  return "others";
 }
 
 function PartitionCombobox(props: {
