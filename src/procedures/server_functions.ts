@@ -233,9 +233,17 @@ export const findTransactions = withValidation(
       ({ pIds, cIds }) =>
         e.select(e.ETransaction, (transaction) => {
           let baseFilter = e.op(
-            transaction.is_visible,
-            "and",
-            e.op("not", transaction.is_counterpart)
+            e.op(
+              transaction.is_visible,
+              "and",
+              e.op("not", transaction.is_counterpart)
+            ),
+            "or",
+            e.op(
+              e.op("exists", transaction.counterpart),
+              "and",
+              e.any(transaction.counterpart.is_visible)
+            )
           );
           if (tssDate) {
             baseFilter = e.op(
@@ -311,6 +319,7 @@ export const findTransactions = withValidation(
               name: true,
               kind: true,
             },
+            is_visible: true,
             description: true,
             kind: transaction.category.kind,
             str_date: e.to_str(transaction.date, "YYYY-mm-dd"),
@@ -339,16 +348,18 @@ export const findTransactions = withValidation(
           .map((tx) => {
             return {
               ...tx,
-              source_partition: {
-                ...tx.source_partition,
-                label: `${tx.source_partition.name} (${computeAccountLabel(
-                  tx.source_partition.account
-                )})`,
-                account: {
-                  ...tx.source_partition.account,
-                  label: computeAccountLabel(tx.source_partition.account),
-                },
-              },
+              source_partition: tx.is_visible
+                ? {
+                    ...tx.source_partition,
+                    label: `${tx.source_partition.name} (${computeAccountLabel(
+                      tx.source_partition.account
+                    )})`,
+                    account: {
+                      ...tx.source_partition.account,
+                      label: computeAccountLabel(tx.source_partition.account),
+                    },
+                  }
+                : null,
               counterpart:
                 tx.counterpart && tx.counterpart.is_visible
                   ? {
