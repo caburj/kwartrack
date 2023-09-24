@@ -16,7 +16,7 @@ import {
   TextField,
   Popover,
 } from "@radix-ui/themes";
-import { ChatBubbleIcon } from "@radix-ui/react-icons";
+import { ChatBubbleIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 
 const randomStrings = [
   "This is a pig",
@@ -56,25 +56,37 @@ export default function CommandMenu() {
                 setSearch(search);
               }}
             />
+
             <ScrollArea
               type="always"
               scrollbars="vertical"
-              style={{ height: 180 }}
+              style={{ height: "200px" }}
             >
-              <Command.List>
-                <Command.Empty>No results found.</Command.Empty>
-                {randomStrings.map((str) => (
-                  <Command.Item
-                    key={str}
-                    onSelect={(value) => {
-                      setSelected(value);
-                      setOpen(false);
-                    }}
-                  >
-                    <Text>{str}</Text>
-                  </Command.Item>
-                ))}
-              </Command.List>
+              <Box
+                px="2"
+                pr="4"
+                style={{
+                  maxWidth: "150px",
+                  minWidth: "150px",
+                }}
+              >
+                <Command.List>
+                  <Command.Empty>No results found.</Command.Empty>
+                  {randomStrings.map((str) => (
+                    <Command.Item
+                      value={`${str}-1`}
+                      key={str}
+                      onSelect={(value) => {
+                        setSelected(value);
+                        setOpen(false);
+                      }}
+                    >
+                      <Text>{`${str}`}</Text>
+                      <span>-fooooo</span>
+                    </Command.Item>
+                  ))}
+                </Command.List>
+              </Box>
             </ScrollArea>
           </Command>
         </Popover.Content>

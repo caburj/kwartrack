@@ -6,6 +6,8 @@ import {
   useContext,
   useState,
   useRef,
+  useMemo,
+  useCallback,
 } from "react";
 import { rpc } from "../../rpc_client";
 import {
@@ -33,8 +35,14 @@ import {
   Select,
   Switch,
   Grid,
+  Popover,
 } from "@radix-ui/themes";
-import { Cross1Icon, PlusIcon } from "@radix-ui/react-icons";
+import {
+  Cross1Icon,
+  MagnifyingGlassIcon,
+  PlusIcon,
+} from "@radix-ui/react-icons";
+import { Command } from "cmdk";
 
 export default function Main(props: {
   params: { username: string; dbname: string };
@@ -75,7 +83,7 @@ export function UserPage({
               left: "350px",
             }}
           >
-            <ScrollArea type="always" scrollbars="vertical">
+            <ScrollArea scrollbars="vertical">
               <Flex direction="column" p="2" pr="4">
                 <TransactionForm user={user} />
                 <Transactions user={user} />
@@ -153,7 +161,7 @@ function SideBar({ user }: { user: FindUserResult }) {
       style={{ minWidth: "350px" }}
     >
       <Flex direction="column" height="100%">
-        <ScrollArea type="always" scrollbars="vertical">
+        <ScrollArea scrollbars="vertical">
           <SectionLabel label="Accounts">
             <Dialog.Content style={{ maxWidth: 500 }}>
               <Dialog.Title>New Partition</Dialog.Title>
@@ -626,7 +634,7 @@ function PartitionLI({
     }
   );
   const isSelected = store.partitionIds.includes(partition.id);
-  const color = isSelected ? "blue" : undefined;
+  const color = isSelected ? "cyan" : undefined;
   return (
     <Flex pr="2" justify="between">
       <Box grow="1">
@@ -639,7 +647,11 @@ function PartitionLI({
             checked={isSelected}
           />
           {/* TODO: Allow editing the partition. */}
-          <Text align="center" color={color}>
+          <Text
+            align="center"
+            color={color}
+            weight={isSelected ? "medium" : "regular"}
+          >
             {partition.name}
           </Text>
           {canBeDeleted.data && (
@@ -1267,13 +1279,13 @@ function TransactionForm({ user }: { user: { id: string; dbname: string } }) {
     );
   };
 
-  const getCategoryOptionName = (category: Category) => {
+  const getCategoryOptionName = useCallback((category: Category) => {
     if (category.is_private) {
       return `${category.name} (Private)`;
     } else {
       return category.name;
     }
-  };
+  }, []);
 
   const shouldDisableSubmit = () => {
     return !value || value <= 0 || isNaN(value) || createTransaction.isLoading;
@@ -1373,8 +1385,96 @@ function TransactionForm({ user }: { user: { id: string; dbname: string } }) {
     }
   };
 
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const categoryName = useMemo(() => {
+    if (categories.data) {
+      const selectedCategory = [
+        ...categories.data.expense,
+        ...categories.data.income,
+        ...categories.data.transfer,
+      ].find((c) => c.id === selectedCategoryId);
+      if (selectedCategory) {
+        return getCategoryOptionName(selectedCategory);
+      }
+    }
+    return "Select Category";
+  }, [categories, selectedCategoryId, getCategoryOptionName]);
+
   return (
     <form onSubmit={onSubmit}>
+      <Popover.Root open={open} onOpenChange={setOpen}>
+        <Popover.Trigger>
+          <Button variant="outline" style={{ width: "200px" }}>
+            {categoryName}
+          </Button>
+        </Popover.Trigger>
+        <Popover.Content style={{ padding: "0px" }}>
+          <Command loop className="linear">
+            <Flex p="2" px="4" gap="1">
+              <Grid align="center">
+                <MagnifyingGlassIcon width="18" height="18" />
+              </Grid>
+              <Command.Input />
+            </Flex>
+            <ScrollArea
+              scrollbars="vertical"
+              style={{
+                height: "200px",
+                width: "200px",
+              }}
+            >
+              <Box px="4" pb="4">
+                <Command.List>
+                  <Command.Group heading="Income">
+                    {categories.data?.income.map((c) => (
+                      <Command.Item
+                        key={c.id}
+                        value={getCategoryOptionName(c)}
+                        onSelect={(value) => {
+                          setSelectedCategoryId(c.id);
+                          setOpen(false);
+                        }}
+                      >
+                        {getCategoryOptionName(c)}
+                      </Command.Item>
+                    ))}
+                  </Command.Group>
+                  <Command.Group heading="Expense">
+                    {categories.data?.expense.map((c) => (
+                      <Command.Item
+                        key={c.id}
+                        value={getCategoryOptionName(c)}
+                        onSelect={(value) => {
+                          setSelectedCategoryId(c.id);
+                          setOpen(false);
+                        }}
+                      >
+                        {getCategoryOptionName(c)}
+                      </Command.Item>
+                    ))}
+                  </Command.Group>
+                  <Command.Group heading="Transfer">
+                    {categories.data?.transfer.map((c) => (
+                      <Command.Item
+                        key={c.id}
+                        value={getCategoryOptionName(c)}
+                        onSelect={(value) => {
+                          setSelectedCategoryId(c.id);
+                          setOpen(false);
+                        }}
+                      >
+                        {getCategoryOptionName(c)}
+                      </Command.Item>
+                    ))}
+                  </Command.Group>
+                </Command.List>
+              </Box>
+            </ScrollArea>
+          </Command>
+        </Popover.Content>
+      </Popover.Root>
       <FormInput flexGrow={2} width="20%">
         <label htmlFor="categoryId">Category</label>
         <QueryResult query={categories}>
