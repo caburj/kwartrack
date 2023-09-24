@@ -1,27 +1,13 @@
+import { css } from "../../../../styled-system/css";
 import { rpc } from "@/app/rpc_client";
 import { QueryResult, Unpacked, groupBy } from "@/utils/common";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { number, object, optional, string } from "valibot";
-import {
-  Box,
-  Button,
-  Flex,
-  Grid,
-  Popover,
-  ScrollArea,
-  TextField,
-  Text,
-} from "@radix-ui/themes";
-import { Command } from "cmdk";
-import {
-  ArrowRightIcon,
-  CaretSortIcon,
-  MagnifyingGlassIcon,
-} from "@radix-ui/react-icons";
+import { Flex, TextField, Text } from "@radix-ui/themes";
+import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { atom, useAtom } from "jotai";
-import { css } from "../../../../styled-system/css";
-import { Combobox } from "./combobox";
+import { Combobox, ComboboxTrigger } from "./combobox";
 
 type Categories = Awaited<ReturnType<typeof rpc.post.getUserCategories>>;
 type Category = Unpacked<Categories["expense"]>;
@@ -40,28 +26,8 @@ const getCategoryOptionName = (category: Category) => {
   }
 };
 
-function SelectButton(props: { children: React.ReactNode }) {
-  return (
-    <Popover.Trigger>
-      <Button variant="outline">
-        <Text>{props.children}</Text>
-        <CaretSortIcon
-          width="18"
-          height="18"
-          className={css({
-            display: "inline-block",
-            verticalAlign: "middle",
-          })}
-        />
-      </Button>
-    </Popover.Trigger>
-  );
-}
-
 function CategoryComboBox(props: { categories: Categories }) {
   const { categories } = props;
-
-  const [open, setOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useAtom(
     selectedCategoryIdAtom
   );
@@ -81,54 +47,15 @@ function CategoryComboBox(props: { categories: Categories }) {
   }, [categories, selectedCategoryId]);
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
-      <SelectButton>{categoryName}</SelectButton>
-      <Popover.Content style={{ padding: "0px" }}>
-        <Command loop className="linear">
-          <Flex
-            p="2"
-            px="4"
-            gap="1"
-            className={css({
-              borderBottom: "1px solid var(--gray-6)",
-            })}
-          >
-            <Grid align="center">
-              <MagnifyingGlassIcon width="18" height="18" />
-            </Grid>
-            <Command.Input />
-          </Flex>
-          <ScrollArea
-            scrollbars="vertical"
-            className={css({ maxHeight: "200px" })}
-          >
-            <Box px="4" pb="4">
-              <Command.List>
-                {Object.entries(categories).map(([kind, categories]) => {
-                  const heading = kind[0].toUpperCase() + kind.slice(1);
-                  return (
-                    <Command.Group heading={heading} key={kind}>
-                      {categories.map((c) => (
-                        <Command.Item
-                          key={c.id}
-                          value={getCategoryOptionName(c)}
-                          onSelect={(value) => {
-                            setSelectedCategoryId(c.id);
-                            setOpen(false);
-                          }}
-                        >
-                          {getCategoryOptionName(c)}
-                        </Command.Item>
-                      ))}
-                    </Command.Group>
-                  );
-                })}
-              </Command.List>
-            </Box>
-          </ScrollArea>
-        </Command>
-      </Popover.Content>
-    </Popover.Root>
+    <Combobox
+      groupedItems={props.categories}
+      getGroupHeading={(key) => key[0].toUpperCase() + key.slice(1)}
+      getItemValue={(c, k) => `${k} ${getCategoryOptionName(c)}`}
+      getItemDisplay={(c) => getCategoryOptionName(c)}
+      onSelectItem={(c) => setSelectedCategoryId(c.id)}
+    >
+      <ComboboxTrigger>{categoryName}</ComboboxTrigger>
+    </Combobox>
   );
 }
 
@@ -190,17 +117,16 @@ function PartitionCombobox(props: {
 
   return (
     <Combobox
-      items={sortedPartitions}
+      groupedItems={groupBy(sortedPartitions, (p) => p.account.id)}
+      getGroupHeading={(key, items) => items[0].account.label}
       isItemIncluded={(p) => !selectedCategory?.is_private || p.is_private}
-      groupItems={(items) => groupBy(items, (p) => p.account.id)}
       getItemValue={(p) =>
         `${getPartitionType(p, user.id)} ${p.account.label} ${p.name}`
       }
       getItemDisplay={(p) => p.name}
-      getGroupHeading={(key, items) => items[0].account.label}
       onSelectItem={(p) => setSelectedPartitionId(p.id)}
     >
-      <SelectButton>{partitionName}</SelectButton>
+      <ComboboxTrigger>{partitionName}</ComboboxTrigger>
     </Combobox>
   );
 }

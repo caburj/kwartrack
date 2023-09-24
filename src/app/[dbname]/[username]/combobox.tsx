@@ -1,22 +1,20 @@
-import { Box, Flex, Grid, Popover, ScrollArea } from "@radix-ui/themes";
+import { Box, Button, Flex, Grid, Popover, ScrollArea, Text } from "@radix-ui/themes";
 import { Command } from "cmdk";
 import { useState } from "react";
 import { css } from "../../../../styled-system/css";
-import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { CaretSortIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 
 export function Combobox<I extends { id: string }>(props: {
-  items: I[];
-  groupItems: (items: I[]) => Record<string, I[]>;
+  groupedItems: Record<string, I[]>;
   isItemIncluded?: (item: I) => boolean;
-  getItemValue: (item: I) => string;
-  getItemDisplay: (item: I) => string;
-  getGroupHeading: (key: string, items: I[]) => string;
+  getItemValue: (item: I, groupKey: string) => string;
+  getItemDisplay: (item: I, groupKey: string) => string;
+  getGroupHeading: (groupKey: string, items: I[]) => string;
   onSelectItem: (item: I) => void;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const pred = props.isItemIncluded ?? (() => true);
-  const groupedItems = props.groupItems(props.items);
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       {props.children}
@@ -41,7 +39,7 @@ export function Combobox<I extends { id: string }>(props: {
           >
             <Box px="4" pb="4">
               <Command.List>
-                {Object.entries(groupedItems).map(([key, items]) => {
+                {Object.entries(props.groupedItems).map(([key, items]) => {
                   const itemsToDisplay = items.filter(pred);
                   if (itemsToDisplay.length === 0) return null;
                   return (
@@ -52,13 +50,13 @@ export function Combobox<I extends { id: string }>(props: {
                       {itemsToDisplay.map((item) => (
                         <Command.Item
                           key={item.id}
-                          value={props.getItemValue(item)}
+                          value={props.getItemValue(item, key)}
                           onSelect={() => {
                             props.onSelectItem(item);
                             setOpen(false);
                           }}
                         >
-                          {props.getItemDisplay(item)}
+                          {props.getItemDisplay(item, key)}
                         </Command.Item>
                       ))}
                     </Command.Group>
@@ -70,5 +68,23 @@ export function Combobox<I extends { id: string }>(props: {
         </Command>
       </Popover.Content>
     </Popover.Root>
+  );
+}
+
+export function ComboboxTrigger(props: { children: React.ReactNode }) {
+  return (
+    <Popover.Trigger>
+      <Button variant="outline">
+        <Text>{props.children}</Text>
+        <CaretSortIcon
+          width="18"
+          height="18"
+          className={css({
+            display: "inline-block",
+            verticalAlign: "middle",
+          })}
+        />
+      </Button>
+    </Popover.Trigger>
   );
 }
