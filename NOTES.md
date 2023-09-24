@@ -139,3 +139,6 @@
 * [X] imp: Allow deleting accounts, partitions and categories.
   - Only delete them if no linked transactions.
   - Only delete account if no linked partitions.
+
+* [X] Should be able to see counterpart of transactions with private sources.
+  - It should look like: Private Partition -> Owned Partition

@@ -3,7 +3,6 @@ import { useContext, useState } from "react";
 import { UserPageStoreContext } from "./store";
 import { rpc } from "@/app/rpc_client";
 import {
-  PartitionOption,
   QueryResult,
   Unpacked,
   formatValue,
@@ -15,6 +14,7 @@ import { Cross1Icon, ArrowRightIcon } from "@radix-ui/react-icons";
 type Transaction = Unpacked<
   NonNullable<Awaited<ReturnType<typeof rpc.post.findTransactions>>>[0]
 >;
+type Partition = Transaction["source_partition"];
 
 const CATEGORY_COLOR = {
   Income: "green",
@@ -32,12 +32,16 @@ function PartitionBadge({
   partition,
   user,
 }: {
-  partition: PartitionOption & { label: string };
+  partition: Partition;
   user: { id: string; dbname: string };
 }) {
-  const _type = getPartitionType(partition, user.id);
-  const color = PARTITION_COLOR[_type];
-  return <Badge color={color}>{partition.label}</Badge>;
+  if (partition) {
+    const _type = getPartitionType(partition, user.id);
+    const color = PARTITION_COLOR[_type];
+    return <Badge color={color}>{partition.label}</Badge>;
+  } else {
+    return <Badge color="gray" variant="outline">Private Partition</Badge>;
+  }
 }
 
 export function TransactionsTable({
@@ -82,14 +86,10 @@ export function TransactionsTable({
           <Box px="1">
             <ArrowRightIcon width="16" height="16" />
           </Box>
-          {transaction.counterpart ? (
-            <PartitionBadge
-              partition={transaction.counterpart.source_partition}
-              user={user}
-            />
-          ) : (
-            <Badge color="gray">Private Partition</Badge>
-          )}
+          <PartitionBadge
+            partition={transaction.counterpart?.source_partition || null}
+            user={user}
+          />
         </Flex>
       );
     } else {
@@ -100,6 +100,8 @@ export function TransactionsTable({
   };
 
   const shouldHideDelete = (transaction: Transaction) => {
+    if (!transaction.source_partition) return true;
+
     const partitions = [transaction.source_partition];
     if (transaction.counterpart) {
       partitions.push(transaction.counterpart.source_partition);
@@ -195,40 +197,6 @@ export function TransactionsTable({
                             });
                             queryClient.invalidateQueries({
                               queryKey: [
-                                "partitionBalance",
-                                {
-                                  partitionId: transaction.source_partition.id,
-                                },
-                              ],
-                            });
-                            queryClient.invalidateQueries({
-                              queryKey: [
-                                "partitionCanBeDeleted",
-                                {
-                                  partitionId: transaction.source_partition.id,
-                                },
-                              ],
-                            });
-                            queryClient.invalidateQueries({
-                              queryKey: [
-                                "accountCanBeDeleted",
-                                {
-                                  accountId:
-                                    transaction.source_partition.account.id,
-                                },
-                              ],
-                            });
-                            queryClient.invalidateQueries({
-                              queryKey: [
-                                "accountBalance",
-                                {
-                                  accountId:
-                                    transaction.source_partition.account.id,
-                                },
-                              ],
-                            });
-                            queryClient.invalidateQueries({
-                              queryKey: [
                                 "categoryCanBeDeleted",
                                 { categoryId: transaction.category.id },
                               ],
@@ -247,6 +215,44 @@ export function TransactionsTable({
                                 transaction.category.kind,
                               ],
                             });
+                            if (transaction.source_partition) {
+                              queryClient.invalidateQueries({
+                                queryKey: [
+                                  "partitionBalance",
+                                  {
+                                    partitionId:
+                                      transaction.source_partition.id,
+                                  },
+                                ],
+                              });
+                              queryClient.invalidateQueries({
+                                queryKey: [
+                                  "partitionCanBeDeleted",
+                                  {
+                                    partitionId:
+                                      transaction.source_partition.id,
+                                  },
+                                ],
+                              });
+                              queryClient.invalidateQueries({
+                                queryKey: [
+                                  "accountCanBeDeleted",
+                                  {
+                                    accountId:
+                                      transaction.source_partition.account.id,
+                                  },
+                                ],
+                              });
+                              queryClient.invalidateQueries({
+                                queryKey: [
+                                  "accountBalance",
+                                  {
+                                    accountId:
+                                      transaction.source_partition.account.id,
+                                  },
+                                ],
+                              });
+                            }
                             if (transaction.counterpart) {
                               queryClient.invalidateQueries({
                                 queryKey: [
