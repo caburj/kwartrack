@@ -38,12 +38,18 @@ dependencies:
   eslint-config-next:
     specifier: 13.4.12
     version: 13.4.12(eslint@8.46.0)(typescript@5.1.6)
+  jotai:
+    specifier: ^2.4.2
+    version: 2.4.2(@types/react@18.2.18)(react@18.2.0)
   next:
     specifier: 13.4.12
     version: 13.4.12(react-dom@18.2.0)(react@18.2.0)(sass@1.68.0)
   next-themes:
     specifier: ^0.2.1
     version: 0.2.1(next@13.4.12)(react-dom@18.2.0)(react@18.2.0)
+  radix-themes-tw:
+    specifier: ^0.0.8
+    version: 0.0.8
   react:
     specifier: 18.2.0
     version: 18.2.0
@@ -3088,6 +3094,22 @@ packages:
     hasBin: true
     dev: true
 
+  /jotai@2.4.2(@types/react@18.2.18)(react@18.2.0):
+    resolution: {integrity: sha512-90jXVOd9h6gi5JXk558M+wnJfaaVN2WegcNOCfiFbWboNaDl6DkRgiY/K1oeqTfYJmq8yM7XPsL99LAvcOPqhw==}
+    engines: {node: '>=12.20.0'}
+    peerDependencies:
+      '@types/react': '>=17.0.0'
+      react: '>=17.0.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      react:
+        optional: true
+    dependencies:
+      '@types/react': 18.2.18
+      react: 18.2.0
+    dev: false
+
   /js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
     dev: false
@@ -3594,6 +3616,10 @@ packages:
 
   /queue-microtask@1.2.3:
     resolution: {integrity: sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==}
+
+  /radix-themes-tw@0.0.8:
+    resolution: {integrity: sha512-NPRRoahUlnYOQNfBHuGR/XFwJ4L2md59MGMbTmPZ11pwPFLeYnu4Lgqa0wcb8wiJSaiRzLA9vrWxj6suupDmdg==}
+    dev: false
 
   /react-dom@18.2.0(react@18.2.0):
     resolution: {integrity: sha512-6IMTriUmvsjHUjNtEDudZfuDQUoWXVxKHhlEGSk81n4YFS+r/Kl99wXiwlVXtPBtJenozv2P+hxDsw9eA7Xo6g==}
