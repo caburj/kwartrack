@@ -1,7 +1,7 @@
 import { rpc } from "@/app/rpc_client";
 import { QueryResult, Unpacked, groupBy } from "@/utils/common";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { number, object, optional, string } from "valibot";
 import {
   Box,
@@ -14,7 +14,11 @@ import {
   Text,
 } from "@radix-ui/themes";
 import { Command } from "cmdk";
-import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import {
+  ArrowRightIcon,
+  CaretSortIcon,
+  MagnifyingGlassIcon,
+} from "@radix-ui/react-icons";
 import { atom, useAtom } from "jotai";
 import { css } from "../../../../styled-system/css";
 
@@ -46,8 +50,8 @@ function CategoryComboBox(props: { categories: Categories }) {
   const categoryName = useMemo(() => {
     if (categories) {
       const selectedCategory = [
-        ...categories.expense,
         ...categories.income,
+        ...categories.expense,
         ...categories.transfer,
       ].find((c) => c.id === selectedCategoryId);
       if (selectedCategory) {
@@ -60,7 +64,17 @@ function CategoryComboBox(props: { categories: Categories }) {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger>
-        <Button variant="outline">{categoryName}</Button>
+        <Button variant="outline">
+          <Text>{categoryName}</Text>
+          <CaretSortIcon
+            width="18"
+            height="18"
+            className={css({
+              display: "inline-block",
+              verticalAlign: "middle",
+            })}
+          />
+        </Button>
       </Popover.Trigger>
       <Popover.Content style={{ padding: "0px" }}>
         <Command loop className="linear">
@@ -85,48 +99,25 @@ function CategoryComboBox(props: { categories: Categories }) {
           >
             <Box px="4" pb="4">
               <Command.List>
-                <Command.Group heading="Income">
-                  {categories.income.map((c) => (
-                    <Command.Item
-                      key={c.id}
-                      value={getCategoryOptionName(c)}
-                      onSelect={(value) => {
-                        setSelectedCategoryId(c.id);
-                        setOpen(false);
-                      }}
-                    >
-                      {getCategoryOptionName(c)}
-                    </Command.Item>
-                  ))}
-                </Command.Group>
-                <Command.Group heading="Expense">
-                  {categories.expense.map((c) => (
-                    <Command.Item
-                      key={c.id}
-                      value={getCategoryOptionName(c)}
-                      onSelect={(value) => {
-                        setSelectedCategoryId(c.id);
-                        setOpen(false);
-                      }}
-                    >
-                      {getCategoryOptionName(c)}
-                    </Command.Item>
-                  ))}
-                </Command.Group>
-                <Command.Group heading="Transfer">
-                  {categories.transfer.map((c) => (
-                    <Command.Item
-                      key={c.id}
-                      value={getCategoryOptionName(c)}
-                      onSelect={(value) => {
-                        setSelectedCategoryId(c.id);
-                        setOpen(false);
-                      }}
-                    >
-                      {getCategoryOptionName(c)}
-                    </Command.Item>
-                  ))}
-                </Command.Group>
+                {Object.entries(categories).map(([kind, categories]) => {
+                  const heading = kind[0].toUpperCase() + kind.slice(1);
+                  return (
+                    <Command.Group heading={heading} key={kind}>
+                      {categories.map((c) => (
+                        <Command.Item
+                          key={c.id}
+                          value={getCategoryOptionName(c)}
+                          onSelect={(value) => {
+                            setSelectedCategoryId(c.id);
+                            setOpen(false);
+                          }}
+                        >
+                          {getCategoryOptionName(c)}
+                        </Command.Item>
+                      ))}
+                    </Command.Group>
+                  );
+                })}
               </Command.List>
             </Box>
           </ScrollArea>
@@ -167,6 +158,13 @@ function PartitionCombobox(props: {
   } = props;
   const [open, setOpen] = useState(false);
 
+  useEffect(() => {
+    // Always reset selected partition when category changes
+    if (selectedCategory) {
+      setSelectedPartitionId("");
+    }
+  }, [selectedCategory, setSelectedPartitionId]);
+
   const sortedPartitions = useMemo(() => {
     const partitionsByType = groupBy(partitions, (p) =>
       getPartitionType(p, user.id)
@@ -197,7 +195,17 @@ function PartitionCombobox(props: {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger>
-        <Button variant="outline">{partitionName}</Button>
+        <Button variant="outline">
+          <Text>{partitionName}</Text>
+          <CaretSortIcon
+            width="18"
+            height="18"
+            className={css({
+              display: "inline-block",
+              verticalAlign: "middle",
+            })}
+          />
+        </Button>
       </Popover.Trigger>
       <Popover.Content style={{ padding: "0px" }}>
         <Command loop className="linear">
@@ -216,9 +224,7 @@ function PartitionCombobox(props: {
           </Flex>
           <ScrollArea
             scrollbars="vertical"
-            className={css({
-              maxHeight: "200px",
-            })}
+            className={css({ maxHeight: "200px" })}
           >
             <Box px="4" pb="4">
               <Command.List>
@@ -413,60 +419,83 @@ export function TransactionForm(props: {
   };
 
   return (
-    <form onSubmit={onSubmit}>
-      <QueryResult query={categories}>
-        {(categories) => <CategoryComboBox categories={categories} />}
-      </QueryResult>
-      <QueryResult query={partitions}>
-        {(partitions) => (
-          <>
-            <PartitionCombobox
-              partitions={partitions}
-              user={user}
-              selectedCategory={selectedCategory}
-              selectedPartitionId={selectedSourcePartitionId}
-              setSelectedPartitionId={setSelectedSourceCategoryId}
-            />
-            {inputCategoryKind == "Transfer" ? (
+    <Flex asChild gap="4" pb="4">
+      <form onSubmit={onSubmit}>
+        <label>
+          <Text as="div" size="1" mb="1" ml="2">
+            Category
+          </Text>
+          <QueryResult query={categories}>
+            {(categories) => <CategoryComboBox categories={categories} />}
+          </QueryResult>
+        </label>
+        <QueryResult query={partitions}>
+          {(partitions) => (
+            <label>
+              <Text as="div" size="1" mb="1" ml="2">
+                Partition
+              </Text>
               <PartitionCombobox
                 partitions={partitions}
                 user={user}
                 selectedCategory={selectedCategory}
-                selectedPartitionId={selectedDestinationPartitionId}
-                setSelectedPartitionId={setSelectedDestinationCategoryId}
+                selectedPartitionId={selectedSourcePartitionId}
+                setSelectedPartitionId={setSelectedSourceCategoryId}
               />
-            ) : null}
-          </>
-        )}
-      </QueryResult>
-      <label>
-        <Text as="div" size="2" mb="1" weight="bold">
-          Amount
-        </Text>
-        <TextField.Input
-          placeholder="Enter amount"
-          name="value"
-          type="numeric"
-          value={inputValue}
-          onInput={(event) => {
-            setInputValue((event.target as HTMLInputElement).value);
-          }}
-          disabled={createTransaction.isLoading}
-        />
-      </label>
-      <label>
-        <Text as="div" size="2" mb="1" weight="bold">
-          Description
-        </Text>
-        <TextField.Input
-          placeholder="E.g. from colruyt"
-          name="description"
-          disabled={createTransaction.isLoading}
-        />
-      </label>
-      <button type="submit" disabled={shouldDisableSubmit()}>
-        Submit
-      </button>
-    </form>
+              {inputCategoryKind == "Transfer" ? (
+                <>
+                  <ArrowRightIcon
+                    width="18"
+                    height="18"
+                    className={css({
+                      display: "inline-block",
+                      verticalAlign: "middle",
+                      margin: "0 4px",
+                    })}
+                  />
+                  <PartitionCombobox
+                    partitions={partitions}
+                    user={user}
+                    selectedCategory={selectedCategory}
+                    selectedPartitionId={selectedDestinationPartitionId}
+                    setSelectedPartitionId={setSelectedDestinationCategoryId}
+                  />
+                </>
+              ) : null}
+            </label>
+          )}
+        </QueryResult>
+        <label>
+          <Text as="div" size="1" mb="1" ml="2">
+            Amount
+          </Text>
+          <TextField.Input
+            placeholder="Enter amount"
+            name="value"
+            type="numeric"
+            value={inputValue}
+            onInput={(event) => {
+              setInputValue((event.target as HTMLInputElement).value);
+            }}
+            autoComplete="off"
+            disabled={createTransaction.isLoading}
+          />
+        </label>
+        <label>
+          <Text as="div" size="1" mb="1" ml="2">
+            Description
+          </Text>
+          <TextField.Input
+            placeholder="E.g. from colruyt"
+            name="description"
+            disabled={createTransaction.isLoading}
+            autoComplete="off"
+          />
+        </label>
+        <button type="submit" disabled={shouldDisableSubmit()}>
+          Submit
+        </button>
+      </form>
+    </Flex>
   );
 }
