@@ -1,65 +1,30 @@
 import { rpc } from "@/app/rpc_client";
 import { QueryResult, Unpacked, groupBy } from "@/utils/common";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { number, object, optional, string } from "valibot";
-import { Box, Button, Flex, Grid, Popover, ScrollArea } from "@radix-ui/themes";
+import {
+  Box,
+  Button,
+  Flex,
+  Grid,
+  Popover,
+  ScrollArea,
+  TextField,
+  Text,
+} from "@radix-ui/themes";
 import { Command } from "cmdk";
 import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { atom, useAtom } from "jotai";
 
-function FormInput(props: {
-  children: React.ReactNode;
-  flexGrow?: number;
-  width: string;
-}) {
-  return <div>{props.children}</div>;
-}
+type Categories = Awaited<ReturnType<typeof rpc.post.getUserCategories>>;
+type Category = Unpacked<Categories["expense"]>;
+type Partitions = Awaited<ReturnType<typeof rpc.post.getPartitionOptions>>;
+type PartitionOption = Unpacked<NonNullable<Partitions>>;
 
-type PartitionOption = Unpacked<
-  NonNullable<Awaited<ReturnType<typeof rpc.post.getPartitionOptions>>>
->;
-
-function PartitionOptGroup(props: {
-  groupedPartitions: PartitionOption[];
-  label: string;
-  onlyPrivate: boolean;
-}) {
-  const { groupedPartitions, label, onlyPrivate } = props;
-  return (
-    <optgroup label={label}>
-      {Object.entries(groupBy(groupedPartitions, (p) => p.account.id)).map(
-        ([accountId, partitions]) => {
-          const partitionsToShow = partitions.filter((p) =>
-            onlyPrivate ? p.is_private : true
-          );
-          if (partitionsToShow.length === 0) return null;
-          const options = [
-            // insert at the beginning the account name
-            {
-              id: accountId,
-              name: partitions[0].account.label,
-              isDisabled: true,
-            },
-            ...partitionsToShow.map((p) => ({
-              id: p.id,
-              name: p.name,
-              isDisabled: false,
-            })),
-          ];
-          return options.map((p) => (
-            <option key={p.id} value={p.id} disabled={p.isDisabled}>
-              {p.name}
-            </option>
-          ));
-        }
-      )}
-    </optgroup>
-  );
-}
-
-type Category = Unpacked<
-  NonNullable<Awaited<ReturnType<typeof rpc.post.getUserCategories>>>["expense"]
->;
+const selectedCategoryIdAtom = atom("");
+const selectedSourcePartitionIdAtom = atom("");
+const selectedDestinationPartitionIdAtom = atom("");
 
 const getCategoryOptionName = (category: Category) => {
   if (category.is_private) {
@@ -69,21 +34,20 @@ const getCategoryOptionName = (category: Category) => {
   }
 };
 
-function CategoryComboBox(props: { user: { id: string; dbname: string } }) {
-  const { user } = props;
-  const categories = useQuery(["categories", user.id], () => {
-    return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
-  });
+function CategoryComboBox(props: { categories: Categories }) {
+  const { categories } = props;
 
   const [open, setOpen] = useState(false);
-  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useAtom(
+    selectedCategoryIdAtom
+  );
 
   const categoryName = useMemo(() => {
-    if (categories.data) {
+    if (categories) {
       const selectedCategory = [
-        ...categories.data.expense,
-        ...categories.data.income,
-        ...categories.data.transfer,
+        ...categories.expense,
+        ...categories.income,
+        ...categories.transfer,
       ].find((c) => c.id === selectedCategoryId);
       if (selectedCategory) {
         return getCategoryOptionName(selectedCategory);
@@ -101,7 +65,7 @@ function CategoryComboBox(props: { user: { id: string; dbname: string } }) {
       </Popover.Trigger>
       <Popover.Content style={{ padding: "0px" }}>
         <Command loop className="linear">
-          <Flex p="2" px="4" gap="1" className="border-b border-gray-200">
+          <Flex p="2" px="4" gap="1" className="border-b border-gray-4">
             <Grid align="center">
               <MagnifyingGlassIcon width="18" height="18" />
             </Grid>
@@ -117,7 +81,7 @@ function CategoryComboBox(props: { user: { id: string; dbname: string } }) {
             <Box px="4" pb="4">
               <Command.List>
                 <Command.Group heading="Income">
-                  {categories.data?.income.map((c) => (
+                  {categories.income.map((c) => (
                     <Command.Item
                       key={c.id}
                       value={getCategoryOptionName(c)}
@@ -131,7 +95,7 @@ function CategoryComboBox(props: { user: { id: string; dbname: string } }) {
                   ))}
                 </Command.Group>
                 <Command.Group heading="Expense">
-                  {categories.data?.expense.map((c) => (
+                  {categories.expense.map((c) => (
                     <Command.Item
                       key={c.id}
                       value={getCategoryOptionName(c)}
@@ -145,7 +109,7 @@ function CategoryComboBox(props: { user: { id: string; dbname: string } }) {
                   ))}
                 </Command.Group>
                 <Command.Group heading="Transfer">
-                  {categories.data?.transfer.map((c) => (
+                  {categories.transfer.map((c) => (
                     <Command.Item
                       key={c.id}
                       value={getCategoryOptionName(c)}
@@ -167,11 +131,133 @@ function CategoryComboBox(props: { user: { id: string; dbname: string } }) {
   );
 }
 
-export function TransactionForm({
-  user,
-}: {
+function getPartitionType(
+  p: PartitionOption,
+  userId: string
+): "owned" | "common" | "others" {
+  if (p.account.owners.length === 1 && p.account.owners[0].id === userId) {
+    return "owned";
+  } else if (
+    p.account.owners.length > 1 &&
+    p.account.owners.map((o) => o.id).includes(userId)
+  ) {
+    return "common";
+  }
+  return "others";
+}
+
+function PartitionCombobox(props: {
+  partitions: Partitions;
+  user: { id: string; dbname: string };
+  selectedCategory: Category | undefined;
+  selectedPartitionId: string;
+  setSelectedPartitionId: (id: string) => void;
+}) {
+  const {
+    partitions,
+    user,
+    selectedPartitionId,
+    setSelectedPartitionId,
+    selectedCategory,
+  } = props;
+  const [open, setOpen] = useState(false);
+
+  const sortedPartitions = useMemo(() => {
+    const partitionsByType = groupBy(partitions, (p) =>
+      getPartitionType(p, user.id)
+    );
+    return [
+      ...(partitionsByType.owned || []),
+      ...(partitionsByType.common || []),
+      ...(partitionsByType.others || []),
+    ];
+  }, [partitions, user.id]);
+
+  const groupedPartitions = useMemo(
+    () => groupBy(sortedPartitions, (p) => p.account.id),
+    [sortedPartitions]
+  );
+
+  const selectedPartition = useMemo(() => {
+    return partitions.find((p) => p.id === selectedPartitionId);
+  }, [partitions, selectedPartitionId]);
+
+  const partitionName = useMemo(() => {
+    if (selectedPartition) {
+      return `${selectedPartition.name} (${selectedPartition.account.label})`;
+    }
+    return "Select Partition";
+  }, [selectedPartition]);
+
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger>
+        <Button variant="outline" style={{ width: "200px" }}>
+          {partitionName}
+        </Button>
+      </Popover.Trigger>
+      <Popover.Content style={{ padding: "0px" }}>
+        <Command loop className="linear">
+          <Flex p="2" px="4" gap="1" className="border-b border-gray-4">
+            <Grid align="center">
+              <MagnifyingGlassIcon width="18" height="18" />
+            </Grid>
+            <Command.Input />
+          </Flex>
+          <ScrollArea
+            scrollbars="vertical"
+            style={{
+              height: "200px",
+              width: "200px",
+            }}
+          >
+            <Box px="4" pb="4">
+              <Command.List>
+                {Object.entries(groupedPartitions).map(
+                  ([accountId, partitions]) => {
+                    const first = partitions[0];
+                    const partitionsToShow = partitions.filter(
+                      (p) => !selectedCategory?.is_private || p.is_private
+                    );
+                    if (partitionsToShow.length === 0) return null;
+                    return (
+                      <Command.Group
+                        heading={first.account.label}
+                        key={accountId}
+                      >
+                        {partitionsToShow.map((p) => {
+                          return (
+                            <Command.Item
+                              key={p.id}
+                              value={`${getPartitionType(first, user.id)} ${
+                                first.account.label
+                              } ${p.name}`}
+                              onSelect={(value) => {
+                                setSelectedPartitionId(p.id);
+                                setOpen(false);
+                              }}
+                            >
+                              {p.name}
+                            </Command.Item>
+                          );
+                        })}
+                      </Command.Group>
+                    );
+                  }
+                )}
+              </Command.List>
+            </Box>
+          </ScrollArea>
+        </Command>
+      </Popover.Content>
+    </Popover.Root>
+  );
+}
+
+export function TransactionForm(props: {
   user: { id: string; dbname: string };
 }) {
+  const { user } = props;
   const queryClient = useQueryClient();
   const partitions = useQuery(["partitions", user.id], () => {
     return rpc.post.getPartitionOptions({
@@ -179,59 +265,39 @@ export function TransactionForm({
       dbname: user.dbname,
     });
   });
+  const categories = useQuery(["categories", user.id], () => {
+    return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
+  });
   const createTransaction = useMutation(rpc.post.createTransaction);
-  const [inputCategoryKind, setInputCategoryKind] = useState("");
-  const [inputCategoryIsPrivate, setInputCategoryIsPrivate] = useState(false);
+
+  const [selectedCategoryId, setSelectedCategoryId] = useAtom(
+    selectedCategoryIdAtom
+  );
+  const [selectedSourcePartitionId, setSelectedSourceCategoryId] = useAtom(
+    selectedSourcePartitionIdAtom
+  );
+  const [selectedDestinationPartitionId, setSelectedDestinationCategoryId] =
+    useAtom(selectedDestinationPartitionIdAtom);
   const [inputValue, setInputValue] = useState("");
+
+  const selectedCategory = useMemo(() => {
+    if (categories.data) {
+      return [
+        ...categories.data.expense,
+        ...categories.data.income,
+        ...categories.data.transfer,
+      ].find((c) => c.id === selectedCategoryId);
+    }
+  }, [categories, selectedCategoryId]);
+
+  const inputCategoryKind = useMemo(() => {
+    return selectedCategory ? selectedCategory.kind : "";
+  }, [selectedCategory]);
 
   let value: number | undefined = undefined;
   try {
     value = parseFloat(inputValue);
   } catch (_error) {}
-
-  type Partition = NonNullable<Unpacked<typeof partitions.data>>;
-
-  const getPartitionOptions = (
-    partitions: Partition[],
-    userId: string,
-    onlyPrivate: boolean
-  ) => {
-    const groupedPartitions = groupBy(partitions, (p) => {
-      if (p.account.owners.length === 1 && p.account.owners[0].id === userId) {
-        return "owned";
-      } else if (
-        p.account.owners.length > 1 &&
-        p.account.owners.map((o) => o.id).includes(userId)
-      ) {
-        return "common";
-      } else {
-        return "others";
-      }
-    });
-
-    const ownedPartitions = groupedPartitions.owned || [];
-    const commonPartitions = groupedPartitions.common || [];
-    const othersPartitions = groupedPartitions.others || [];
-    return (
-      <>
-        <PartitionOptGroup
-          label="-- Owned --"
-          groupedPartitions={ownedPartitions}
-          onlyPrivate={onlyPrivate}
-        />
-        <PartitionOptGroup
-          label="-- Common --"
-          groupedPartitions={commonPartitions}
-          onlyPrivate={onlyPrivate}
-        />
-        <PartitionOptGroup
-          label="-- Others --"
-          groupedPartitions={othersPartitions}
-          onlyPrivate={onlyPrivate}
-        />
-      </>
-    );
-  };
 
   const shouldDisableSubmit = () => {
     return !value || value <= 0 || isNaN(value) || createTransaction.isLoading;
@@ -252,6 +318,9 @@ export function TransactionForm({
     });
     const parsedData = dataSchema.parse({
       ...formObj,
+      categoryId: selectedCategoryId,
+      sourcePartitionId: selectedSourcePartitionId,
+      destinationPartitionId: selectedDestinationPartitionId,
       userId: user.id,
       value,
     });
@@ -260,6 +329,9 @@ export function TransactionForm({
       dbname: user.dbname,
     });
     target.reset();
+    setSelectedSourceCategoryId("");
+    setSelectedDestinationCategoryId("");
+    setSelectedCategoryId("");
     if (transaction) {
       setInputValue("");
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
@@ -333,61 +405,56 @@ export function TransactionForm({
 
   return (
     <form onSubmit={onSubmit}>
-      <CategoryComboBox user={user} />
-      <FormInput flexGrow={2} width="20%">
-        <label htmlFor="sourcePartitionId">Source Partition</label>
-        <QueryResult query={partitions}>
-          {(partitions) => (
-            <select
-              name="sourcePartitionId"
-              disabled={createTransaction.isLoading}
-            >
-              {getPartitionOptions(partitions, user.id, inputCategoryIsPrivate)}
-            </select>
-          )}
-        </QueryResult>
-      </FormInput>
-
-      {inputCategoryKind == "Transfer" ? (
-        <FormInput flexGrow={2} width="20%">
-          <label htmlFor="destinationPartitionId">Destination Partition</label>
-          <QueryResult query={partitions}>
-            {(partitions) => (
-              <select
-                name="destinationPartitionId"
-                disabled={createTransaction.isLoading}
-              >
-                {getPartitionOptions(
-                  partitions,
-                  user.id,
-                  inputCategoryIsPrivate
-                )}
-              </select>
-            )}
-          </QueryResult>
-        </FormInput>
-      ) : null}
-      <FormInput flexGrow={1} width="10%">
-        <label htmlFor="value">Value</label>
-        <input
-          type="text"
-          inputMode="numeric"
+      <QueryResult query={categories}>
+        {(categories) => <CategoryComboBox categories={categories} />}
+      </QueryResult>
+      <QueryResult query={partitions}>
+        {(partitions) => (
+          <>
+            <PartitionCombobox
+              partitions={partitions}
+              user={user}
+              selectedCategory={selectedCategory}
+              selectedPartitionId={selectedSourcePartitionId}
+              setSelectedPartitionId={setSelectedSourceCategoryId}
+            />
+            {inputCategoryKind == "Transfer" ? (
+              <PartitionCombobox
+                partitions={partitions}
+                user={user}
+                selectedCategory={selectedCategory}
+                selectedPartitionId={selectedDestinationPartitionId}
+                setSelectedPartitionId={setSelectedDestinationCategoryId}
+              />
+            ) : null}
+          </>
+        )}
+      </QueryResult>
+      <label>
+        <Text as="div" size="2" mb="1" weight="bold">
+          Amount
+        </Text>
+        <TextField.Input
+          placeholder="Enter amount"
           name="value"
+          type="numeric"
           value={inputValue}
           onInput={(event) => {
             setInputValue((event.target as HTMLInputElement).value);
           }}
           disabled={createTransaction.isLoading}
         />
-      </FormInput>
-      <FormInput flexGrow={4} width="40%">
-        <label htmlFor="description">Description</label>
-        <input
-          type="text"
+      </label>
+      <label>
+        <Text as="div" size="2" mb="1" weight="bold">
+          Description
+        </Text>
+        <TextField.Input
+          placeholder="E.g. from colruyt"
           name="description"
           disabled={createTransaction.isLoading}
         />
-      </FormInput>
+      </label>
       <button type="submit" disabled={shouldDisableSubmit()}>
         Submit
       </button>

@@ -3,11 +3,11 @@ import { ReactHTML } from "react";
 
 export type Unpacked<T> = T extends (infer U)[] ? U : T;
 
-export function groupBy<T>(
+export function groupBy<T, K extends string>(
   items: T[],
-  key: (item: T) => string
-): Record<string, T[]> {
-  const result: Record<string, T[]> = {};
+  key: (item: T) => K
+): Record<K, T[]> {
+  const result = {} as Record<K, T[]>;
   for (const item of items) {
     const k = key(item);
     if (k in result) {

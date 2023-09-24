@@ -183,6 +183,10 @@ export const getPartitionOptions = withValidation(
         },
         is_private: true,
         filter: partition.is_visible,
+        order_by: {
+          expression: partition.name,
+          direction: e.ASC,
+        },
       };
     });
     const result = await query.run(
@@ -190,17 +194,15 @@ export const getPartitionOptions = withValidation(
         .createClient({ database: dbname })
         .withGlobals({ current_user_id: userId })
     );
-    if (result.length !== 0) {
-      return result.map((p) => {
-        return {
-          ...p,
-          account: {
-            ...p.account,
-            label: computeAccountLabel(p.account),
-          },
-        };
-      });
-    }
+    return result.map((p) => {
+      return {
+        ...p,
+        account: {
+          ...p.account,
+          label: computeAccountLabel(p.account),
+        },
+      };
+    });
   }
 );
 
