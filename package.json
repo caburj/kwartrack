@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prepare": "panda codegen",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -31,6 +32,7 @@
     "valibot": "^0.8.0"
   },
   "devDependencies": {
-    "@edgedb/generate": "^0.3.2"
+    "@edgedb/generate": "^0.3.2",
+    "@pandacss/dev": "^0.15.1"
   }
 }

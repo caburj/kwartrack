@@ -16,6 +16,7 @@ import {
 import { Command } from "cmdk";
 import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { atom, useAtom } from "jotai";
+import { css } from "../../../../styled-system/css";
 
 type Categories = Awaited<ReturnType<typeof rpc.post.getUserCategories>>;
 type Category = Unpacked<Categories["expense"]>;
@@ -65,7 +66,14 @@ function CategoryComboBox(props: { categories: Categories }) {
       </Popover.Trigger>
       <Popover.Content style={{ padding: "0px" }}>
         <Command loop className="linear">
-          <Flex p="2" px="4" gap="1" className="border-b border-gray-4">
+          <Flex
+            p="2"
+            px="4"
+            gap="1"
+            className={css({
+              borderBottom: "1px solid var(--gray-6)",
+            })}
+          >
             <Grid align="center">
               <MagnifyingGlassIcon width="18" height="18" />
             </Grid>
