@@ -21,6 +21,7 @@ import {
 } from "@radix-ui/react-icons";
 import { atom, useAtom } from "jotai";
 import { css } from "../../../../styled-system/css";
+import { Combobox } from "./combobox";
 
 type Categories = Awaited<ReturnType<typeof rpc.post.getUserCategories>>;
 type Category = Unpacked<Categories["expense"]>;
@@ -38,6 +39,24 @@ const getCategoryOptionName = (category: Category) => {
     return category.name;
   }
 };
+
+function SelectButton(props: { children: React.ReactNode }) {
+  return (
+    <Popover.Trigger>
+      <Button variant="outline">
+        <Text>{props.children}</Text>
+        <CaretSortIcon
+          width="18"
+          height="18"
+          className={css({
+            display: "inline-block",
+            verticalAlign: "middle",
+          })}
+        />
+      </Button>
+    </Popover.Trigger>
+  );
+}
 
 function CategoryComboBox(props: { categories: Categories }) {
   const { categories } = props;
@@ -63,19 +82,7 @@ function CategoryComboBox(props: { categories: Categories }) {
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger>
-        <Button variant="outline">
-          <Text>{categoryName}</Text>
-          <CaretSortIcon
-            width="18"
-            height="18"
-            className={css({
-              display: "inline-block",
-              verticalAlign: "middle",
-            })}
-          />
-        </Button>
-      </Popover.Trigger>
+      <SelectButton>{categoryName}</SelectButton>
       <Popover.Content style={{ padding: "0px" }}>
         <Command loop className="linear">
           <Flex
@@ -93,9 +100,7 @@ function CategoryComboBox(props: { categories: Categories }) {
           </Flex>
           <ScrollArea
             scrollbars="vertical"
-            className={css({
-              maxHeight: "200px",
-            })}
+            className={css({ maxHeight: "200px" })}
           >
             <Box px="4" pb="4">
               <Command.List>
@@ -156,7 +161,6 @@ function PartitionCombobox(props: {
     setSelectedPartitionId,
     selectedCategory,
   } = props;
-  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     // Always reset selected partition when category changes
@@ -176,96 +180,28 @@ function PartitionCombobox(props: {
     ];
   }, [partitions, user.id]);
 
-  const groupedPartitions = useMemo(
-    () => groupBy(sortedPartitions, (p) => p.account.id),
-    [sortedPartitions]
-  );
-
   const selectedPartition = useMemo(() => {
     return partitions.find((p) => p.id === selectedPartitionId);
   }, [partitions, selectedPartitionId]);
 
-  const partitionName = useMemo(() => {
-    if (selectedPartition) {
-      return `${selectedPartition.name} (${selectedPartition.account.label})`;
-    }
-    return "Select Partition";
-  }, [selectedPartition]);
+  const partitionName = selectedPartition
+    ? `${selectedPartition.name} (${selectedPartition.account.label})`
+    : "Select Partition";
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger>
-        <Button variant="outline">
-          <Text>{partitionName}</Text>
-          <CaretSortIcon
-            width="18"
-            height="18"
-            className={css({
-              display: "inline-block",
-              verticalAlign: "middle",
-            })}
-          />
-        </Button>
-      </Popover.Trigger>
-      <Popover.Content style={{ padding: "0px" }}>
-        <Command loop className="linear">
-          <Flex
-            p="2"
-            px="4"
-            gap="1"
-            className={css({
-              borderBottom: "1px solid var(--gray-6)",
-            })}
-          >
-            <Grid align="center">
-              <MagnifyingGlassIcon width="18" height="18" />
-            </Grid>
-            <Command.Input />
-          </Flex>
-          <ScrollArea
-            scrollbars="vertical"
-            className={css({ maxHeight: "200px" })}
-          >
-            <Box px="4" pb="4">
-              <Command.List>
-                {Object.entries(groupedPartitions).map(
-                  ([accountId, partitions]) => {
-                    const first = partitions[0];
-                    const partitionsToShow = partitions.filter(
-                      (p) => !selectedCategory?.is_private || p.is_private
-                    );
-                    if (partitionsToShow.length === 0) return null;
-                    return (
-                      <Command.Group
-                        heading={first.account.label}
-                        key={accountId}
-                      >
-                        {partitionsToShow.map((p) => {
-                          return (
-                            <Command.Item
-                              key={p.id}
-                              value={`${getPartitionType(first, user.id)} ${
-                                first.account.label
-                              } ${p.name}`}
-                              onSelect={(value) => {
-                                setSelectedPartitionId(p.id);
-                                setOpen(false);
-                              }}
-                            >
-                              {p.name}
-                            </Command.Item>
-                          );
-                        })}
-                      </Command.Group>
-                    );
-                  }
-                )}
-              </Command.List>
-            </Box>
-          </ScrollArea>
-        </Command>
-      </Popover.Content>
-    </Popover.Root>
+    <Combobox
+      items={sortedPartitions}
+      isItemIncluded={(p) => !selectedCategory?.is_private || p.is_private}
+      groupItems={(items) => groupBy(items, (p) => p.account.id)}
+      getItemValue={(p) =>
+        `${getPartitionType(p, user.id)} ${p.account.label} ${p.name}`
+      }
+      getItemDisplay={(p) => p.name}
+      getGroupHeading={(key, items) => items[0].account.label}
+      onSelectItem={(p) => setSelectedPartitionId(p.id)}
+    >
+      <SelectButton>{partitionName}</SelectButton>
+    </Combobox>
   );
 }
 
@@ -419,7 +355,7 @@ export function TransactionForm(props: {
   };
 
   return (
-    <Flex asChild gap="4" pb="4">
+    <Flex gap="4" pb="4" asChild>
       <form onSubmit={onSubmit}>
         <label>
           <Text as="div" size="1" mb="1" ml="2">
@@ -492,7 +428,7 @@ export function TransactionForm(props: {
             autoComplete="off"
           />
         </label>
-        <button type="submit" disabled={shouldDisableSubmit()}>
+        <button type="submit" disabled={shouldDisableSubmit()} hidden>
           Submit
         </button>
       </form>
