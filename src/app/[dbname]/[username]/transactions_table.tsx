@@ -173,7 +173,7 @@ export function TransactionsTable({
                       </Table.Cell>
                       <Table.Cell>{getPartitionColumn(transaction)}</Table.Cell>
                       <Table.Cell justify="end">
-                        {formatValue(parseFloat(transaction.value))}
+                        {formatValue(Math.abs(parseFloat(transaction.value)))}
                       </Table.Cell>
                       <Table.Cell>{transaction.description}</Table.Cell>
                       <Table.Cell>
