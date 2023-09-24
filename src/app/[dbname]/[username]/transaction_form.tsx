@@ -60,9 +60,7 @@ function CategoryComboBox(props: { categories: Categories }) {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger>
-        <Button variant="outline" style={{ width: "200px" }}>
-          {categoryName}
-        </Button>
+        <Button variant="outline">{categoryName}</Button>
       </Popover.Trigger>
       <Popover.Content style={{ padding: "0px" }}>
         <Command loop className="linear">
@@ -81,10 +79,9 @@ function CategoryComboBox(props: { categories: Categories }) {
           </Flex>
           <ScrollArea
             scrollbars="vertical"
-            style={{
-              height: "200px",
-              width: "200px",
-            }}
+            className={css({
+              maxHeight: "200px",
+            })}
           >
             <Box px="4" pb="4">
               <Command.List>
@@ -200,13 +197,18 @@ function PartitionCombobox(props: {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger>
-        <Button variant="outline" style={{ width: "200px" }}>
-          {partitionName}
-        </Button>
+        <Button variant="outline">{partitionName}</Button>
       </Popover.Trigger>
       <Popover.Content style={{ padding: "0px" }}>
         <Command loop className="linear">
-          <Flex p="2" px="4" gap="1" className="border-b border-gray-4">
+          <Flex
+            p="2"
+            px="4"
+            gap="1"
+            className={css({
+              borderBottom: "1px solid var(--gray-6)",
+            })}
+          >
             <Grid align="center">
               <MagnifyingGlassIcon width="18" height="18" />
             </Grid>
@@ -214,10 +216,9 @@ function PartitionCombobox(props: {
           </Flex>
           <ScrollArea
             scrollbars="vertical"
-            style={{
-              height: "200px",
-              width: "200px",
-            }}
+            className={css({
+              maxHeight: "200px",
+            })}
           >
             <Box px="4" pb="4">
               <Command.List>
