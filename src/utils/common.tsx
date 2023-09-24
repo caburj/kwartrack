@@ -26,7 +26,7 @@ const nf = new Intl.NumberFormat("en-US", {
 });
 
 export function formatValue(value: number) {
-  return nf.format(Math.abs(value));
+  return nf.format(value);
 }
 
 export function QueryResult<T>(props: {
