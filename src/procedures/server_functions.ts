@@ -634,8 +634,8 @@ export const getUserCategories = withValidation(
         }))
         .run(tx);
       return {
-        expense,
         income,
+        expense,
         transfer,
       };
     });
