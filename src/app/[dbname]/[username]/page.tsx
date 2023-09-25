@@ -422,7 +422,7 @@ function AccountLI({
           )}
         </Flex>
         <LoadingValue
-          expect={(value) => value > 0}
+          expect={(value) => value >= 0}
           queryKey={[
             "accountBalance",
             {
@@ -648,7 +648,7 @@ function PartitionLI({
         </Flex>
       </Box>
       <LoadingValue
-        expect={(value) => value > 0}
+        expect={(value) => value >= 0}
         queryKey={[
           "partitionBalance",
           {
@@ -745,7 +745,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
             >
               <Text>Income</Text>
               <LoadingValue
-                expect={(value) => value > 0}
+                expect={(value) => value >= 0}
                 queryKey={["categoryKindBalance", "Income"]}
                 valueLoader={() =>
                   rpc.post.getCategoryKindBalance({
@@ -768,7 +768,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
             >
               <Text>Expense</Text>
               <LoadingValue
-                expect={(value) => value < 0}
+                expect={(value) => value <= 0}
                 queryKey={["categoryKindBalance", "Expense"]}
                 valueLoader={() =>
                   rpc.post.getCategoryKindBalance({
@@ -883,9 +883,9 @@ function Category({
       <LoadingValue
         expect={(value) => {
           if (category.kind === "Income") {
-            return value > 0;
+            return value >= 0;
           } else if (category.kind === "Expense") {
-            return value < 0;
+            return value <= 0;
           } else {
             return value === 0;
           }
