@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useContext, useState } from "react";
 import { UserPageStoreContext } from "./store";
 import { rpc } from "@/app/rpc_client";
@@ -8,10 +8,12 @@ import {
   QueryResult,
   Unpacked,
   formatValue,
+  getCategoryOptionName,
   getPartitionType,
 } from "@/utils/common";
-import { Badge, Box, Flex, IconButton, Table } from "@radix-ui/themes";
+import { Badge, Box, Flex, IconButton, Popover, Table } from "@radix-ui/themes";
 import { Cross1Icon, ArrowRightIcon } from "@radix-ui/react-icons";
+import { Combobox } from "./combobox";
 
 type Transaction = Unpacked<
   NonNullable<Awaited<ReturnType<typeof rpc.post.findTransactions>>>[0]
@@ -68,6 +70,23 @@ export function TransactionsTable({
       tseDate: store.tseDate?.toISOString(),
     });
   });
+
+  const categories = useQuery(["categories", user.id], () => {
+    return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
+  });
+
+  const updateTransaction = useMutation(
+    async (arg: { transaction: Transaction; categoryId: string }) => {
+      const { transaction, categoryId } = arg;
+      if (transaction.category.id === categoryId) return;
+      return rpc.post.updateTransaction({
+        transactionId: transaction.id,
+        categoryId,
+        userId: user.id,
+        dbname: user.dbname,
+      });
+    }
+  );
 
   const getPartitionColumn = (transaction: Transaction) => {
     if (transaction.kind === "Transfer") {
@@ -151,15 +170,67 @@ export function TransactionsTable({
             {([transactions]) => (
               <Table.Body>
                 {transactions.map((transaction) => {
+                  const allowedCategories =
+                    categories.data?.[transaction.category.kind] ?? [];
                   return (
                     <Table.Row key={transaction.id}>
                       <Table.Cell>{transaction.str_date.slice(5)}</Table.Cell>
                       <Table.Cell>
-                        <Badge
-                          color={CATEGORY_COLOR[transaction.category.kind]}
+                        <Combobox
+                          groupedItems={{
+                            [transaction.category.kind]: allowedCategories,
+                          }}
+                          getGroupHeading={(key) => key}
+                          getItemDisplay={(cat) => getCategoryOptionName(cat)}
+                          getItemValue={(cat) =>
+                            `${
+                              transaction.category.kind
+                            } ${getCategoryOptionName(cat)}`
+                          }
+                          getItemColor={(cat) => CATEGORY_COLOR[cat.kind]}
+                          onSelectItem={async (cat) => {
+                            await updateTransaction.mutateAsync({
+                              transaction,
+                              categoryId: cat.id,
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: ["transactions"],
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: [
+                                "categoryBalance",
+                                { categoryId: transaction.category.id },
+                              ],
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: [
+                                "categoryBalance",
+                                { categoryId: cat.id },
+                              ],
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: [
+                                "categoryCanBeDeleted",
+                                { categoryId: transaction.category.id },
+                              ],
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: [
+                                "categoryCanBeDeleted",
+                                { categoryId: cat.id },
+                              ],
+                            });
+                          }}
                         >
-                          {transaction.category.name}
-                        </Badge>
+                          <Popover.Trigger>
+                            <Badge
+                              color={CATEGORY_COLOR[transaction.category.kind]}
+                              style={{ cursor: "pointer" }}
+                            >
+                              {transaction.category.name}
+                            </Badge>
+                          </Popover.Trigger>
+                        </Combobox>
                       </Table.Cell>
                       <Table.Cell>{getPartitionColumn(transaction)}</Table.Cell>
                       <Table.Cell justify="end">
