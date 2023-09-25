@@ -2,10 +2,13 @@ import { css } from "../../../../styled-system/css";
 import { rpc } from "@/app/rpc_client";
 import {
   CATEGORY_COLOR,
+  Categories,
+  Category,
   PARTITION_COLOR,
   Partitions,
   QueryResult,
   Unpacked,
+  getCategoryOptionName,
   getPartitionType,
   groupBy,
 } from "@/utils/common";
@@ -17,20 +20,9 @@ import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { atom, useAtom } from "jotai";
 import { Combobox, ComboboxTrigger } from "./combobox";
 
-type Categories = Awaited<ReturnType<typeof rpc.post.getUserCategories>>;
-type Category = Unpacked<Categories["Expense"]>;
-
 const selectedCategoryIdAtom = atom("");
 const selectedSourcePartitionIdAtom = atom("");
 const selectedDestinationPartitionIdAtom = atom("");
-
-const getCategoryOptionName = (category: Category) => {
-  if (category.is_private) {
-    return `${category.name} (Private)`;
-  } else {
-    return category.name;
-  }
-};
 
 function CategoryComboBox(props: { categories: Categories }) {
   const { categories } = props;
@@ -57,7 +49,7 @@ function CategoryComboBox(props: { categories: Categories }) {
   return (
     <Combobox
       groupedItems={props.categories}
-      getGroupHeading={(key) => key[0].toUpperCase() + key.slice(1)}
+      getGroupHeading={(key) => key}
       getItemColor={(item, key) => {
         return CATEGORY_COLOR[key];
       }}

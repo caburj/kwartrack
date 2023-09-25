@@ -1291,3 +1291,38 @@ export const updateCategory = withValidation(
     );
   }
 );
+
+export const updateTransaction = withValidation(
+  object({
+    userId: string(),
+    dbname: string(),
+    transactionId: string(),
+    categoryId: optional(string()),
+  }),
+  async ({ userId, dbname, transactionId, categoryId }) => {
+    const updateQuery = e.params(
+      {
+        id: e.uuid,
+        categoryId: e.optional(e.uuid),
+      },
+      ({ id, categoryId }) =>
+        e.update(e.ETransaction, (transaction) => ({
+          filter_single: e.op(transaction.id, "=", id),
+          set: {
+            category: e.select(e.ECategory, (category) => ({
+              filter_single: e.op(category.id, "=", categoryId),
+            })),
+          },
+        }))
+    );
+    return updateQuery.run(
+      edgedb
+        .createClient({ database: dbname })
+        .withGlobals({ current_user_id: userId }),
+      {
+        id: transactionId,
+        categoryId,
+      }
+    );
+  }
+);
