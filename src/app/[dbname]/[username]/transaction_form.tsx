@@ -11,8 +11,14 @@ import {
   getCategoryOptionName,
   getPartitionType,
   groupBy,
+  invalidateMany,
 } from "@/utils/common";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  QueryKey,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { number, object, optional, string } from "valibot";
 import { Flex, TextField, Text } from "@radix-ui/themes";
@@ -205,75 +211,52 @@ export function TransactionForm(props: {
     setSelectedSourceCategoryId("");
     setSelectedDestinationCategoryId("");
     setSelectedCategoryId("");
+    const queryKeys: QueryKey[] = [];
     if (transaction) {
       setInputValue("");
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({
-        queryKey: ["categoryBalance", { categoryId: parsedData.categoryId }],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [
-          "categoryCanBeDeleted",
-          { categoryId: parsedData.categoryId },
-        ],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [
-          "partitionBalance",
-          { partitionId: parsedData.sourcePartitionId },
-        ],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [
+      queryKeys.push(
+        ["transactions"],
+        ["categoryBalance", { categoryId: parsedData.categoryId }],
+        ["categoryCanBeDeleted", { categoryId: parsedData.categoryId }],
+        ["partitionBalance", { partitionId: parsedData.sourcePartitionId }],
+        [
           "partitionCanBeDeleted",
           { partitionId: parsedData.sourcePartitionId },
         ],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [
+        [
           "accountCanBeDeleted",
           { accountId: transaction.source_partition.account.id },
         ],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [
+        [
           "accountBalance",
           { accountId: transaction.source_partition.account.id },
         ],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["categoryKindBalance", transaction.category.kind],
-      });
+        ["categoryKindBalance", transaction.category.kind]
+      );
     }
     if (counterpart) {
-      queryClient.invalidateQueries({
-        queryKey: [
+      queryKeys.push(
+        [
           "partitionBalance",
           { partitionId: parsedData.destinationPartitionId },
         ],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [
+        [
           "partitionCanBeDeleted",
           { partitionId: counterpart.source_partition.id },
         ],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [
+        [
           "accountCanBeDeleted",
           { accountId: counterpart.source_partition.account.id },
         ],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [
+        [
           "accountBalance",
           { accountId: counterpart.source_partition.account.id },
         ],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["categoryKindBalance", counterpart.category.kind],
-      });
+        ["categoryKindBalance", counterpart.category.kind]
+      );
+      invalidateMany(queryClient, queryKeys);
     }
+    invalidateMany(queryClient, queryKeys);
   };
 
   return (

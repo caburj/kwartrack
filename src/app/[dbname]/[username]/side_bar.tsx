@@ -12,6 +12,7 @@ import {
   Unpacked,
   formatValue,
   groupBy,
+  invalidateMany,
 } from "@/utils/common";
 import {
   Box,
@@ -126,12 +127,10 @@ export function SideBar({ user }: { user: FindUserResult }) {
                       isSharedAccount,
                       newAccountName: accountName,
                     });
-                    queryClient.invalidateQueries({
-                      queryKey: ["accounts", user.id],
-                    });
-                    queryClient.invalidateQueries({
-                      queryKey: ["partitions", user.id],
-                    });
+                    invalidateMany(queryClient, [
+                      ["accounts", user.id],
+                      ["partitions", user.id],
+                    ]);
                   }}
                 >
                   <TwoColumnInput>
@@ -481,15 +480,10 @@ function PartitionLI({
     },
     {
       onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: ["partitions", user.id, partition.account.id],
-        });
-        queryClient.invalidateQueries({
-          queryKey: [
-            "accountCanBeDeleted",
-            { accountId: partition.account.id },
-          ],
-        });
+        invalidateMany(queryClient, [
+          ["partitions", user.id, partition.account.id],
+          ["accountCanBeDeleted", { accountId: partition.account.id }],
+        ]);
       },
     }
   );
