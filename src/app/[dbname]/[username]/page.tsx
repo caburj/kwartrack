@@ -5,13 +5,12 @@ import { rpc } from "../../rpc_client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { boolean, minLength, object, optional, string } from "valibot";
 import { UserPageStoreProvider, UserPageStoreContext } from "./store";
-import { QueryResult, Unpacked, formatValue, groupBy } from "@/utils/common";
+import { QueryResult, RadixColor, Unpacked, formatValue, groupBy } from "@/utils/common";
 import {
   Box,
   Flex,
   IconButton,
   ScrollArea,
-  Table,
   Text,
   Checkbox,
   Separator,
@@ -699,34 +698,33 @@ function Partitions(props: {
 
 type Category = Awaited<
   ReturnType<typeof rpc.post.getUserCategories>
->["income"][number];
+>["Income"][number];
 
 function Categories({ user }: { user: { id: string; dbname: string } }) {
-  const queryClient = useQueryClient();
   const categories = useQuery(["categories", user.id], () => {
     return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
   });
   const [store, dispatch] = useContext(UserPageStoreContext);
   const selectCategories = (kind: string) => {
     if (kind === "Income") {
-      if (categories?.data?.income) {
+      if (categories?.data?.Income) {
         dispatch({
           type: "TOGGLE_CATEGORY_KIND",
-          payload: categories.data.income.map((c) => c.id),
+          payload: categories.data.Income.map((c) => c.id),
         });
       }
     } else if (kind === "Expense") {
-      if (categories?.data?.expense) {
+      if (categories?.data?.Expense) {
         dispatch({
           type: "TOGGLE_CATEGORY_KIND",
-          payload: categories.data.expense.map((c) => c.id),
+          payload: categories.data.Expense.map((c) => c.id),
         });
       }
     } else if (kind === "Transfer") {
-      if (categories?.data?.transfer) {
+      if (categories?.data?.Transfer) {
         dispatch({
           type: "TOGGLE_CATEGORY_KIND",
-          payload: categories.data.transfer.map((c) => c.id),
+          payload: categories.data.Transfer.map((c) => c.id),
         });
       }
     }
@@ -759,7 +757,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
               />
             </Flex>
             <Box mb="2">
-              {categories.income.map((category) => (
+              {categories.Income.map((category) => (
                 <Category key={category.id} category={category} user={user} />
               ))}
             </Box>
@@ -782,7 +780,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
               />
             </Flex>
             <Box mb="2">
-              {categories.expense.map((category) => (
+              {categories.Expense.map((category) => (
                 <Category key={category.id} category={category} user={user} />
               ))}
             </Box>
@@ -805,7 +803,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
               />
             </Flex>
             <Box mb="2">
-              {categories.transfer.map((category) => (
+              {categories.Transfer.map((category) => (
                 <Category key={category.id} category={category} user={user} />
               ))}
             </Box>
@@ -950,8 +948,6 @@ function DateRange({ user }: { user: { id: string; dbname: string } }) {
   );
 }
 
-type Color = (typeof textPropDefs)["color"]["values"][number];
-
 function LoadingValue(props: {
   expect: (value: number) => boolean;
   queryKey: [string, ...any];
@@ -965,7 +961,7 @@ function LoadingValue(props: {
     >
       {(value) => {
         const parsedValue = parseFloat(value);
-        let color: Color | undefined;
+        let color: RadixColor;
         const asExpected = props.expect(parsedValue);
         if (!asExpected) {
           color = "red";
