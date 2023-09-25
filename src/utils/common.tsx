@@ -1,6 +1,6 @@
 import { rpc } from "@/app/rpc_client";
 import { textPropDefs } from "@radix-ui/themes";
-import { UseQueryResult } from "@tanstack/react-query";
+import { UseQueryResult, QueryClient, QueryKey } from "@tanstack/react-query";
 import { ReactHTML } from "react";
 
 export type Unpacked<T> = T extends (infer U)[] ? U : T;
@@ -101,3 +101,9 @@ export const getCategoryOptionName = (category: Category) => {
     return category.name;
   }
 };
+
+export function invalidateMany(client: QueryClient, keys: QueryKey[]) {
+  for (const key of keys) {
+    client.invalidateQueries(key);
+  }
+}
