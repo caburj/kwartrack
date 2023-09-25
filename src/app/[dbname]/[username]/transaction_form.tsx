@@ -1,6 +1,8 @@
 import { css } from "../../../../styled-system/css";
 import { rpc } from "@/app/rpc_client";
 import {
+  CATEGORY_COLOR,
+  PARTITION_COLOR,
   Partitions,
   QueryResult,
   Unpacked,
@@ -16,7 +18,7 @@ import { atom, useAtom } from "jotai";
 import { Combobox, ComboboxTrigger } from "./combobox";
 
 type Categories = Awaited<ReturnType<typeof rpc.post.getUserCategories>>;
-type Category = Unpacked<Categories["expense"]>;
+type Category = Unpacked<Categories["Expense"]>;
 
 const selectedCategoryIdAtom = atom("");
 const selectedSourcePartitionIdAtom = atom("");
@@ -36,29 +38,34 @@ function CategoryComboBox(props: { categories: Categories }) {
     selectedCategoryIdAtom
   );
 
-  const categoryName = useMemo(() => {
+  const selectedCategory = useMemo(() => {
     if (categories) {
-      const selectedCategory = [
-        ...categories.income,
-        ...categories.expense,
-        ...categories.transfer,
+      return [
+        ...categories.Income,
+        ...categories.Expense,
+        ...categories.Transfer,
       ].find((c) => c.id === selectedCategoryId);
-      if (selectedCategory) {
-        return getCategoryOptionName(selectedCategory);
-      }
     }
-    return "Select Category";
   }, [categories, selectedCategoryId]);
+
+  const categoryName = selectedCategory
+    ? getCategoryOptionName(selectedCategory)
+    : "Select Category";
+
+  const color = selectedCategory && CATEGORY_COLOR[selectedCategory.kind];
 
   return (
     <Combobox
       groupedItems={props.categories}
       getGroupHeading={(key) => key[0].toUpperCase() + key.slice(1)}
+      getItemColor={(item, key) => {
+        return CATEGORY_COLOR[key];
+      }}
       getItemValue={(c, k) => `${k} ${getCategoryOptionName(c)}`}
       getItemDisplay={(c) => getCategoryOptionName(c)}
       onSelectItem={(c) => setSelectedCategoryId(c.id)}
     >
-      <ComboboxTrigger>{categoryName}</ComboboxTrigger>
+      <ComboboxTrigger color={color}>{categoryName}</ComboboxTrigger>
     </Combobox>
   );
 }
@@ -104,10 +111,18 @@ function PartitionCombobox(props: {
     ? `${selectedPartition.name} (${selectedPartition.account.label})`
     : "Select Partition";
 
+  const color =
+    selectedPartition &&
+    PARTITION_COLOR[getPartitionType(selectedPartition, user.id)];
+
   return (
     <Combobox
       groupedItems={groupBy(sortedPartitions, (p) => p.account.id)}
       getGroupHeading={(key, items) => items[0].account.label}
+      getItemColor={(item) => {
+        const _type = getPartitionType(item, user.id);
+        return PARTITION_COLOR[_type];
+      }}
       isItemIncluded={(p) => !selectedCategory?.is_private || p.is_private}
       getItemValue={(p) =>
         `${getPartitionType(p, user.id)} ${p.account.label} ${p.name}`
@@ -115,7 +130,7 @@ function PartitionCombobox(props: {
       getItemDisplay={(p) => p.name}
       onSelectItem={(p) => setSelectedPartitionId(p.id)}
     >
-      <ComboboxTrigger>{partitionName}</ComboboxTrigger>
+      <ComboboxTrigger color={color}>{partitionName}</ComboboxTrigger>
     </Combobox>
   );
 }
@@ -149,9 +164,9 @@ export function TransactionForm(props: {
   const selectedCategory = useMemo(() => {
     if (categories.data) {
       return [
-        ...categories.data.expense,
-        ...categories.data.income,
-        ...categories.data.transfer,
+        ...categories.data.Expense,
+        ...categories.data.Income,
+        ...categories.data.Transfer,
       ].find((c) => c.id === selectedCategoryId);
     }
   }, [categories, selectedCategoryId]);

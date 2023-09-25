@@ -1,4 +1,5 @@
 import { rpc } from "@/app/rpc_client";
+import { textPropDefs } from "@radix-ui/themes";
 import { UseQueryResult } from "@tanstack/react-query";
 import { ReactHTML } from "react";
 
@@ -73,3 +74,17 @@ export function getPartitionType(
   }
   return "others";
 }
+
+export const CATEGORY_COLOR = {
+  Income: "green",
+  Expense: "red",
+  Transfer: "blue",
+} as const;
+
+export const PARTITION_COLOR = {
+  owned: "orange",
+  common: "indigo",
+  others: "gray",
+} as const;
+
+export type RadixColor = (typeof textPropDefs)["color"]["values"][number] | undefined;

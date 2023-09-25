@@ -3,6 +3,8 @@ import { useContext, useState } from "react";
 import { UserPageStoreContext } from "./store";
 import { rpc } from "@/app/rpc_client";
 import {
+  CATEGORY_COLOR,
+  PARTITION_COLOR,
   QueryResult,
   Unpacked,
   formatValue,
@@ -15,18 +17,6 @@ type Transaction = Unpacked<
   NonNullable<Awaited<ReturnType<typeof rpc.post.findTransactions>>>[0]
 >;
 type Partition = Transaction["source_partition"];
-
-const CATEGORY_COLOR = {
-  Income: "green",
-  Expense: "red",
-  Transfer: "blue",
-} as const;
-
-const PARTITION_COLOR = {
-  owned: "orange",
-  common: "indigo",
-  others: "gray",
-} as const;
 
 function PartitionBadge({
   partition,

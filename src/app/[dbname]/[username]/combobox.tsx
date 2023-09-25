@@ -1,15 +1,26 @@
-import { Box, Button, Flex, Grid, Popover, ScrollArea, Text } from "@radix-ui/themes";
+import {
+  Badge,
+  Box,
+  Button,
+  Flex,
+  Grid,
+  Popover,
+  ScrollArea,
+  Text,
+} from "@radix-ui/themes";
 import { Command } from "cmdk";
 import { useState } from "react";
 import { css } from "../../../../styled-system/css";
 import { CaretSortIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { RadixColor } from "@/utils/common";
 
-export function Combobox<I extends { id: string }>(props: {
-  groupedItems: Record<string, I[]>;
+export function Combobox<I extends { id: string }, K extends string>(props: {
+  groupedItems: Record<K, I[]>;
   isItemIncluded?: (item: I) => boolean;
-  getItemValue: (item: I, groupKey: string) => string;
-  getItemDisplay: (item: I, groupKey: string) => string;
-  getGroupHeading: (groupKey: string, items: I[]) => string;
+  getItemValue: (item: I, groupKey: K) => string;
+  getItemDisplay: (item: I, groupKey: K) => string;
+  getItemColor: (item: I, groupKey: K) => RadixColor;
+  getGroupHeading: (groupKey: K, items: I[]) => string;
   onSelectItem: (item: I) => void;
   children: React.ReactNode;
 }) {
@@ -36,9 +47,11 @@ export function Combobox<I extends { id: string }>(props: {
             scrollbars="vertical"
             className={css({ maxHeight: "200px" })}
           >
-            <Box px="5" pb="4">
+            <Box px="4" pb="4">
               <Command.List>
-                {Object.entries(props.groupedItems).map(([key, items]) => {
+                {(
+                  Object.entries(props.groupedItems) as unknown as [K, I[]][]
+                ).map(([key, items]) => {
                   const itemsToDisplay = items.filter(pred);
                   if (itemsToDisplay.length === 0) return null;
                   return (
@@ -46,18 +59,23 @@ export function Combobox<I extends { id: string }>(props: {
                       heading={props.getGroupHeading(key, itemsToDisplay)}
                       key={key}
                     >
-                      {itemsToDisplay.map((item) => (
-                        <Command.Item
-                          key={item.id}
-                          value={props.getItemValue(item, key)}
-                          onSelect={() => {
-                            props.onSelectItem(item);
-                            setOpen(false);
-                          }}
-                        >
-                          {props.getItemDisplay(item, key)}
-                        </Command.Item>
-                      ))}
+                      {itemsToDisplay.map((item) => {
+                        const color = props.getItemColor(item, key);
+                        return (
+                          <Command.Item
+                            key={item.id}
+                            value={props.getItemValue(item, key)}
+                            onSelect={() => {
+                              props.onSelectItem(item);
+                              setOpen(false);
+                            }}
+                          >
+                            <Badge color={color} style={{ cursor: "pointer" }}>
+                              {props.getItemDisplay(item, key)}
+                            </Badge>
+                          </Command.Item>
+                        );
+                      })}
                     </Command.Group>
                   );
                 })}
@@ -70,10 +88,13 @@ export function Combobox<I extends { id: string }>(props: {
   );
 }
 
-export function ComboboxTrigger(props: { children: React.ReactNode }) {
+export function ComboboxTrigger(props: {
+  children: React.ReactNode;
+  color?: RadixColor;
+}) {
   return (
     <Popover.Trigger>
-      <Button variant="outline" color="gray">
+      <Button variant="outline" color={props.color ?? "gray"}>
         <Text>{props.children}</Text>
         <CaretSortIcon
           width="18"
