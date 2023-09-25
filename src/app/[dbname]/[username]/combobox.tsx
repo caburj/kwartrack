@@ -94,7 +94,17 @@ export function ComboboxTrigger(props: {
 }) {
   return (
     <Popover.Trigger>
-      <Button variant="outline" color={props.color ?? "gray"}>
+      <Button
+        variant="outline"
+        color={props.color ?? "gray"}
+        onKeyUp={(ev) => {
+          if (["ArrowDown"].includes(ev.key)) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            ev.currentTarget.click();
+          }
+        }}
+      >
         <Text>{props.children}</Text>
         <CaretSortIcon
           width="18"
