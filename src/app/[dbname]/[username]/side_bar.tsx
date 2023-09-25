@@ -1,7 +1,8 @@
 "use client";
 
-import { MouseEventHandler, useContext, useState, useRef } from "react";
 import { rpc } from "../../rpc_client";
+import { css } from "../../../../styled-system/css";
+import { MouseEventHandler, useContext, useState, useRef } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { boolean, minLength, object, optional, string } from "valibot";
 import { UserPageStoreContext } from "./store";
@@ -331,18 +332,18 @@ function AccountLI({
   const [store, dispatch] = useContext(UserPageStoreContext);
   return (
     <Box px="4" mb="1" key={account.id}>
-      <Flex
-        pr="2"
-        justify="between"
-        onClick={() => {
-          dispatch({
-            type: "TOGGLE_ACCOUNT",
-            payload: account.partitions.map((p) => p.id),
-          });
-        }}
-      >
+      <Flex pr="2" justify="between">
         <Flex align="center" gap="1">
-          <Text style={{ cursor: "pointer" }} weight="medium">
+          <Text
+            style={{ cursor: "pointer" }}
+            onClick={() => {
+              dispatch({
+                type: "TOGGLE_ACCOUNT",
+                payload: account.partitions.map((p) => p.id),
+              });
+            }}
+            weight="medium"
+          >
             {account.label}
           </Text>
           {canBeDeleted.data && (
@@ -637,12 +638,14 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
       >
         {(categories) => (
           <Flex direction="column" px="4">
-            <Flex
-              pr="2"
-              justify="between"
-              onClick={() => selectCategories("Income")}
-            >
-              <Text>Income</Text>
+            <Flex pr="2" justify="between">
+              <Text
+                weight="medium"
+                onClick={() => selectCategories("Income")}
+                className={css({ cursor: "pointer" })}
+              >
+                Income
+              </Text>
               <LoadingValue
                 expect={(value) => value >= 0}
                 queryKey={["categoryKindBalance", "Income"]}
@@ -660,12 +663,14 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
                 <CategoryLI key={category.id} category={category} user={user} />
               ))}
             </Box>
-            <Flex
-              pr="2"
-              justify="between"
-              onClick={() => selectCategories("Expense")}
-            >
-              <Text>Expense</Text>
+            <Flex pr="2" justify="between">
+              <Text
+                weight="medium"
+                onClick={() => selectCategories("Expense")}
+                className={css({ cursor: "pointer" })}
+              >
+                Expense
+              </Text>
               <LoadingValue
                 expect={(value) => value <= 0}
                 queryKey={["categoryKindBalance", "Expense"]}
@@ -683,12 +688,14 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
                 <CategoryLI key={category.id} category={category} user={user} />
               ))}
             </Box>
-            <Flex
-              pr="2"
-              justify="between"
-              onClick={() => selectCategories("Transfer")}
-            >
-              <Text>Transfer</Text>
+            <Flex pr="2" justify="between">
+              <Text
+                weight="medium"
+                onClick={() => selectCategories("Transfer")}
+                className={css({ cursor: "pointer" })}
+              >
+                Transfer
+              </Text>
               <LoadingValue
                 expect={(value) => value === 0}
                 queryKey={["categoryKindBalance", "Transfer"]}
