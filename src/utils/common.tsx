@@ -95,11 +95,7 @@ export type Categories = Awaited<ReturnType<typeof rpc.post.getUserCategories>>;
 export type Category = Unpacked<Categories["Expense"]>;
 
 export const getCategoryOptionName = (category: Category) => {
-  if (category.is_private) {
-    return `${category.name} (Private)`;
-  } else {
-    return category.name;
-  }
+  return category.name;
 };
 
 export function invalidateMany(client: QueryClient, keys: QueryKey[]) {

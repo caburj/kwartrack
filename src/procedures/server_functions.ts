@@ -353,9 +353,9 @@ export const findTransactions = withValidation(
               source_partition: tx.is_visible
                 ? {
                     ...tx.source_partition,
-                    label: `${tx.source_partition.name} (${computeAccountLabel(
+                    label: `${computeAccountLabel(
                       tx.source_partition.account
-                    )})`,
+                    )} - ${tx.source_partition.name}`,
                     account: {
                       ...tx.source_partition.account,
                       label: computeAccountLabel(tx.source_partition.account),
@@ -368,11 +368,9 @@ export const findTransactions = withValidation(
                       ...tx.counterpart,
                       source_partition: {
                         ...tx.counterpart.source_partition,
-                        label: `${
-                          tx.counterpart.source_partition.name
-                        } (${computeAccountLabel(
+                        label: `${computeAccountLabel(
                           tx.counterpart.source_partition.account
-                        )})`,
+                        )} - ${tx.counterpart.source_partition.name}`,
                         account: {
                           ...tx.counterpart.source_partition.account,
                           label: computeAccountLabel(

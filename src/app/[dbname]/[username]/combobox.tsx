@@ -14,7 +14,10 @@ import { css } from "../../../../styled-system/css";
 import { CaretSortIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { RadixColor } from "@/utils/common";
 
-export function Combobox<I extends { id: string }, K extends string>(props: {
+export function Combobox<
+  I extends { id: string; is_private: boolean },
+  K extends string
+>(props: {
   groupedItems: Record<K, I[]>;
   isItemIncluded?: (item: I) => boolean;
   getItemValue: (item: I, groupKey: K) => string;
@@ -61,6 +64,7 @@ export function Combobox<I extends { id: string }, K extends string>(props: {
                     >
                       {itemsToDisplay.map((item) => {
                         const color = props.getItemColor(item, key);
+                        const variant = item.is_private ? "outline" : "soft";
                         return (
                           <Command.Item
                             key={item.id}
@@ -70,7 +74,7 @@ export function Combobox<I extends { id: string }, K extends string>(props: {
                               setOpen(false);
                             }}
                           >
-                            <Badge color={color} style={{ cursor: "pointer" }}>
+                            <Badge color={color} variant={variant} style={{ cursor: "pointer" }}>
                               {props.getItemDisplay(item, key)}
                             </Badge>
                           </Command.Item>
