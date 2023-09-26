@@ -19,7 +19,6 @@ export default function RootLayout(props: { children: React.ReactNode }) {
       <body className={inter.className}>
         <Providers>
           <Theme
-            scaling="95%"
             grayColor="gray"
             accentColor="cyan"
             radius="medium"
