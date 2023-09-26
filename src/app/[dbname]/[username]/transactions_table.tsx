@@ -79,6 +79,7 @@ function EditablePartitionBadge({
   const color = PARTITION_COLOR[_type];
   const groupedPartitions = useGroupedPartitions(partitions, user.id);
   const selectedCategory = transaction.category;
+  const variant = partition.is_private ? "outline" : "soft";
   return (
     <Combobox
       groupedItems={groupedPartitions}
@@ -110,7 +111,7 @@ function EditablePartitionBadge({
       }}
     >
       <Popover.Trigger>
-        <Badge color={color} style={{ cursor: "pointer" }}>
+        <Badge color={color} variant={variant} style={{ cursor: "pointer" }}>
           {partition.label}
         </Badge>
       </Popover.Trigger>
@@ -301,6 +302,9 @@ export function TransactionsTable({
                 {transactions.map((transaction) => {
                   const allowedCategories =
                     categories.data?.[transaction.category.kind] ?? [];
+                  const variant = transaction.category.is_private
+                    ? "outline"
+                    : "soft";
                   return (
                     <Table.Row key={transaction.id}>
                       <Table.Cell>{transaction.str_date.slice(5)}</Table.Cell>
@@ -340,6 +344,7 @@ export function TransactionsTable({
                           <Popover.Trigger>
                             <Badge
                               color={CATEGORY_COLOR[transaction.category.kind]}
+                              variant={variant}
                               style={{ cursor: "pointer" }}
                             >
                               {transaction.category.name}
