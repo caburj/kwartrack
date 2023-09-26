@@ -1,3 +1,5 @@
+# TO REMEMBER
+
 - A transfer should always be represented by 2 transactions, one for the send
   transaction and one for the receipt transaction.
   - This is important because it's possible that one of the transactions comes
@@ -7,6 +9,7 @@
     private category.
   - A private partition with private category transactions can't be changed to a
     public partition.
+
 
 # TODO
 
@@ -115,6 +118,23 @@
 * [ ] fix: Resetting the transaction form doesn't work when making a transfer.
   - It's the same problem in the Partition dialog form, that's why it's many
     visible input elements at the moment.
+
+* [ ] Horizontal scroll for the transactions table.
+
+* [ ] Allow changing the color of each partition and category.
+
+
+# IDEA
+
+* [ ] Each transaction row should be a different query.
+  - One query to ask for the ids of the transactions to display.
+    - Each id will correspond to a transaction row and data in each row will be
+      fetched by a query.
+  - With this, when editing a transaction, we don't need to fetch the whole
+    table.
+  - As a result, initial page load is slow, but modification is fast.
+  - ! Looks like it's not a good idea because it's rare to make modifications in
+      the records.
 
 
 # DONE

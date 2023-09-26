@@ -10,12 +10,14 @@ import { rpc } from "@/app/rpc_client";
 import {
   CATEGORY_COLOR,
   PARTITION_COLOR,
+  Partitions,
   QueryResult,
   Unpacked,
   formatValue,
   getCategoryOptionName,
   getPartitionType,
   invalidateMany,
+  useGroupedPartitions,
 } from "@/utils/common";
 import { Badge, Box, Flex, IconButton, Popover, Table } from "@radix-ui/themes";
 import { Cross1Icon, ArrowRightIcon } from "@radix-ui/react-icons";
@@ -26,17 +28,119 @@ type Transaction = Unpacked<
 >;
 type Partition = Transaction["source_partition"];
 
-function PartitionBadge({
+function EditablePartitionBadge({
+  partitions,
+  transaction,
   partition,
   user,
+  isCounterpart,
 }: {
+  partitions: Partitions;
+  transaction: Transaction;
+  partition: NonNullable<Partition>;
+  user: { id: string; dbname: string };
+  isCounterpart: boolean;
+}) {
+  const queryClient = useQueryClient();
+
+  const updateTransaction = useMutation(
+    async (arg: {
+      transaction: Transaction;
+      partitionId: string;
+      isCounterpart: boolean;
+    }) => {
+      const { transaction, partitionId } = arg;
+      if (
+        isCounterpart
+          ? transaction.counterpart?.source_partition.id === partitionId ?? true
+          : transaction.source_partition?.id === partitionId ?? true
+      ) {
+        return;
+      }
+
+      const transactionId = isCounterpart
+        ? transaction.counterpart?.id
+        : transaction.id;
+
+      if (!transactionId) {
+        console.error("transactionId can't be undefined");
+        return;
+      }
+
+      return rpc.post.updateTransaction({
+        transactionId,
+        partitionId,
+        userId: user.id,
+        dbname: user.dbname,
+      });
+    }
+  );
+  const _type = getPartitionType(partition, user.id);
+  const color = PARTITION_COLOR[_type];
+  const groupedPartitions = useGroupedPartitions(partitions, user.id);
+  const selectedCategory = transaction.category;
+  return (
+    <Combobox
+      groupedItems={groupedPartitions}
+      getGroupHeading={(key, items) => items[0].account.label}
+      getItemColor={(item) => {
+        const _type = getPartitionType(item, user.id);
+        return PARTITION_COLOR[_type];
+      }}
+      isItemIncluded={(p) => !selectedCategory.is_private || p.is_private}
+      getItemValue={(p) =>
+        `${getPartitionType(p, user.id)} ${p.account.label} ${p.name}`
+      }
+      getItemDisplay={(p) => p.name}
+      onSelectItem={async (par) => {
+        await updateTransaction.mutateAsync({
+          transaction,
+          partitionId: par.id,
+          isCounterpart,
+        });
+        invalidateMany(queryClient, [
+          ["transactions"],
+          ["partitionBalance", { partitionId: par.id }],
+          ["partitionBalance", { partitionId: partition.id }],
+          ["partitionCanBeDeleted", { partitionId: par.id }],
+          ["partitionCanBeDeleted", { partitionId: partition.id }],
+          ["accountBalance", { accountId: par.account.id }],
+          ["accountBalance", { accountId: partition.account.id }],
+        ]);
+      }}
+    >
+      <Popover.Trigger>
+        <Badge color={color} style={{ cursor: "pointer" }}>
+          {partition.label}
+        </Badge>
+      </Popover.Trigger>
+    </Combobox>
+  );
+}
+
+function PartitionBadge({
+  partitions,
+  transaction,
+  partition,
+  user,
+  isCounterpart,
+}: {
+  partitions: Partitions;
+  transaction: Transaction;
   partition: Partition;
   user: { id: string; dbname: string };
+  isCounterpart: boolean;
 }) {
   if (partition) {
-    const _type = getPartitionType(partition, user.id);
-    const color = PARTITION_COLOR[_type];
-    return <Badge color={color}>{partition.label}</Badge>;
+    return (
+      <EditablePartitionBadge
+        partitions={partitions}
+        transaction={transaction}
+        partition={partition}
+        user={user}
+        isCounterpart={isCounterpart}
+      />
+    );
   } else {
     return (
       <Badge color="gray" variant="outline">
@@ -81,6 +185,13 @@ export function TransactionsTable({
     return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
   });
 
+  const partitions = useQuery(["partitions", user.id], () => {
+    return rpc.post.getPartitionOptions({
+      userId: user.id,
+      dbname: user.dbname,
+    });
+  });
+
   const updateTransaction = useMutation(
     async (arg: { transaction: Transaction; categoryId: string }) => {
       const { transaction, categoryId } = arg;
@@ -99,21 +210,33 @@ export function TransactionsTable({
       return (
         <Flex>
           <PartitionBadge
+            partitions={partitions.data ?? []}
+            transaction={transaction}
             partition={transaction.source_partition}
             user={user}
+            isCounterpart={false}
           />
           <Box px="1">
             <ArrowRightIcon width="16" height="16" />
           </Box>
           <PartitionBadge
+            partitions={partitions.data ?? []}
+            transaction={transaction}
             partition={transaction.counterpart?.source_partition || null}
             user={user}
+            isCounterpart={true}
           />
         </Flex>
       );
     } else {
       return (
-        <PartitionBadge partition={transaction.source_partition} user={user} />
+        <PartitionBadge
+          partitions={partitions.data ?? []}
+          transaction={transaction}
+          partition={transaction.source_partition}
+          user={user}
+          isCounterpart={false}
+        />
       );
     }
   };

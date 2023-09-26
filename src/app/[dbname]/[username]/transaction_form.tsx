@@ -7,11 +7,10 @@ import {
   PARTITION_COLOR,
   Partitions,
   QueryResult,
-  Unpacked,
   getCategoryOptionName,
   getPartitionType,
-  groupBy,
   invalidateMany,
+  useGroupedPartitions,
 } from "@/utils/common";
 import {
   QueryKey,
@@ -90,16 +89,7 @@ function PartitionCombobox(props: {
     }
   }, [selectedCategory, setSelectedPartitionId]);
 
-  const sortedPartitions = useMemo(() => {
-    const partitionsByType = groupBy(partitions, (p) =>
-      getPartitionType(p, user.id)
-    );
-    return [
-      ...(partitionsByType.owned || []),
-      ...(partitionsByType.common || []),
-      ...(partitionsByType.others || []),
-    ];
-  }, [partitions, user.id]);
+  const groupedPartitions = useGroupedPartitions(partitions, user.id);
 
   const selectedPartition = useMemo(() => {
     return partitions.find((p) => p.id === selectedPartitionId);
@@ -115,7 +105,7 @@ function PartitionCombobox(props: {
 
   return (
     <Combobox
-      groupedItems={groupBy(sortedPartitions, (p) => p.account.id)}
+      groupedItems={groupedPartitions}
       getGroupHeading={(key, items) => items[0].account.label}
       getItemColor={(item) => {
         const _type = getPartitionType(item, user.id);

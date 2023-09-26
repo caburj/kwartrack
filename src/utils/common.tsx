@@ -1,7 +1,7 @@
 import { rpc } from "@/app/rpc_client";
 import { textPropDefs } from "@radix-ui/themes";
 import { UseQueryResult, QueryClient, QueryKey } from "@tanstack/react-query";
-import { ReactHTML } from "react";
+import { ReactHTML, useMemo } from "react";
 
 export type Unpacked<T> = T extends (infer U)[] ? U : T;
 
@@ -106,4 +106,23 @@ export function invalidateMany(client: QueryClient, keys: QueryKey[]) {
   for (const key of keys) {
     client.invalidateQueries(key);
   }
+}
+
+export function useGroupedPartitions(partitions: Partitions, userId: string) {
+  const sortedPartitions = useMemo(() => {
+    const partitionsByType = groupBy(partitions, (p) =>
+      getPartitionType(p, userId)
+    );
+    return [
+      ...(partitionsByType.owned || []),
+      ...(partitionsByType.common || []),
+      ...(partitionsByType.others || []),
+    ];
+  }, [partitions, userId]);
+
+  const groupedPartitions = useMemo(() => {
+    return groupBy(sortedPartitions, (p) => p.account.id);
+  }, [sortedPartitions]);
+
+  return groupedPartitions;
 }
