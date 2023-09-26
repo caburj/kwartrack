@@ -318,6 +318,7 @@ export const findTransactions = withValidation(
               id: true,
               name: true,
               kind: true,
+              is_private: true,
             },
             is_visible: true,
             description: true,
@@ -1298,12 +1299,13 @@ export const updateTransaction = withValidation(
     dbname: string(),
     transactionId: string(),
     categoryId: optional(string()),
+    partitionId: optional(string()),
   }),
-  async ({ userId, dbname, transactionId, categoryId }) => {
-    const updateQuery = e.params(
+  async ({ userId, dbname, transactionId, categoryId, partitionId }) => {
+    const updateCategoryQuery = e.params(
       {
         id: e.uuid,
-        categoryId: e.optional(e.uuid),
+        categoryId: e.uuid,
       },
       ({ id, categoryId }) =>
         e.update(e.ETransaction, (transaction) => ({
@@ -1315,14 +1317,37 @@ export const updateTransaction = withValidation(
           },
         }))
     );
-    return updateQuery.run(
-      edgedb
-        .createClient({ database: dbname })
-        .withGlobals({ current_user_id: userId }),
+
+    const updatePartitionQuery = e.params(
       {
-        id: transactionId,
-        categoryId,
+        id: e.uuid,
+        partitionId: e.uuid,
+      },
+      ({ id, partitionId }) => {
+        return e.update(e.ETransaction, (transaction) => ({
+          filter_single: e.op(transaction.id, "=", id),
+          set: {
+            source_partition: e.select(e.EPartition, (partition) => ({
+              filter_single: e.op(partition.id, "=", partitionId),
+            })),
+          },
+        }));
       }
     );
+
+    const client = edgedb
+      .createClient({ database: dbname })
+      .withGlobals({ current_user_id: userId });
+
+    await client.transaction(async (tx) => {
+      if (categoryId) {
+        await updateCategoryQuery.run(tx, { id: transactionId, categoryId });
+      }
+      if (partitionId) {
+        await updatePartitionQuery.run(tx, { id: transactionId, partitionId });
+      }
+    });
+
+    return true;
   }
 );
