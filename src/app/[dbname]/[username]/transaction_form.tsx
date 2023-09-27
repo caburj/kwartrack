@@ -250,7 +250,7 @@ export function TransactionForm(props: {
   };
 
   return (
-    <Flex gap="4" pb="4" asChild>
+    <Flex gap="4" mb="4" asChild>
       <form onSubmit={onSubmit}>
         <label>
           <Text as="div" size="1" mb="1" ml="2">
@@ -321,6 +321,7 @@ export function TransactionForm(props: {
             name="description"
             disabled={createTransaction.isLoading}
             autoComplete="off"
+            style={{ width: "300px" }}
           />
         </label>
         <button type="submit" disabled={shouldDisableSubmit()} hidden>
