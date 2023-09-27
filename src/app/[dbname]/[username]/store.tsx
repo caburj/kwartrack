@@ -32,7 +32,7 @@ const lastDayOfCurrentMonth = () => {
 const initStore: UserPageStore = {
   partitionIds: [],
   categoryIds: [],
-  nPerPage: 15,
+  nPerPage: 20,
   tssDate: firstDayOfCurrentMonth(),
   tseDate: lastDayOfCurrentMonth(),
 };
