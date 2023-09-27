@@ -4,7 +4,7 @@ import { rpc } from "../../rpc_client";
 import { useQuery } from "@tanstack/react-query";
 import { UserPageStoreProvider } from "./store";
 import { QueryResult } from "@/utils/common";
-import { Box, Flex, ScrollArea } from "@radix-ui/themes";
+import { Box, Flex } from "@radix-ui/themes";
 import { TransactionForm } from "./transaction_form";
 import { TransactionsTable } from "./transactions_table";
 import { SideBar } from "./side_bar";
@@ -48,12 +48,10 @@ export function UserPage({
               left: "350px",
             }}
           >
-            <ScrollArea scrollbars="vertical">
-              <Flex direction="column" p="2" pr="4">
-                <TransactionForm user={user} />
-                <TransactionsTable user={user} />
-              </Flex>
-            </ScrollArea>
+            <Flex direction="column" p="2" height="100%">
+              <TransactionForm user={user} />
+              <TransactionsTable user={user} />
+            </Flex>
           </Box>
         </Flex>
       )}
