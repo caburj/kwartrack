@@ -28,12 +28,14 @@
 
 * [ ] Properly handle "undefined" result from rpc, also error.
 
-* [ ] Simpler way to declare invalidated queries.
+* [ ] A better way to invalidate queries when making mutations.
+  - Can we find a declarative way?
 
 * [ ] Allow editing the accounts, partitions, and categories.
   - Always edit mode in the sidebar?
 
-* [ ] Allow hiding emptied accounts.
+* [ ] Allow hiding emptied accounts -- accounts with transactions but with 0
+  balance.
   - Maybe show the delete button, but instead of completely deleting the
     account, only archive it.
     - And archived accounts should be hidden.
@@ -115,16 +117,19 @@
 
 * [ ] Prettify the date section.
 
-* [ ] fix: Resetting the transaction form doesn't work when making a transfer.
-  - It's the same problem in the Partition dialog form, that's why it's many
-    visible input elements at the moment.
-
-* [ ] Horizontal scroll for the transactions table.
-
 * [ ] Allow changing the color of each partition and category.
 
+* [ ] Allow editing amount, description and date.
+  - Clicking the date will show the date picker.
+  - Amount and description is rendered as input.
+    - Update the transaction at onBlur.
 
-# IDEA
+* [ ] Rename repo to "kwartrack".
+
+* [ ] Authentication.
+
+
+# IDEA / NICE TO HAVE (MAYBE)
 
 * [ ] Each transaction row should be a different query.
   - One query to ask for the ids of the transactions to display.
@@ -135,6 +140,9 @@
   - As a result, initial page load is slow, but modification is fast.
   - ! Looks like it's not a good idea because it's rare to make modifications in
       the records.
+
+* [ ] Undo/Redo
+  - This is probably very difficult.
 
 
 # DONE
@@ -162,3 +170,9 @@
 
 * [X] Should be able to see counterpart of transactions with private sources.
   - It should look like: Private Partition -> Owned Partition
+
+* [X] Horizontal scroll for the transactions table.
+
+* [X] fix: Resetting the transaction form doesn't work when making a transfer.
+  - It's the same problem in the Partition dialog form, that's why it's many
+    visible input elements at the moment.

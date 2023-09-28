@@ -104,17 +104,22 @@ export function invalidateMany(client: QueryClient, keys: QueryKey[]) {
   }
 }
 
-export function useGroupedPartitions(partitions: Partitions, userId: string) {
+export function useGroupedPartitions(
+  partitions: Partitions,
+  userId: string,
+  onlyOwned = false
+) {
   const sortedPartitions = useMemo(() => {
-    const partitionsByType = groupBy(partitions, (p) =>
-      getPartitionType(p, userId)
+    const partitionsByType = groupBy(
+      partitions.filter((p) => (onlyOwned ? p.account.is_owned : true)),
+      (p) => getPartitionType(p, userId)
     );
     return [
       ...(partitionsByType.owned || []),
       ...(partitionsByType.common || []),
       ...(partitionsByType.others || []),
     ];
-  }, [partitions, userId]);
+  }, [partitions, userId, onlyOwned]);
 
   const groupedPartitions = useMemo(() => {
     return groupBy(sortedPartitions, (p) => p.account.id);

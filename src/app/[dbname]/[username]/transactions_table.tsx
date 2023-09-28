@@ -92,7 +92,11 @@ function EditablePartitionBadge({
   );
   const _type = getPartitionType(partition, user.id);
   const color = PARTITION_COLOR[_type];
-  const groupedPartitions = useGroupedPartitions(partitions, user.id);
+  const groupedPartitions = useGroupedPartitions(
+    partitions,
+    user.id,
+    !isCounterpart
+  );
   const selectedCategory = transaction.category;
   const variant = partition.is_private ? "outline" : "soft";
   return (
@@ -140,23 +144,33 @@ function PartitionBadge({
   partition,
   user,
   isCounterpart,
+  isEditable,
 }: {
   partitions: Partitions;
   transaction: Transaction;
   partition: Partition;
   user: { id: string; dbname: string };
   isCounterpart: boolean;
+  isEditable: boolean;
 }) {
   if (partition) {
-    return (
-      <EditablePartitionBadge
-        partitions={partitions}
-        transaction={transaction}
-        partition={partition}
-        user={user}
-        isCounterpart={isCounterpart}
-      />
-    );
+    if (isEditable) {
+      return (
+        <EditablePartitionBadge
+          partitions={partitions}
+          transaction={transaction}
+          partition={partition}
+          user={user}
+          isCounterpart={isCounterpart}
+        />
+      );
+    } else {
+      return (
+        <Badge color={PARTITION_COLOR.others} variant="soft">
+          {partition.label}
+        </Badge>
+      );
+    }
   } else {
     return (
       <Badge color="gray" variant="outline">
@@ -222,6 +236,7 @@ export function TransactionsTable({
   );
 
   const getPartitionColumn = (transaction: Transaction) => {
+    const isEditable = transaction.source_partition?.account.is_owned || false;
     if (transaction.kind === "Transfer") {
       return (
         <Flex>
@@ -231,6 +246,7 @@ export function TransactionsTable({
             partition={transaction.source_partition}
             user={user}
             isCounterpart={false}
+            isEditable={isEditable}
           />
           <Box px="1">
             <ArrowRightIcon width="16" height="16" />
@@ -241,6 +257,7 @@ export function TransactionsTable({
             partition={transaction.counterpart?.source_partition || null}
             user={user}
             isCounterpart={true}
+            isEditable={isEditable}
           />
         </Flex>
       );
@@ -252,6 +269,7 @@ export function TransactionsTable({
           partition={transaction.source_partition}
           user={user}
           isCounterpart={false}
+          isEditable={isEditable}
         />
       );
     }
