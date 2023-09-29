@@ -700,83 +700,51 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
         onUndefined={<>No categories found</>}
       >
         {(categories) => (
-          <Flex direction="column" px="4">
-            <Flex pr="2" justify="between">
-              <Text
-                weight="medium"
-                onClick={() => selectCategories("Income")}
-                className={css({ cursor: "pointer" })}
-              >
-                Income
-              </Text>
-              <LoadingValue
-                expect={(value) => value >= 0}
-                queryKey={["categoryKindBalance", "Income"]}
-                valueLoader={() =>
-                  rpc.post.getCategoryKindBalance({
-                    kind: "Income",
-                    userId: user.id,
-                    dbname: user.dbname,
-                  })
-                }
-              />
-            </Flex>
-            <Box mb="2">
-              {categories.Income.map((category) => (
-                <CategoryLI key={category.id} category={category} user={user} />
+          <Accordion.Root
+            type="multiple"
+            defaultValue={Object.keys(categories)}
+          >
+            <Flex direction="column" px="4">
+              {Object.entries(categories).map(([kind, categories]) => (
+                <Accordion.Item value={kind} key={kind}>
+                  <Accordion.Header>
+                    <Flex pr="2" justify="between">
+                      <Accordion.Trigger>
+                        <Text
+                          weight="medium"
+                          className={css({ cursor: "pointer" })}
+                        >
+                          {kind}
+                        </Text>
+                      </Accordion.Trigger>
+                      <LoadingValue
+                        expect={(value) => value >= 0}
+                        queryKey={["categoryKindBalance", kind]}
+                        valueLoader={() =>
+                          rpc.post.getCategoryKindBalance({
+                            kind,
+                            userId: user.id,
+                            dbname: user.dbname,
+                          })
+                        }
+                      />
+                    </Flex>
+                  </Accordion.Header>
+                  <Accordion.Content>
+                    <Box mb="2">
+                      {categories.map((category) => (
+                        <CategoryLI
+                          key={category.id}
+                          category={category}
+                          user={user}
+                        />
+                      ))}
+                    </Box>
+                  </Accordion.Content>
+                </Accordion.Item>
               ))}
-            </Box>
-            <Flex pr="2" justify="between">
-              <Text
-                weight="medium"
-                onClick={() => selectCategories("Expense")}
-                className={css({ cursor: "pointer" })}
-              >
-                Expense
-              </Text>
-              <LoadingValue
-                expect={(value) => value <= 0}
-                queryKey={["categoryKindBalance", "Expense"]}
-                valueLoader={() =>
-                  rpc.post.getCategoryKindBalance({
-                    kind: "Expense",
-                    userId: user.id,
-                    dbname: user.dbname,
-                  })
-                }
-              />
             </Flex>
-            <Box mb="2">
-              {categories.Expense.map((category) => (
-                <CategoryLI key={category.id} category={category} user={user} />
-              ))}
-            </Box>
-            <Flex pr="2" justify="between">
-              <Text
-                weight="medium"
-                onClick={() => selectCategories("Transfer")}
-                className={css({ cursor: "pointer" })}
-              >
-                Transfer
-              </Text>
-              <LoadingValue
-                expect={(value) => value === 0}
-                queryKey={["categoryKindBalance", "Transfer"]}
-                valueLoader={() =>
-                  rpc.post.getCategoryKindBalance({
-                    kind: "Transfer",
-                    userId: user.id,
-                    dbname: user.dbname,
-                  })
-                }
-              />
-            </Flex>
-            <Box mb="2">
-              {categories.Transfer.map((category) => (
-                <CategoryLI key={category.id} category={category} user={user} />
-              ))}
-            </Box>
-          </Flex>
+          </Accordion.Root>
         )}
       </QueryResult>
     </>
