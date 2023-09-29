@@ -711,12 +711,24 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
                   <Accordion.Header>
                     <Flex pr="2" justify="between">
                       <Accordion.Trigger>
-                        <Text
-                          weight="medium"
-                          className={css({ cursor: "pointer" })}
+                        <RightClick
+                          items={[
+                            {
+                              label: "Toggle All",
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                selectCategories(kind);
+                              },
+                            },
+                          ]}
                         >
-                          {kind}
-                        </Text>
+                          <Text
+                            weight="medium"
+                            className={css({ cursor: "pointer" })}
+                          >
+                            {kind}
+                          </Text>
+                        </RightClick>
                       </Accordion.Trigger>
                       <LoadingValue
                         expect={(value) =>
@@ -756,7 +768,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
 
 type RightClickItem = {
   label: string;
-  color: RadixColor;
+  color?: RadixColor;
   onClick: MouseEventHandler<HTMLDivElement>;
 };
 
