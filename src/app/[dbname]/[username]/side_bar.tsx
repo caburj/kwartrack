@@ -28,6 +28,7 @@ import {
   Select,
   Switch,
   Grid,
+  ContextMenu,
 } from "@radix-ui/themes";
 import { Cross1Icon, PlusIcon } from "@radix-ui/react-icons";
 import * as Accordion from "@radix-ui/react-accordion";
@@ -753,7 +754,33 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
   );
 }
 
-function ContextMenu(props: {}) {}
+type RightClickItem = {
+  label: string;
+  color: RadixColor;
+  onClick: MouseEventHandler<HTMLDivElement>;
+};
+
+function RightClick(props: {
+  items: RightClickItem[];
+  children: React.ReactNode;
+}) {
+  return (
+    <ContextMenu.Root>
+      <ContextMenu.Trigger>{props.children}</ContextMenu.Trigger>
+      <ContextMenu.Content>
+        {props.items.map((item) => (
+          <ContextMenu.Item
+            key={item.label}
+            color={item.color}
+            onClick={item.onClick}
+          >
+            {item.label}
+          </ContextMenu.Item>
+        ))}
+      </ContextMenu.Content>
+    </ContextMenu.Root>
+  );
+}
 
 function CategoryLI({
   category,
@@ -799,6 +826,20 @@ function CategoryLI({
   });
   const color = store.categoryIds.includes(category.id) ? "blue" : undefined;
   const isSelected = store.categoryIds.includes(category.id);
+  const rightClickItems = [
+    ...(canBeDeleted.data
+      ? [
+          {
+            label: "Delete",
+            color: "red" as RadixColor,
+            onClick: (e) => {
+              e.stopPropagation();
+              deleteCategory.mutateAsync();
+            },
+          } as RightClickItem,
+        ]
+      : []),
+  ];
   return (
     <Flex justify="between" pr="2">
       <Flex gap="1" align="center">
@@ -809,16 +850,16 @@ function CategoryLI({
           }}
           checked={isSelected}
         />
-        <Text align="center" color={color}>
-          {category.name}
-        </Text>
-        {canBeDeleted.data && (
-          <DeleteButton
-            onClick={async (e) => {
-              e.stopPropagation();
-              await deleteCategory.mutateAsync();
-            }}
-          />
+        {rightClickItems.length > 0 ? (
+          <RightClick items={rightClickItems}>
+            <Text align="center" color={color}>
+              {category.name}
+            </Text>
+          </RightClick>
+        ) : (
+          <Text align="center" color={color}>
+            {category.name}
+          </Text>
         )}
       </Flex>
       <LoadingValue
