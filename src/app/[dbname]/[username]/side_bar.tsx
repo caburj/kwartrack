@@ -718,7 +718,9 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
                         </Text>
                       </Accordion.Trigger>
                       <LoadingValue
-                        expect={(value) => value >= 0}
+                        expect={(value) =>
+                          kind === "Expense" ? value <= 0 : value >= 0
+                        }
                         queryKey={["categoryKindBalance", kind]}
                         valueLoader={() =>
                           rpc.post.getCategoryKindBalance({
@@ -750,6 +752,8 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
     </>
   );
 }
+
+function ContextMenu(props: {}) {}
 
 function CategoryLI({
   category,
@@ -899,9 +903,11 @@ function LoadingValue(props: {
       {(value) => {
         const parsedValue = parseFloat(value);
         let color: RadixColor;
+        let weight: "regular" | "bold" = "regular";
         const asExpected = props.expect(parsedValue);
         if (!asExpected) {
           color = "red";
+          weight = "bold";
         }
         let result;
         if (isNaN(parsedValue)) {
@@ -911,7 +917,11 @@ function LoadingValue(props: {
             asExpected ? Math.abs(parsedValue) : parsedValue
           );
         }
-        return <Text color={color}>{result}</Text>;
+        return (
+          <Text color={color} weight={weight}>
+            {result}
+          </Text>
+        );
       }}
     </QueryResult>
   );
