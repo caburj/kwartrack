@@ -709,7 +709,15 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
               {Object.entries(categories).map(([kind, categories]) => (
                 <Accordion.Item value={kind} key={kind}>
                   <Accordion.Header>
-                    <Flex pr="2" justify="between">
+                    <Flex
+                      mr="2"
+                      pb="1"
+                      my="1"
+                      justify="between"
+                      className={css({
+                        borderBottom: "1px solid var(--gray-3)",
+                      })}
+                    >
                       <Accordion.Trigger>
                         <RightClick
                           items={[
@@ -839,6 +847,13 @@ function CategoryLI({
   const color = store.categoryIds.includes(category.id) ? "blue" : undefined;
   const isSelected = store.categoryIds.includes(category.id);
   const rightClickItems = [
+    {
+      label: "Toggle Selection",
+      onClick: (e) => {
+        e.stopPropagation();
+        dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
+      },
+    } as RightClickItem,
     ...(canBeDeleted.data
       ? [
           {
@@ -854,26 +869,11 @@ function CategoryLI({
   ];
   return (
     <Flex justify="between" pr="2">
-      <Flex gap="1" align="center">
-        <Checkbox
-          mr="1"
-          onClick={() => {
-            dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
-          }}
-          checked={isSelected}
-        />
-        {rightClickItems.length > 0 ? (
-          <RightClick items={rightClickItems}>
-            <Text align="center" color={color}>
-              {category.name}
-            </Text>
-          </RightClick>
-        ) : (
-          <Text align="center" color={color}>
-            {category.name}
-          </Text>
-        )}
-      </Flex>
+      <RightClick items={rightClickItems}>
+        <Text align="center" color={color}>
+          {category.name}
+        </Text>
+      </RightClick>
       <LoadingValue
         expect={(value) => {
           if (category.kind === "Income") {
