@@ -30,6 +30,7 @@ import {
   Grid,
 } from "@radix-ui/themes";
 import { Cross1Icon, PlusIcon } from "@radix-ui/react-icons";
+import * as Accordion from "@radix-ui/react-accordion";
 
 type FindUserResult = NonNullable<
   Unpacked<Awaited<ReturnType<typeof rpc.post.findUser>>>
@@ -83,210 +84,278 @@ export function SideBar({ user }: { user: FindUserResult }) {
     >
       <Flex direction="column" height="100%">
         <ScrollArea scrollbars="vertical">
-          <SectionLabel label="Accounts">
-            <Dialog.Content style={{ maxWidth: 500 }}>
-              <Dialog.Title>New Partition</Dialog.Title>
-              <Separator size="4" mb="4" />
-              <Flex direction="column" gap="3" asChild>
-                <form
-                  id="partition-form"
-                  ref={partitionFormRef}
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-
-                    const formdata = new FormData(e.target as HTMLFormElement);
-
-                    const parsedData = newPartitionSchema.parse({
-                      ...Object.fromEntries(formdata.entries()),
-                      isPrivate: formdata.get("isPrivate") === "on",
-                      isSharedAccount: formdata.get("isSharedAccount") === "on",
-                    });
-
-                    const {
-                      name,
-                      isPrivate,
-                      accountId,
-                      accountName,
-                      isSharedAccount,
-                    } = parsedData;
-
-                    let forNewAccount = false;
-                    if (accountId === "for-new-account") {
-                      forNewAccount = true;
-                      if (!accountName?.trim()) {
-                        throw new Error("Account name is required");
-                      }
-                    }
-                    await rpc.post.createPartition({
-                      userId: user.id,
-                      dbname: user.dbname,
-                      name,
-                      isPrivate,
-                      forNewAccount,
-                      accountId,
-                      isSharedAccount,
-                      newAccountName: accountName,
-                    });
-                    invalidateMany(queryClient, [
-                      ["accounts", user.id],
-                      ["partitions", user.id],
-                    ]);
-                  }}
-                >
-                  <TwoColumnInput>
-                    <Text as="div" size="2" mb="1" weight="bold">
-                      Name
-                    </Text>
-                    <TextField.Input
-                      name="name"
-                      placeholder="Enter partition name"
-                    />
-                  </TwoColumnInput>
-
-                  <TwoColumnInput>
-                    <Text as="div" size="2" mb="1" weight="bold">
-                      Private
-                    </Text>
-                    <Switch name="isPrivate" />
-                  </TwoColumnInput>
-
-                  <TwoColumnInput>
-                    <Text as="div" size="2" mb="1" weight="bold">
-                      Account
-                    </Text>
-                    <Select.Root
-                      name="accountId"
-                      value={accountId}
-                      onValueChange={(value) => {
-                        setAccountId(value);
-                      }}
+          <Accordion.Root
+            type="multiple"
+            defaultValue={["accounts", "categories"]}
+          >
+            <Accordion.Item value="accounts">
+              <Accordion.Header>
+                <Flex align="center" justify="between" p="2" px="4">
+                  <Accordion.Trigger>
+                    <Text
+                      size="4"
+                      weight="bold"
+                      className={css({ cursor: "pointer" })}
                     >
-                      <Select.Trigger variant="surface" />
-                      <Select.Content>
-                        <Select.Item value="for-new-account">
-                          Create New Account
-                        </Select.Item>
-                        {ownedAccounts.data && (
-                          <Select.Group>
-                            <Select.Label>My Accounts</Select.Label>
-                            {ownedAccounts.data.map((acc) => (
-                              <Select.Item value={acc.id} key={acc.id}>
-                                {acc.name}
-                              </Select.Item>
-                            ))}
-                          </Select.Group>
-                        )}
-                      </Select.Content>
-                    </Select.Root>
-                  </TwoColumnInput>
+                      Accounts
+                    </Text>
+                  </Accordion.Trigger>
+                  <Dialog.Root>
+                    <Dialog.Trigger>
+                      <IconButton radius="full" mr="2" variant="ghost">
+                        <PlusIcon width="18" height="18" />
+                      </IconButton>
+                    </Dialog.Trigger>
+                    <Dialog.Content style={{ maxWidth: 500 }}>
+                      <Dialog.Title>New Partition</Dialog.Title>
+                      <Separator size="4" mb="4" />
+                      <Flex direction="column" gap="3" asChild>
+                        <form
+                          id="partition-form"
+                          ref={partitionFormRef}
+                          onSubmit={async (e) => {
+                            e.preventDefault();
 
-                  {accountId === "for-new-account" && (
-                    <>
-                      <TwoColumnInput>
-                        <Text as="div" size="2" mb="1" weight="bold">
-                          Account Name
-                        </Text>
-                        <TextField.Input
-                          name="accountName"
-                          placeholder="E.g. InterBank"
-                        />
-                      </TwoColumnInput>
-                      <TwoColumnInput>
-                        <Text as="div" size="2" mb="1" weight="bold">
-                          Shared?
-                        </Text>
-                        <Switch name="isSharedAccount" />
-                      </TwoColumnInput>
-                    </>
-                  )}
-                </form>
-              </Flex>
-              <Separator size="4" mt="4" />
-              <Flex gap="3" mt="4" justify="start" direction="row-reverse">
-                <Dialog.Close type="submit" form="partition-form">
-                  <Button>Save</Button>
-                </Dialog.Close>
-                <Dialog.Close>
-                  <Button variant="soft" color="gray">
-                    Cancel
-                  </Button>
-                </Dialog.Close>
-              </Flex>
-            </Dialog.Content>
-          </SectionLabel>
-          <Accounts user={user} />
-          <SectionLabel label="Categories">
-            <Dialog.Content style={{ maxWidth: 500 }}>
-              <Dialog.Title>New Category</Dialog.Title>
-              <Separator size="4" mb="4" />
-              <Flex direction="column" gap="3" asChild>
-                <form
-                  id="category-form"
-                  ref={categoryFormRef}
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    const formdata = new FormData(e.target as HTMLFormElement);
-                    const parsedData = newCategorySchema.parse({
-                      ...Object.fromEntries(formdata.entries()),
-                      isPrivate: formdata.get("isPrivate") === "on",
-                    });
-                    const { name, kind, isPrivate } = parsedData;
-                    await rpc.post.createCategory({
-                      userId: user.id,
-                      dbname: user.dbname,
-                      name,
-                      kind,
-                      isPrivate,
-                    });
-                    queryClient.invalidateQueries({
-                      queryKey: ["categories", user.id],
-                    });
-                  }}
-                >
-                  <TwoColumnInput>
-                    <Text as="div" size="2" mb="1" weight="bold">
-                      Name
+                            const formdata = new FormData(
+                              e.target as HTMLFormElement
+                            );
+
+                            const parsedData = newPartitionSchema.parse({
+                              ...Object.fromEntries(formdata.entries()),
+                              isPrivate: formdata.get("isPrivate") === "on",
+                              isSharedAccount:
+                                formdata.get("isSharedAccount") === "on",
+                            });
+
+                            const {
+                              name,
+                              isPrivate,
+                              accountId,
+                              accountName,
+                              isSharedAccount,
+                            } = parsedData;
+
+                            let forNewAccount = false;
+                            if (accountId === "for-new-account") {
+                              forNewAccount = true;
+                              if (!accountName?.trim()) {
+                                throw new Error("Account name is required");
+                              }
+                            }
+                            await rpc.post.createPartition({
+                              userId: user.id,
+                              dbname: user.dbname,
+                              name,
+                              isPrivate,
+                              forNewAccount,
+                              accountId,
+                              isSharedAccount,
+                              newAccountName: accountName,
+                            });
+                            invalidateMany(queryClient, [
+                              ["accounts", user.id],
+                              ["partitions", user.id],
+                            ]);
+                          }}
+                        >
+                          <TwoColumnInput>
+                            <Text as="div" size="2" mb="1" weight="bold">
+                              Name
+                            </Text>
+                            <TextField.Input
+                              name="name"
+                              placeholder="Enter partition name"
+                            />
+                          </TwoColumnInput>
+
+                          <TwoColumnInput>
+                            <Text as="div" size="2" mb="1" weight="bold">
+                              Private
+                            </Text>
+                            <Switch name="isPrivate" />
+                          </TwoColumnInput>
+
+                          <TwoColumnInput>
+                            <Text as="div" size="2" mb="1" weight="bold">
+                              Account
+                            </Text>
+                            <Select.Root
+                              name="accountId"
+                              value={accountId}
+                              onValueChange={(value) => {
+                                setAccountId(value);
+                              }}
+                            >
+                              <Select.Trigger variant="surface" />
+                              <Select.Content>
+                                <Select.Item value="for-new-account">
+                                  Create New Account
+                                </Select.Item>
+                                {ownedAccounts.data && (
+                                  <Select.Group>
+                                    <Select.Label>My Accounts</Select.Label>
+                                    {ownedAccounts.data.map((acc) => (
+                                      <Select.Item value={acc.id} key={acc.id}>
+                                        {acc.name}
+                                      </Select.Item>
+                                    ))}
+                                  </Select.Group>
+                                )}
+                              </Select.Content>
+                            </Select.Root>
+                          </TwoColumnInput>
+
+                          {accountId === "for-new-account" && (
+                            <>
+                              <TwoColumnInput>
+                                <Text as="div" size="2" mb="1" weight="bold">
+                                  Account Name
+                                </Text>
+                                <TextField.Input
+                                  name="accountName"
+                                  placeholder="E.g. InterBank"
+                                />
+                              </TwoColumnInput>
+                              <TwoColumnInput>
+                                <Text as="div" size="2" mb="1" weight="bold">
+                                  Shared?
+                                </Text>
+                                <Switch name="isSharedAccount" />
+                              </TwoColumnInput>
+                            </>
+                          )}
+                        </form>
+                      </Flex>
+                      <Separator size="4" mt="4" />
+                      <Flex
+                        gap="3"
+                        mt="4"
+                        justify="start"
+                        direction="row-reverse"
+                      >
+                        <Dialog.Close type="submit" form="partition-form">
+                          <Button>Save</Button>
+                        </Dialog.Close>
+                        <Dialog.Close>
+                          <Button variant="soft" color="gray">
+                            Cancel
+                          </Button>
+                        </Dialog.Close>
+                      </Flex>
+                    </Dialog.Content>
+                  </Dialog.Root>
+                </Flex>
+              </Accordion.Header>
+              <Accordion.Content>
+                <Accounts user={user} />
+              </Accordion.Content>
+            </Accordion.Item>
+            <Accordion.Item value="categories">
+              <Accordion.Header>
+                <Flex align="center" justify="between" p="2" px="4">
+                  <Accordion.Trigger>
+                    <Text
+                      size="4"
+                      weight="bold"
+                      className={css({ cursor: "pointer" })}
+                    >
+                      Categories
                     </Text>
-                    <TextField.Input
-                      name="name"
-                      placeholder="Enter category name"
-                    />
-                  </TwoColumnInput>
-                  <TwoColumnInput>
-                    <Text as="div" size="2" mb="1" weight="bold">
-                      Kind
-                    </Text>
-                    <Select.Root defaultValue="Income" name="kind">
-                      <Select.Trigger variant="surface" />
-                      <Select.Content>
-                        <Select.Item value="Income">Income</Select.Item>
-                        <Select.Item value="Expense">Expense</Select.Item>
-                        <Select.Item value="Transfer">Transfer</Select.Item>
-                      </Select.Content>
-                    </Select.Root>
-                  </TwoColumnInput>
-                  <TwoColumnInput>
-                    <Text as="div" size="2" mb="1" weight="bold">
-                      Private
-                    </Text>
-                    <Switch name="isPrivate" />
-                  </TwoColumnInput>
-                </form>
-              </Flex>
-              <Separator size="4" mt="4" />
-              <Flex gap="3" mt="4" justify="start" direction="row-reverse">
-                <Dialog.Close type="submit" form="category-form">
-                  <Button>Save</Button>
-                </Dialog.Close>
-                <Dialog.Close>
-                  <Button variant="soft" color="gray">
-                    Cancel
-                  </Button>
-                </Dialog.Close>
-              </Flex>
-            </Dialog.Content>
-          </SectionLabel>
-          <Categories user={user} />
+                  </Accordion.Trigger>
+                  <Dialog.Root>
+                    <Dialog.Trigger>
+                      <IconButton radius="full" mr="2" variant="ghost">
+                        <PlusIcon width="18" height="18" />
+                      </IconButton>
+                    </Dialog.Trigger>
+                    <Dialog.Content style={{ maxWidth: 500 }}>
+                      <Dialog.Title>New Category</Dialog.Title>
+                      <Separator size="4" mb="4" />
+                      <Flex direction="column" gap="3" asChild>
+                        <form
+                          id="category-form"
+                          ref={categoryFormRef}
+                          onSubmit={async (e) => {
+                            e.preventDefault();
+                            const formdata = new FormData(
+                              e.target as HTMLFormElement
+                            );
+                            const parsedData = newCategorySchema.parse({
+                              ...Object.fromEntries(formdata.entries()),
+                              isPrivate: formdata.get("isPrivate") === "on",
+                            });
+                            const { name, kind, isPrivate } = parsedData;
+                            await rpc.post.createCategory({
+                              userId: user.id,
+                              dbname: user.dbname,
+                              name,
+                              kind,
+                              isPrivate,
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: ["categories", user.id],
+                            });
+                          }}
+                        >
+                          <TwoColumnInput>
+                            <Text as="div" size="2" mb="1" weight="bold">
+                              Name
+                            </Text>
+                            <TextField.Input
+                              name="name"
+                              placeholder="Enter category name"
+                            />
+                          </TwoColumnInput>
+                          <TwoColumnInput>
+                            <Text as="div" size="2" mb="1" weight="bold">
+                              Kind
+                            </Text>
+                            <Select.Root defaultValue="Income" name="kind">
+                              <Select.Trigger variant="surface" />
+                              <Select.Content>
+                                <Select.Item value="Income">Income</Select.Item>
+                                <Select.Item value="Expense">
+                                  Expense
+                                </Select.Item>
+                                <Select.Item value="Transfer">
+                                  Transfer
+                                </Select.Item>
+                              </Select.Content>
+                            </Select.Root>
+                          </TwoColumnInput>
+                          <TwoColumnInput>
+                            <Text as="div" size="2" mb="1" weight="bold">
+                              Private
+                            </Text>
+                            <Switch name="isPrivate" />
+                          </TwoColumnInput>
+                        </form>
+                      </Flex>
+                      <Separator size="4" mt="4" />
+                      <Flex
+                        gap="3"
+                        mt="4"
+                        justify="start"
+                        direction="row-reverse"
+                      >
+                        <Dialog.Close type="submit" form="category-form">
+                          <Button>Save</Button>
+                        </Dialog.Close>
+                        <Dialog.Close>
+                          <Button variant="soft" color="gray">
+                            Cancel
+                          </Button>
+                        </Dialog.Close>
+                      </Flex>
+                    </Dialog.Content>
+                  </Dialog.Root>
+                </Flex>
+              </Accordion.Header>
+              <Accordion.Content>
+                <Categories user={user} />
+              </Accordion.Content>
+            </Accordion.Item>
+          </Accordion.Root>
         </ScrollArea>
         <DateRange user={user} />
       </Flex>
@@ -877,24 +946,6 @@ function LoadingValue(props: {
         return <Text color={color}>{result}</Text>;
       }}
     </QueryResult>
-  );
-}
-
-function SectionLabel(props: { children: React.ReactNode; label: string }) {
-  return (
-    <Dialog.Root>
-      <Flex align="center" justify="between" p="2" px="4">
-        <Text size="4" weight="bold">
-          {props.label}
-        </Text>
-        <Dialog.Trigger>
-          <IconButton radius="full" mr="2" variant="ghost">
-            <PlusIcon width="18" height="18" />
-          </IconButton>
-        </Dialog.Trigger>
-        {props.children}
-      </Flex>
-    </Dialog.Root>
   );
 }
 
