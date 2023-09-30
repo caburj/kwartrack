@@ -275,7 +275,10 @@ export function SideBar({ user }: { user: FindUserResult }) {
                 <Accounts user={user} />
               </AnimatedAccordionContent>
             </Accordion.Item>
-            <Accordion.Item value="categories">
+            <Accordion.Item
+              value="categories"
+              className={css({ marginBottom: "8px" })}
+            >
               <Accordion.Header>
                 <Flex
                   align="center"
@@ -655,7 +658,6 @@ function PartitionLI({
     <Flex justify="between">
       <Flex gap="2">
         <Box
-          ml="2"
           pl="1"
           className={css({
             backgroundColor: isSelected
@@ -1040,7 +1042,6 @@ function CategoryLI({
     <Flex justify="between">
       <Flex gap="2">
         <Box
-          ml="2"
           pl="1"
           className={css({
             backgroundColor: isSelected
