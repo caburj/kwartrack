@@ -8,6 +8,7 @@ import {
   useState,
   useRef,
   ReactNode,
+  useCallback,
 } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { boolean, minLength, object, optional, string } from "valibot";
@@ -749,6 +750,33 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
       }
     }
   };
+
+  const areAllCategoriesSelected = useCallback(
+    (kind: string) => {
+      if (kind === "Income") {
+        if (categories?.data?.Income) {
+          return categories.data.Income.every((c) =>
+            store.categoryIds.includes(c.id)
+          );
+        }
+      } else if (kind === "Expense") {
+        if (categories?.data?.Expense) {
+          return categories.data.Expense.every((c) =>
+            store.categoryIds.includes(c.id)
+          );
+        }
+      } else if (kind === "Transfer") {
+        if (categories?.data?.Transfer) {
+          return categories.data.Transfer.every((c) =>
+            store.categoryIds.includes(c.id)
+          );
+        }
+      }
+      return false;
+    },
+    [categories?.data, store.categoryIds]
+  );
+
   return (
     <>
       <QueryResult
@@ -760,9 +788,8 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
           <FoldableList
             groupedItems={categories}
             openValues={["Income", "Expense"]}
-            onClickLabel={selectCategories}
             getHeaderExtraContent={(kind) => (
-              <GLoadingValue
+              <GenericLoadingValue
                 queryKey={["categoryKindBalance", kind]}
                 valueLoader={() =>
                   rpc.post.getCategoryKindBalance({
@@ -779,9 +806,21 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
                     defaultWeight="medium"
                   />
                 )}
-              </GLoadingValue>
+              </GenericLoadingValue>
             )}
-            getHeaderLabel={(kind) => kind}
+            getHeaderLabel={(kind) => (
+              <Text
+                weight="medium"
+                color={areAllCategoriesSelected(kind) ? "cyan" : undefined}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  selectCategories(kind);
+                }}
+                className={css({ cursor: "pointer " })}
+              >
+                {kind}
+              </Text>
+            )}
           >
             {(category) => (
               <CategoryLI key={category.id} category={category} user={user} />
@@ -796,9 +835,8 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
 function FoldableList<X extends { name: string }>(props: {
   openValues: string[];
   groupedItems: Record<string, X[]>;
-  onClickLabel: (key: string) => void | Promise<void>;
   getHeaderExtraContent: (key: string) => ReactNode;
-  getHeaderLabel: (key: string) => string;
+  getHeaderLabel: (key: string) => ReactNode;
   children: (item: X) => ReactNode;
 }) {
   return (
@@ -835,30 +873,23 @@ function FoldableList<X extends { name: string }>(props: {
                       })}
                     />
                   </Accordion.Trigger>
-                  <Text
-                    weight="medium"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      props.onClickLabel(key);
-                    }}
-                    className={css({ cursor: "pointer " })}
-                  >
-                    {props.getHeaderLabel(key)}
-                  </Text>
+                  {props.getHeaderLabel(key)}
                 </Flex>
                 {props.getHeaderExtraContent(key)}
               </Flex>
             </Accordion.Header>
-            <Accordion.Content className={css({
-              "&[data-state=open]": {
-                animation: "slideDown 200ms ease"
-              },
-              "&[data-state=closed]": {
-                animation: "slideUp 200ms ease"
-              },
-              // needed to prevent the content from being visible during the animation
-              overflow: "hidden"
-            })}>
+            <Accordion.Content
+              className={css({
+                "&[data-state=open]": {
+                  animation: "slideDown 200ms ease",
+                },
+                "&[data-state=closed]": {
+                  animation: "slideUp 200ms ease",
+                },
+                // needed to prevent the content from being visible during the animation
+                overflow: "hidden",
+              })}
+            >
               <Box mb="2">{items.map(props.children)}</Box>
             </Accordion.Content>
           </Accordion.Item>
@@ -993,7 +1024,7 @@ function CategoryLI({
           </Text>
         </WithRightClick>
       </Flex>
-      <GLoadingValue
+      <GenericLoadingValue
         queryKey={[
           "categoryBalance",
           {
@@ -1015,7 +1046,7 @@ function CategoryLI({
             defaultWeight="regular"
           />
         )}
-      </GLoadingValue>
+      </GenericLoadingValue>
     </Flex>
   );
 }
@@ -1060,7 +1091,7 @@ function DateRange({ user }: { user: { id: string; dbname: string } }) {
   );
 }
 
-function GLoadingValue(props: {
+function GenericLoadingValue(props: {
   queryKey: [string, ...any];
   valueLoader: () => Promise<string>;
   children: (value: string) => ReactNode;
@@ -1082,7 +1113,7 @@ function LoadingValue(props: {
   valueLoader: () => Promise<string>;
 }) {
   return (
-    <GLoadingValue {...props}>
+    <GenericLoadingValue {...props}>
       {(value) => {
         const parsedValue = parseFloat(value);
         let color: RadixColor;
@@ -1106,7 +1137,7 @@ function LoadingValue(props: {
           </Text>
         );
       }}
-    </GLoadingValue>
+    </GenericLoadingValue>
   );
 }
 
