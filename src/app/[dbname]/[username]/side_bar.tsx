@@ -670,6 +670,56 @@ function Partitions(props: {
   );
 }
 
+function categoryValueProps({
+  value,
+  kind,
+  defaultWeight,
+}: {
+  value: string;
+  kind: string;
+  defaultWeight: "medium" | "regular";
+}) {
+  const parsedValue = parseFloat(value);
+  let color: RadixColor;
+  let weight: "medium" | "bold" | "regular" = defaultWeight;
+  let asExpected = false;
+  if (kind === "Income") {
+    asExpected = parsedValue >= 0;
+  } else if (kind === "Expense") {
+    asExpected = parsedValue <= 0;
+  } else {
+    asExpected = parsedValue === 0;
+  }
+  if (!asExpected) {
+    color = "red";
+    weight = "bold";
+  }
+  let result;
+  if (isNaN(parsedValue)) {
+    result = value;
+  } else {
+    result = formatValue(asExpected ? Math.abs(parsedValue) : parsedValue);
+  }
+  return {
+    color,
+    weight,
+    formatted: result,
+  };
+}
+
+function CategoryValue(props: {
+  value: string;
+  kind: string;
+  defaultWeight: "medium" | "regular";
+}) {
+  const { color, weight, formatted } = categoryValueProps(props);
+  return (
+    <Text color={color} weight={weight}>
+      {formatted}
+    </Text>
+  );
+}
+
 function Categories({ user }: { user: { id: string; dbname: string } }) {
   const categories = useQuery(["categories", user.id], () => {
     return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
@@ -712,10 +762,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
             openValues={["Income", "Expense", "Transfer"]}
             onClickLabel={selectCategories}
             getHeaderExtraContent={(kind) => (
-              <LoadingValue
-                expect={(value) =>
-                  kind === "Expense" ? value <= 0 : value >= 0
-                }
+              <GLoadingValue
                 queryKey={["categoryKindBalance", kind]}
                 valueLoader={() =>
                   rpc.post.getCategoryKindBalance({
@@ -724,7 +771,15 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
                     dbname: user.dbname,
                   })
                 }
-              />
+              >
+                {(value) => (
+                  <CategoryValue
+                    value={value}
+                    kind={kind}
+                    defaultWeight="medium"
+                  />
+                )}
+              </GLoadingValue>
             )}
             getHeaderLabel={(kind) => kind}
           >
@@ -889,20 +944,20 @@ function CategoryLI({
   return (
     <Flex justify="between" pr="2">
       <RightClick items={rightClickItems}>
-        <Text align="center" color={color}>
-          {category.name}
-        </Text>
+        <Flex gap="2">
+          <Box
+            ml="2"
+            pl="1"
+            className={css({
+              backgroundColor: "var(--gray-6)",
+            })}
+          />
+          <Text align="center" color={color}>
+            {category.name}
+          </Text>
+        </Flex>
       </RightClick>
-      <LoadingValue
-        expect={(value) => {
-          if (category.kind === "Income") {
-            return value >= 0;
-          } else if (category.kind === "Expense") {
-            return value <= 0;
-          } else {
-            return value === 0;
-          }
-        }}
+      <GLoadingValue
         queryKey={[
           "categoryBalance",
           {
@@ -916,7 +971,15 @@ function CategoryLI({
             dbname: user.dbname,
           })
         }
-      />
+      >
+        {(value) => (
+          <CategoryValue
+            value={value}
+            kind={category.kind}
+            defaultWeight="regular"
+          />
+        )}
+      </GLoadingValue>
     </Flex>
   );
 }
@@ -961,10 +1024,10 @@ function DateRange({ user }: { user: { id: string; dbname: string } }) {
   );
 }
 
-function LoadingValue(props: {
-  expect: (value: number) => boolean;
+function GLoadingValue(props: {
   queryKey: [string, ...any];
   valueLoader: () => Promise<string>;
+  children: (value: string) => ReactNode;
 }) {
   return (
     <QueryResult
@@ -972,6 +1035,18 @@ function LoadingValue(props: {
       onLoading={<>...</>}
       onUndefined={<>Missing Value</>}
     >
+      {props.children}
+    </QueryResult>
+  );
+}
+
+function LoadingValue(props: {
+  expect: (value: number) => boolean;
+  queryKey: [string, ...any];
+  valueLoader: () => Promise<string>;
+}) {
+  return (
+    <GLoadingValue {...props}>
       {(value) => {
         const parsedValue = parseFloat(value);
         let color: RadixColor;
@@ -995,7 +1070,7 @@ function LoadingValue(props: {
           </Text>
         );
       }}
-    </QueryResult>
+    </GLoadingValue>
   );
 }
 
