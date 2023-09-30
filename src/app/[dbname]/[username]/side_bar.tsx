@@ -15,6 +15,8 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { boolean, minLength, object, optional, string } from "valibot";
 import { UserPageStoreContext } from "./store";
 import {
+  CATEGORY_COLOR,
+  PARTITION_COLOR,
   QueryResult,
   RadixColor,
   Unpacked,
@@ -36,6 +38,7 @@ import {
   Switch,
   Grid,
   ContextMenu,
+  Badge,
 } from "@radix-ui/themes";
 import { ChevronRightIcon, Cross1Icon, PlusIcon } from "@radix-ui/react-icons";
 import * as Accordion from "@radix-ui/react-accordion";
@@ -560,6 +563,22 @@ function Accounts({ user }: { user: { id: string; dbname: string } }) {
   );
 }
 
+// TODO: Refactor this. This is just the same as getPartitionType from common.
+export function getPartitionType(
+  p: Partition,
+  userId: string
+): "owned" | "common" | "others" {
+  if (p.owners.length === 1 && p.owners[0].id === userId) {
+    return "owned";
+  } else if (
+    p.owners.length > 1 &&
+    p.owners.map((o) => o.id).includes(userId)
+  ) {
+    return "common";
+  }
+  return "others";
+}
+
 function PartitionLI({
   partition,
   user,
@@ -629,7 +648,9 @@ function PartitionLI({
       : []),
   ];
   const isSelected = store.partitionIds.includes(partition.id);
-  const color = isSelected ? "cyan" : undefined;
+  const variant = partition.is_private ? "outline" : "soft";
+  const _type = getPartitionType(partition, user.id);
+  const color = PARTITION_COLOR[_type];
   return (
     <Flex justify="between">
       <Flex gap="2">
@@ -637,24 +658,26 @@ function PartitionLI({
           ml="2"
           pl="1"
           className={css({
-            backgroundColor: canBeDeleted.data
+            backgroundColor: isSelected
+              ? "var(--cyan-8)"
+              : canBeDeleted.data
               ? "var(--red-8)"
               : "var(--gray-6)",
           })}
         />
         <WithRightClick rightClickItems={rightClickItems}>
-          <Text
-            align="center"
+          <Badge
+            my="1"
             color={color}
-            weight={isSelected ? "medium" : "regular"}
+            variant={variant}
+            style={{ cursor: "pointer" }}
             onClick={(e) => {
               e.stopPropagation();
               dispatch({ type: "TOGGLE_PARTITIONS", payload: [partition.id] });
             }}
-            className={css({ cursor: "pointer" })}
           >
             {partition.name}
-          </Text>
+          </Badge>
         </WithRightClick>
       </Flex>
       <LoadingValue
@@ -998,7 +1021,6 @@ function CategoryLI({
     });
   });
   const isSelected = store.categoryIds.includes(category.id);
-  const color = isSelected ? "cyan" : undefined;
   const canBeRemoved = canBeDeleted.data;
   const rightClickItems = [
     ...(canBeRemoved
@@ -1021,22 +1043,26 @@ function CategoryLI({
           ml="2"
           pl="1"
           className={css({
-            backgroundColor: canBeRemoved ? "var(--red-8)" : "var(--gray-6)",
+            backgroundColor: isSelected
+              ? "var(--cyan-8)"
+              : canBeRemoved
+              ? "var(--red-8)"
+              : "var(--gray-6)",
           })}
         />
         <WithRightClick rightClickItems={rightClickItems}>
-          <Text
-            align="center"
-            color={color}
-            weight={isSelected ? "medium" : "regular"}
+          <Badge
+            my="1"
+            color={CATEGORY_COLOR[category.kind]}
+            variant={category.is_private ? "outline" : "soft"}
+            style={{ cursor: "pointer" }}
             onClick={(e) => {
               e.stopPropagation();
               dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
             }}
-            className={css({ cursor: "pointer" })}
           >
             {category.name}
-          </Text>
+          </Badge>
         </WithRightClick>
       </Flex>
       <GenericLoadingValue
