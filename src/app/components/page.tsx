@@ -1,207 +1,145 @@
 "use client";
 
-import { useState } from "react";
-import { Command } from "cmdk";
-import {
-  Text,
-  Box,
-  ScrollArea,
-  Flex,
-  Avatar,
-  Button,
-  TextArea,
-  Checkbox,
-  ContextMenu,
-  Dialog,
-  TextField,
-  Popover,
-} from "@radix-ui/themes";
-import { ChatBubbleIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import * as Accordion from "@radix-ui/react-accordion";
+import { ChevronRightIcon } from "@radix-ui/react-icons";
+import { Box, Flex, Text } from "@radix-ui/themes";
+import { css } from "../../../styled-system/css";
+import { ReactNode } from "react";
 
-const randomStrings = [
-  "This is a pig",
-  "This is a dog",
-  "That was full",
-  "This is a cow",
-  "Full metal alchepig",
-  "This is a cat",
-  "I am a pig",
-  "I am a dog",
-  "food is good",
-  "I am a cow",
-  "I am a cat",
-  "All the world's a stage",
-  "I am a bird",
-  "hitting two birds with one stone",
-  "I am a fish",
-  "I am a human",
-  "I am a robot",
-];
-
-export default function CommandMenu() {
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState("unselected");
-  const [open, setOpen] = useState(false);
-
+export default function Page() {
   return (
-    <>
-      <Popover.Root open={open} onOpenChange={setOpen}>
-        <Popover.Trigger>
-          <span>{selected}</span>
-        </Popover.Trigger>
-        <Popover.Content>
-          <Command label="Global Command Menu" loop>
-            <Command.Input
-              onValueChange={(search) => {
-                setSearch(search);
-              }}
-            />
-
-            <ScrollArea
-              type="always"
-              scrollbars="vertical"
-              style={{ height: "200px" }}
-            >
-              <Box
-                px="2"
-                pr="4"
-                style={{
-                  maxWidth: "150px",
-                  minWidth: "150px",
-                }}
-              >
-                <Command.List>
-                  <Command.Empty>No results found.</Command.Empty>
-                  {randomStrings.map((str) => (
-                    <Command.Item
-                      value={`${str}-1`}
-                      key={str}
-                      onSelect={(value) => {
-                        setSelected(value);
-                        setOpen(false);
-                      }}
-                    >
-                      <Text>{`${str}`}</Text>
-                      <span>-fooooo</span>
-                    </Command.Item>
-                  ))}
-                </Command.List>
-              </Box>
-            </ScrollArea>
-          </Command>
-        </Popover.Content>
-      </Popover.Root>
-      <div>
-        <Text>Search: {search}</Text>
-        <div>Selected: {selected}</div>
-        <ContextMenu.Root>
-          <ContextMenu.Trigger>
-            <Box>
-              <Text>Right click me</Text>
-            </Box>
-          </ContextMenu.Trigger>
-          <ContextMenu.Content>
-            <ContextMenu.Item shortcut="⌘ E">Edit</ContextMenu.Item>
-            <ContextMenu.Item shortcut="⌘ D">Duplicate</ContextMenu.Item>
-            <ContextMenu.Separator />
-            <ContextMenu.Item shortcut="⌘ N">Archive</ContextMenu.Item>
-
-            <ContextMenu.Sub>
-              <ContextMenu.SubTrigger>More</ContextMenu.SubTrigger>
-              <ContextMenu.SubContent>
-                <ContextMenu.Item>Move to project…</ContextMenu.Item>
-                <ContextMenu.Item>Move to folder…</ContextMenu.Item>
-                <ContextMenu.Separator />
-                <ContextMenu.Item>Advanced options…</ContextMenu.Item>
-              </ContextMenu.SubContent>
-            </ContextMenu.Sub>
-
-            <ContextMenu.Separator />
-            <ContextMenu.Item>Share</ContextMenu.Item>
-            <ContextMenu.Item>Add to favorites</ContextMenu.Item>
-            <ContextMenu.Separator />
-            <ContextMenu.Item shortcut="⌘ ⌫" color="red">
-              Delete
-            </ContextMenu.Item>
-          </ContextMenu.Content>
-        </ContextMenu.Root>
-        <Dialog.Root>
-          <Dialog.Trigger>
-            <Button>Edit profile</Button>
-          </Dialog.Trigger>
-          <Dialog.Content style={{ maxWidth: 450 }}>
-            <Dialog.Title>Edit profile</Dialog.Title>
-            <Dialog.Description size="2" mb="4">
-              Make changes to your profile.
-            </Dialog.Description>
-            <Flex direction="column" gap="3">
-              <label>
-                <Text as="div" size="2" mb="1" weight="bold">
-                  Name
-                </Text>
-                <TextField.Input
-                  defaultValue="Freja Johnsen"
-                  placeholder="Enter your full name"
-                />
-              </label>
-              <label>
-                <Text as="div" size="2" mb="1" weight="bold">
-                  Email
-                </Text>
-                <TextField.Input
-                  defaultValue="freja@example.com"
-                  placeholder="Enter your email"
-                />
-              </label>
-            </Flex>
-            <Flex gap="3" mt="4" justify="end">
-              <Dialog.Close>
-                <Button variant="soft" color="gray">
-                  Cancel
-                </Button>
-              </Dialog.Close>
-              <Dialog.Close>
-                <Button>Save</Button>
-              </Dialog.Close>
-            </Flex>
-          </Dialog.Content>
-        </Dialog.Root>
-        <Popover.Root>
-          <Popover.Trigger>
-            <Button variant="soft">
-              <ChatBubbleIcon width="16" height="16" />
-              Comment
-            </Button>
-          </Popover.Trigger>
-          <Popover.Content style={{ width: 360 }}>
-            <Flex gap="3">
-              <Avatar
-                size="2"
-                src="https://images.unsplash.com/photo-1607346256330-dee7af15f7c5?&w=64&h=64&dpr=2&q=70&crop=focalpoint&fp-x=0.67&fp-y=0.5&fp-z=1.4&fit=crop"
-                fallback="A"
-                radius="full"
-              />
-              <Box grow="1">
-                <TextArea
-                  placeholder="Write a comment…"
-                  style={{ height: 80 }}
-                />
-                <Flex gap="3" mt="3" justify="between">
-                  <Flex align="center" gap="2" asChild>
-                    <label>
-                      <Checkbox />
-                      <Text size="2">Send to group</Text>
-                    </label>
-                  </Flex>
-                  <Popover.Close>
-                    <Button size="1">Comment</Button>
-                  </Popover.Close>
-                </Flex>
-              </Box>
-            </Flex>
-          </Popover.Content>
-        </Popover.Root>
-      </div>
-    </>
+    <Box
+      style={{
+        width: "400px",
+        height: "400px",
+      }}
+    >
+      <Collapsible
+        item={{
+          id: "0",
+          kind: "group",
+          heading: "Group 1",
+          items: [
+            {
+              id: "1",
+              kind: "item",
+              heading: (
+                <Accordion.Trigger>
+                  <Text className={css({ cursor: "pointer" })}>Test 1</Text>
+                </Accordion.Trigger>
+              ),
+              content: "This is a content of 1",
+            },
+            {
+              id: "2",
+              kind: "group",
+              heading: (
+                <Accordion.Trigger>
+                  <Text className={css({ cursor: "pointer" })}>Test 2</Text>
+                </Accordion.Trigger>
+              ),
+              openItems: ["3"],
+              items: [
+                {
+                  id: "3",
+                  kind: "item",
+                  heading: (
+                    <Accordion.Trigger>
+                      <Text className={css({ cursor: "pointer" })}>Test 3</Text>
+                    </Accordion.Trigger>
+                  ),
+                  content: "This is a content of 3",
+                },
+                {
+                  id: "4",
+                  kind: "group",
+                  heading: (
+                    <Accordion.Trigger>
+                      <Text className={css({ cursor: "pointer" })}>Test 4</Text>
+                    </Accordion.Trigger>
+                  ),
+                  openItems: ["6"],
+                  items: [
+                    {
+                      id: "6",
+                      kind: "item",
+                      heading: (
+                        <Accordion.Trigger>
+                          <Text className={css({ cursor: "pointer" })}>
+                            Test 6
+                          </Text>
+                        </Accordion.Trigger>
+                      ),
+                      content: "This is a content of 6",
+                    },
+                    {
+                      id: "7",
+                      kind: "item",
+                      heading: (
+                        <Accordion.Trigger>
+                          <Text className={css({ cursor: "pointer" })}>
+                            Test 7
+                          </Text>
+                        </Accordion.Trigger>
+                      ),
+                      content: "This is a content of 7",
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              id: "5",
+              kind: "item",
+              heading: (
+                <Accordion.Trigger>
+                  <Text className={css({ cursor: "pointer" })}>Test 5</Text>
+                </Accordion.Trigger>
+              ),
+              content: "This is a content of 5",
+            },
+          ],
+          openItems: ["1"],
+        }}
+      />
+    </Box>
   );
 }
+
+function Collapsible(props: { item: GroupItem }) {
+  return (
+    <Accordion.Root type="multiple" defaultValue={props.item.openItems}>
+      {props.item.items.map((item) => (
+        <Accordion.Item value={item.id} key={item.id}>
+          <Accordion.Header asChild>{item.heading}</Accordion.Header>
+          <Accordion.Content asChild>
+            <Flex direction="column">
+              {item.kind === "group" ? (
+                <Collapsible item={item} />
+              ) : (
+                item.content
+              )}
+            </Flex>
+          </Accordion.Content>
+        </Accordion.Item>
+      ))}
+    </Accordion.Root>
+  );
+}
+
+type CollapsibleItem = GroupItem | BasicItem;
+
+type GroupItem = {
+  id: string;
+  kind: "group";
+  heading: ReactNode;
+  items: CollapsibleItem[];
+  openItems: string[];
+};
+
+type BasicItem = {
+  id: string;
+  kind: "item";
+  heading: ReactNode;
+  content: ReactNode;
+};

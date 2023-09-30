@@ -87,6 +87,24 @@ module default {
     property is_owned := .source_partition.is_owned;
     property is_visible := .source_partition.is_visible;
   }
+
+  type ELoan {
+    required transaction: ETransaction {
+      constraint exclusive;
+    }
+    required amount_to_pay: decimal;
+    property amount := math::abs(.transaction.value);
+    multi link payments := .<loan[is EPayment];
+    property amount_paid := sum(math::abs(.payments.transaction.value));
+    property is_paid := .amount_paid >= .amount_to_pay;
+  }
+
+  type EPayment {
+    required loan: ELoan;
+    required transaction: ETransaction {
+      constraint exclusive;
+    }
+  }
 }
 
 module masterdb {
