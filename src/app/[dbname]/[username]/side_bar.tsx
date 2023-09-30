@@ -876,6 +876,19 @@ function RightClick(props: {
   );
 }
 
+function WithRightClick(props: {
+  rightClickItems: RightClickItem[];
+  children: React.ReactNode;
+}) {
+  if (props.rightClickItems.length === 0) {
+    return <>{props.children}</>;
+  } else {
+    return (
+      <RightClick items={props.rightClickItems}>{props.children}</RightClick>
+    );
+  }
+}
+
 function CategoryLI({
   category,
   user,
@@ -918,17 +931,11 @@ function CategoryLI({
       name,
     });
   });
-  const color = store.categoryIds.includes(category.id) ? "blue" : undefined;
   const isSelected = store.categoryIds.includes(category.id);
+  const color = isSelected ? "cyan" : undefined;
+  const canBeRemoved = canBeDeleted.data;
   const rightClickItems = [
-    {
-      label: "Toggle Selection",
-      onClick: (e) => {
-        e.stopPropagation();
-        dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
-      },
-    } as RightClickItem,
-    ...(canBeDeleted.data
+    ...(canBeRemoved
       ? [
           {
             label: "Delete",
@@ -943,20 +950,29 @@ function CategoryLI({
   ];
   return (
     <Flex justify="between" pr="2">
-      <RightClick items={rightClickItems}>
-        <Flex gap="2">
-          <Box
-            ml="2"
-            pl="1"
-            className={css({
-              backgroundColor: "var(--gray-6)",
-            })}
-          />
-          <Text align="center" color={color}>
+      <Flex gap="2">
+        <Box
+          ml="2"
+          pl="1"
+          className={css({
+            backgroundColor: canBeRemoved ? "var(--red-8)" : "var(--gray-6)",
+          })}
+        />
+        <WithRightClick rightClickItems={rightClickItems}>
+          <Text
+            align="center"
+            color={color}
+            weight={isSelected ? "medium" : "regular"}
+            onClick={(e) => {
+              e.stopPropagation();
+              dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
+            }}
+            className={css({ cursor: "pointer" })}
+          >
             {category.name}
           </Text>
-        </Flex>
-      </RightClick>
+        </WithRightClick>
+      </Flex>
       <GLoadingValue
         queryKey={[
           "categoryBalance",
