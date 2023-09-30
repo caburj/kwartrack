@@ -9,6 +9,7 @@ import {
   useRef,
   ReactNode,
   useCallback,
+  useMemo,
 } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { boolean, minLength, object, optional, string } from "valibot";
@@ -27,7 +28,6 @@ import {
   IconButton,
   ScrollArea,
   Text,
-  Checkbox,
   Separator,
   Dialog,
   TextField,
@@ -96,9 +96,23 @@ export function SideBar({ user }: { user: FindUserResult }) {
             type="multiple"
             defaultValue={["accounts", "categories"]}
           >
-            <Accordion.Item value="accounts">
+            <Accordion.Item
+              value="accounts"
+              className={css({ marginBottom: "8px" })}
+            >
               <Accordion.Header>
-                <Flex align="center" justify="between" p="2" px="4">
+                <Flex
+                  align="center"
+                  justify="between"
+                  pt="2"
+                  pb="1"
+                  mb="1"
+                  px="4"
+                  className={css({
+                    borderBottom: "1px solid var(--gray-4)",
+                    shadow: "0px 2px 2px -2px rgba(22, 23, 24, 0.35)",
+                  })}
+                >
                   <Accordion.Trigger>
                     <Text
                       size="4"
@@ -110,7 +124,7 @@ export function SideBar({ user }: { user: FindUserResult }) {
                   </Accordion.Trigger>
                   <Dialog.Root>
                     <Dialog.Trigger>
-                      <IconButton radius="full" mr="2" variant="ghost">
+                      <IconButton radius="full" variant="ghost">
                         <PlusIcon width="18" height="18" />
                       </IconButton>
                     </Dialog.Trigger>
@@ -254,13 +268,24 @@ export function SideBar({ user }: { user: FindUserResult }) {
                   </Dialog.Root>
                 </Flex>
               </Accordion.Header>
-              <Accordion.Content>
+              <AnimatedAccordionContent>
                 <Accounts user={user} />
-              </Accordion.Content>
+              </AnimatedAccordionContent>
             </Accordion.Item>
             <Accordion.Item value="categories">
               <Accordion.Header>
-                <Flex align="center" justify="between" p="2" px="4">
+                <Flex
+                  align="center"
+                  justify="between"
+                  pt="2"
+                  pb="1"
+                  mb="1"
+                  px="4"
+                  className={css({
+                    borderBottom: "1px solid var(--gray-4)",
+                    shadow: "0px 2px 2px -2px rgba(22, 23, 24, 0.35)",
+                  })}
+                >
                   <Accordion.Trigger>
                     <Text
                       size="4"
@@ -272,7 +297,7 @@ export function SideBar({ user }: { user: FindUserResult }) {
                   </Accordion.Trigger>
                   <Dialog.Root>
                     <Dialog.Trigger>
-                      <IconButton radius="full" mr="2" variant="ghost">
+                      <IconButton radius="full" variant="ghost">
                         <PlusIcon width="18" height="18" />
                       </IconButton>
                     </Dialog.Trigger>
@@ -359,9 +384,9 @@ export function SideBar({ user }: { user: FindUserResult }) {
                   </Dialog.Root>
                 </Flex>
               </Accordion.Header>
-              <Accordion.Content>
+              <AnimatedAccordionContent>
                 <Categories user={user} />
-              </Accordion.Content>
+              </AnimatedAccordionContent>
             </Accordion.Item>
           </Accordion.Root>
         </ScrollArea>
@@ -379,6 +404,7 @@ function AccountLI({
   user: { id: string; dbname: string };
 }) {
   const queryClient = useQueryClient();
+
   const canBeDeleted = useQuery(
     ["accountCanBeDeleted", { accountId: account.id }],
     () => {
@@ -389,6 +415,7 @@ function AccountLI({
       });
     }
   );
+
   const deleteAccount = useMutation(
     () => {
       return rpc.post.deleteAccount({
@@ -405,51 +432,100 @@ function AccountLI({
       },
     }
   );
-  const [store, dispatch] = useContext(UserPageStoreContext);
-  return (
-    <Box px="4" mb="1" key={account.id}>
-      <Flex pr="2" justify="between">
-        <Flex align="center" gap="1">
-          <Text
-            style={{ cursor: "pointer" }}
-            onClick={() => {
-              dispatch({
-                type: "TOGGLE_ACCOUNT",
-                payload: account.partitions.map((p) => p.id),
-              });
-            }}
-            weight="medium"
-          >
-            {account.label}
-          </Text>
-          {canBeDeleted.data && (
-            <DeleteButton
-              onClick={async (e) => {
-                e.stopPropagation();
-                await deleteAccount.mutateAsync();
-              }}
-            />
-          )}
-        </Flex>
-        <LoadingValue
-          expect={(value) => value >= 0}
-          queryKey={[
-            "accountBalance",
-            {
-              accountId: account.id,
+
+  const rightClickItems = [
+    ...(canBeDeleted.data
+      ? [
+          {
+            label: "Delete",
+            color: "red" as RadixColor,
+            onClick: (e) => {
+              e.stopPropagation();
+              return deleteAccount.mutateAsync();
             },
-          ]}
-          valueLoader={() =>
-            rpc.post.getAccountBalance({
-              accountId: account.id,
-              userId: user.id,
-              dbname: user.dbname,
-            })
-          }
-        />
-      </Flex>
-      <Partitions accountId={account.id} user={user} />
-    </Box>
+          } as RightClickItem,
+        ]
+      : []),
+  ];
+
+  const partitions = useQuery(["partitions", user.id, account.id], () => {
+    return rpc.post.getPartitions({
+      accountId: account.id,
+      userId: user.id,
+      dbname: user.dbname,
+    });
+  });
+  const [store, dispatch] = useContext(UserPageStoreContext);
+
+  const areAllPartitionsSelected = useMemo(() => {
+    if (partitions?.data) {
+      return partitions.data.every((p) => store.partitionIds.includes(p.id));
+    }
+    return false;
+  }, [partitions?.data, store.partitionIds]);
+
+  const accountGroup = getAccountGroup(account, user.id);
+
+  return (
+    <QueryResult query={partitions} onUndefined={<>No partitions found</>}>
+      {(partitions) => {
+        return (
+          <FoldableList
+            groupedItems={{ [account.id]: partitions }}
+            openValues={accountGroup !== "others" ? [account.id] : []}
+            getHeaderExtraContent={() => {
+              return (
+                <LoadingValue
+                  expect={(value) => value >= 0}
+                  queryKey={[
+                    "accountBalance",
+                    {
+                      accountId: account.id,
+                    },
+                  ]}
+                  valueLoader={() =>
+                    rpc.post.getAccountBalance({
+                      accountId: account.id,
+                      userId: user.id,
+                      dbname: user.dbname,
+                    })
+                  }
+                />
+              );
+            }}
+            getHeaderLabel={() => {
+              return (
+                <WithRightClick rightClickItems={rightClickItems}>
+                  <Text
+                    style={{ cursor: "pointer" }}
+                    onClick={() => {
+                      dispatch({
+                        type: "TOGGLE_ACCOUNT",
+                        payload: account.partitions.map((p) => p.id),
+                      });
+                    }}
+                    weight="medium"
+                    color={areAllPartitionsSelected ? "cyan" : undefined}
+                  >
+                    {account.label}
+                  </Text>
+                </WithRightClick>
+              );
+            }}
+          >
+            {(partition) => {
+              return (
+                <PartitionLI
+                  partition={partition}
+                  user={user}
+                  key={partition.id}
+                />
+              );
+            }}
+          </FoldableList>
+        );
+      }}
+    </QueryResult>
   );
 }
 
@@ -471,69 +547,16 @@ function Accounts({ user }: { user: { id: string; dbname: string } }) {
         const groupedAccounts = groupBy(accounts, (account) => {
           return getAccountGroup(account, user.id);
         });
-        const showTitle =
-          Object.values(groupedAccounts).filter(
-            (accounts) => accounts.length > 0
-          ).length > 1;
-        return (
-          <>
-            {groupedAccounts.owned && (
-              <GroupedAccounts
-                title="Owned"
-                accounts={groupedAccounts.owned || []}
-                user={user}
-                showTitle={showTitle}
-              />
-            )}
-            {groupedAccounts.common && (
-              <GroupedAccounts
-                title="Common"
-                accounts={groupedAccounts.common || []}
-                user={user}
-                showTitle={showTitle}
-              />
-            )}
-            {groupedAccounts.others && (
-              <GroupedAccounts
-                title="Others"
-                accounts={groupedAccounts.others || []}
-                user={user}
-                showTitle={showTitle}
-              />
-            )}
-          </>
-        );
+        const sortedAccounts = [
+          ...(groupedAccounts.owned || []),
+          ...(groupedAccounts.common || []),
+          ...(groupedAccounts.others || []),
+        ];
+        return sortedAccounts.map((account) => (
+          <AccountLI account={account} user={user} key={account.id} />
+        ));
       }}
     </QueryResult>
-  );
-}
-
-function GroupedAccounts(props: {
-  title: string;
-  accounts: Account[];
-  user: { id: string; dbname: string };
-  showTitle: boolean;
-}) {
-  const { title, accounts, user, showTitle } = props;
-  return (
-    <>
-      {showTitle && (
-        <Flex justify="center" align="center" mb="1">
-          <Separator size="3" />
-          <Box px="4">
-            <Text size="1" weight="medium">
-              {title.toUpperCase()}
-            </Text>
-          </Box>
-          <Separator size="3" />
-        </Flex>
-      )}
-      <Box>
-        {accounts.map((account) => (
-          <AccountLI account={account} user={user} key={account.id} />
-        ))}
-      </Box>
-    </>
   );
 }
 
@@ -591,37 +614,49 @@ function PartitionLI({
       },
     }
   );
+  const rightClickItems = [
+    ...(canBeDeleted.data
+      ? [
+          {
+            label: "Delete",
+            color: "red" as RadixColor,
+            onClick: (e) => {
+              e.stopPropagation();
+              return deletePartition.mutateAsync();
+            },
+          } as RightClickItem,
+        ]
+      : []),
+  ];
   const isSelected = store.partitionIds.includes(partition.id);
   const color = isSelected ? "cyan" : undefined;
   return (
-    <Flex pr="2" justify="between">
-      <Box grow="1">
-        <Flex gap="1" align="center">
-          <Checkbox
-            mr="1"
-            onClick={() => {
-              dispatch({ type: "TOGGLE_PARTITIONS", payload: [partition.id] });
-            }}
-            checked={isSelected}
-          />
-          {/* TODO: Allow editing the partition. */}
+    <Flex justify="between">
+      <Flex gap="2">
+        <Box
+          ml="2"
+          pl="1"
+          className={css({
+            backgroundColor: canBeDeleted.data
+              ? "var(--red-8)"
+              : "var(--gray-6)",
+          })}
+        />
+        <WithRightClick rightClickItems={rightClickItems}>
           <Text
             align="center"
             color={color}
             weight={isSelected ? "medium" : "regular"}
+            onClick={(e) => {
+              e.stopPropagation();
+              dispatch({ type: "TOGGLE_PARTITIONS", payload: [partition.id] });
+            }}
+            className={css({ cursor: "pointer" })}
           >
             {partition.name}
           </Text>
-          {canBeDeleted.data && (
-            <DeleteButton
-              onClick={async (e) => {
-                e.stopPropagation();
-                await deletePartition.mutateAsync();
-              }}
-            />
-          )}
-        </Flex>
-      </Box>
+        </WithRightClick>
+      </Flex>
       <LoadingValue
         expect={(value) => value >= 0}
         queryKey={[
@@ -639,35 +674,6 @@ function PartitionLI({
         }
       />
     </Flex>
-  );
-}
-
-function Partitions(props: {
-  accountId: string;
-  user: { id: string; dbname: string };
-}) {
-  const { accountId, user } = props;
-  const partitions = useQuery(["partitions", user.id, accountId], () => {
-    return rpc.post.getPartitions({
-      accountId,
-      userId: user.id,
-      dbname: user.dbname,
-    });
-  });
-  return (
-    <QueryResult
-      query={partitions}
-      onLoading={<>Loading partitions...</>}
-      onUndefined={<>No partitions found</>}
-    >
-      {(partitions) => (
-        <Box>
-          {partitions.map((partition) => (
-            <PartitionLI partition={partition} user={user} key={partition.id} />
-          ))}
-        </Box>
-      )}
-    </QueryResult>
   );
 }
 
@@ -787,7 +793,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
         {(categories) => (
           <FoldableList
             groupedItems={categories}
-            openValues={["Income", "Expense"]}
+            openValues={["Income", "Expense", "Transfer"]}
             getHeaderExtraContent={(kind) => (
               <GenericLoadingValue
                 queryKey={["categoryKindBalance", kind]}
@@ -844,14 +850,15 @@ function FoldableList<X extends { name: string }>(props: {
       <Flex direction="column" px="4">
         {Object.entries(props.groupedItems).map(([key, items]) => (
           <Accordion.Item value={key} key={key}>
-            <Accordion.Header>
+            <Accordion.Header asChild>
               <Flex
-                mr="2"
                 pb="1"
-                my="1"
+                mb="1"
                 justify="between"
                 className={css({
-                  borderBottom: "1px solid var(--gray-3)",
+                  "&[data-state=open]": {
+                    borderBottom: "1px solid var(--gray-4)",
+                  },
                 })}
               >
                 <Flex gap="1">
@@ -878,24 +885,32 @@ function FoldableList<X extends { name: string }>(props: {
                 {props.getHeaderExtraContent(key)}
               </Flex>
             </Accordion.Header>
-            <Accordion.Content
-              className={css({
-                "&[data-state=open]": {
-                  animation: "slideDown 200ms ease",
-                },
-                "&[data-state=closed]": {
-                  animation: "slideUp 200ms ease",
-                },
-                // needed to prevent the content from being visible during the animation
-                overflow: "hidden",
-              })}
-            >
+            <AnimatedAccordionContent>
               <Box mb="2">{items.map(props.children)}</Box>
-            </Accordion.Content>
+            </AnimatedAccordionContent>
           </Accordion.Item>
         ))}
       </Flex>
     </Accordion.Root>
+  );
+}
+
+function AnimatedAccordionContent(props: { children: ReactNode }) {
+  return (
+    <Accordion.Content
+      className={css({
+        "&[data-state=open]": {
+          animation: "slideDown 200ms ease",
+        },
+        "&[data-state=closed]": {
+          animation: "slideUp 200ms ease",
+        },
+        // needed to prevent the content from being visible during the animation
+        overflow: "hidden",
+      })}
+    >
+      {props.children}
+    </Accordion.Content>
   );
 }
 
@@ -1000,7 +1015,7 @@ function CategoryLI({
       : []),
   ];
   return (
-    <Flex justify="between" pr="2">
+    <Flex justify="between">
       <Flex gap="2">
         <Box
           ml="2"
