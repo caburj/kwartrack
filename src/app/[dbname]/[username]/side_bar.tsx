@@ -759,7 +759,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
         {(categories) => (
           <FoldableList
             groupedItems={categories}
-            openValues={["Income", "Expense", "Transfer"]}
+            openValues={["Income", "Expense"]}
             onClickLabel={selectCategories}
             getHeaderExtraContent={(kind) => (
               <GLoadingValue
@@ -817,7 +817,18 @@ function FoldableList<X extends { name: string }>(props: {
                 })}
               >
                 <Flex gap="1">
-                  <Accordion.Trigger>
+                  <Accordion.Trigger
+                    className={css({
+                      "& svg": {
+                        transition: "transform 200ms ease",
+                      },
+                      "&[data-state=open]": {
+                        "& svg": {
+                          transform: "rotate(90deg)",
+                        },
+                      },
+                    })}
+                  >
                     <ChevronRightIcon
                       className={css({
                         cursor: "pointer",
@@ -838,7 +849,16 @@ function FoldableList<X extends { name: string }>(props: {
                 {props.getHeaderExtraContent(key)}
               </Flex>
             </Accordion.Header>
-            <Accordion.Content>
+            <Accordion.Content className={css({
+              "&[data-state=open]": {
+                animation: "slideDown 200ms ease"
+              },
+              "&[data-state=closed]": {
+                animation: "slideUp 200ms ease"
+              },
+              // needed to prevent the content from being visible during the animation
+              overflow: "hidden"
+            })}>
               <Box mb="2">{items.map(props.children)}</Box>
             </Accordion.Content>
           </Accordion.Item>
