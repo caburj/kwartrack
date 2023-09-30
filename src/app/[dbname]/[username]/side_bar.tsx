@@ -2,7 +2,13 @@
 
 import { rpc } from "../../rpc_client";
 import { css } from "../../../../styled-system/css";
-import { MouseEventHandler, useContext, useState, useRef } from "react";
+import {
+  MouseEventHandler,
+  useContext,
+  useState,
+  useRef,
+  ReactNode,
+} from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { boolean, minLength, object, optional, string } from "valibot";
 import { UserPageStoreContext } from "./store";
@@ -30,7 +36,7 @@ import {
   Grid,
   ContextMenu,
 } from "@radix-ui/themes";
-import { Cross1Icon, PlusIcon } from "@radix-ui/react-icons";
+import { ChevronRightIcon, Cross1Icon, PlusIcon } from "@radix-ui/react-icons";
 import * as Accordion from "@radix-ui/react-accordion";
 
 type FindUserResult = NonNullable<
@@ -701,76 +707,89 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
         onUndefined={<>No categories found</>}
       >
         {(categories) => (
-          <Accordion.Root
-            type="multiple"
-            defaultValue={Object.keys(categories)}
+          <FoldableList
+            groupedItems={categories}
+            openValues={["Income", "Expense", "Transfer"]}
+            onClickLabel={selectCategories}
+            getHeaderExtraContent={(kind) => (
+              <LoadingValue
+                expect={(value) =>
+                  kind === "Expense" ? value <= 0 : value >= 0
+                }
+                queryKey={["categoryKindBalance", kind]}
+                valueLoader={() =>
+                  rpc.post.getCategoryKindBalance({
+                    kind,
+                    userId: user.id,
+                    dbname: user.dbname,
+                  })
+                }
+              />
+            )}
+            getHeaderLabel={(kind) => kind}
           >
-            <Flex direction="column" px="4">
-              {Object.entries(categories).map(([kind, categories]) => (
-                <Accordion.Item value={kind} key={kind}>
-                  <Accordion.Header>
-                    <Flex
-                      mr="2"
-                      pb="1"
-                      my="1"
-                      justify="between"
-                      className={css({
-                        borderBottom: "1px solid var(--gray-3)",
-                      })}
-                    >
-                      <Accordion.Trigger>
-                        <RightClick
-                          items={[
-                            {
-                              label: "Toggle All",
-                              onClick: (e) => {
-                                e.stopPropagation();
-                                selectCategories(kind);
-                              },
-                            },
-                          ]}
-                        >
-                          <Text
-                            weight="medium"
-                            className={css({ cursor: "pointer" })}
-                          >
-                            {kind}
-                          </Text>
-                        </RightClick>
-                      </Accordion.Trigger>
-                      <LoadingValue
-                        expect={(value) =>
-                          kind === "Expense" ? value <= 0 : value >= 0
-                        }
-                        queryKey={["categoryKindBalance", kind]}
-                        valueLoader={() =>
-                          rpc.post.getCategoryKindBalance({
-                            kind,
-                            userId: user.id,
-                            dbname: user.dbname,
-                          })
-                        }
-                      />
-                    </Flex>
-                  </Accordion.Header>
-                  <Accordion.Content>
-                    <Box mb="2">
-                      {categories.map((category) => (
-                        <CategoryLI
-                          key={category.id}
-                          category={category}
-                          user={user}
-                        />
-                      ))}
-                    </Box>
-                  </Accordion.Content>
-                </Accordion.Item>
-              ))}
-            </Flex>
-          </Accordion.Root>
+            {(category) => (
+              <CategoryLI key={category.id} category={category} user={user} />
+            )}
+          </FoldableList>
         )}
       </QueryResult>
     </>
+  );
+}
+
+function FoldableList<X extends { name: string }>(props: {
+  openValues: string[];
+  groupedItems: Record<string, X[]>;
+  onClickLabel: (key: string) => void | Promise<void>;
+  getHeaderExtraContent: (key: string) => ReactNode;
+  getHeaderLabel: (key: string) => string;
+  children: (item: X) => ReactNode;
+}) {
+  return (
+    <Accordion.Root type="multiple" defaultValue={props.openValues}>
+      <Flex direction="column" px="4">
+        {Object.entries(props.groupedItems).map(([key, items]) => (
+          <Accordion.Item value={key} key={key}>
+            <Accordion.Header>
+              <Flex
+                mr="2"
+                pb="1"
+                my="1"
+                justify="between"
+                className={css({
+                  borderBottom: "1px solid var(--gray-3)",
+                })}
+              >
+                <Flex gap="1">
+                  <Accordion.Trigger>
+                    <ChevronRightIcon
+                      className={css({
+                        cursor: "pointer",
+                      })}
+                    />
+                  </Accordion.Trigger>
+                  <Text
+                    weight="medium"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      props.onClickLabel(key);
+                    }}
+                    className={css({ cursor: "pointer " })}
+                  >
+                    {props.getHeaderLabel(key)}
+                  </Text>
+                </Flex>
+                {props.getHeaderExtraContent(key)}
+              </Flex>
+            </Accordion.Header>
+            <Accordion.Content>
+              <Box mb="2">{items.map(props.children)}</Box>
+            </Accordion.Content>
+          </Accordion.Item>
+        ))}
+      </Flex>
+    </Accordion.Root>
   );
 }
 
