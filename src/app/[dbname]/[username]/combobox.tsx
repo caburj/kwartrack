@@ -9,7 +9,7 @@ import {
   Text,
 } from "@radix-ui/themes";
 import { Command } from "cmdk";
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import { css } from "../../../../styled-system/css";
 import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { RadixColor } from "@/utils/common";
@@ -96,13 +96,17 @@ export function Combobox<
   );
 }
 
-export function ComboboxTrigger(props: {
-  children: React.ReactNode;
-  color?: RadixColor;
-}) {
+export const ComboboxTrigger = forwardRef(function ComboboxTrigger(
+  props: {
+    children: React.ReactNode;
+    color?: RadixColor;
+  },
+  ref: React.Ref<HTMLButtonElement>
+) {
   return (
     <Popover.Trigger>
       <button
+        ref={ref}
         style={{ outlineColor: `var(--${props.color ?? "gray"}-9)` }}
         onKeyUp={(ev) => {
           if (["ArrowDown"].includes(ev.key)) {
@@ -122,4 +126,4 @@ export function ComboboxTrigger(props: {
       </button>
     </Popover.Trigger>
   );
-}
+});

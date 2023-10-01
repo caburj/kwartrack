@@ -17,7 +17,14 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import {
+  ForwardedRef,
+  forwardRef,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { number, object, optional, string } from "valibot";
 import { Flex, Table, IconButton } from "@radix-ui/themes";
 import { atom, useAtom } from "jotai";
@@ -28,7 +35,10 @@ const selectedCategoryIdAtom = atom("");
 const selectedSourcePartitionIdAtom = atom("");
 const selectedDestinationPartitionIdAtom = atom("");
 
-function CategoryComboBox(props: { categories: Categories }) {
+const CategoryComboBox = forwardRef(function CategoryComboBox(
+  props: { categories: Categories },
+  ref: ForwardedRef<HTMLButtonElement>
+) {
   const { categories } = props;
   const [selectedCategoryId, setSelectedCategoryId] = useAtom(
     selectedCategoryIdAtom
@@ -61,10 +71,12 @@ function CategoryComboBox(props: { categories: Categories }) {
       getItemDisplay={(c) => getCategoryOptionName(c)}
       onSelectItem={(c) => setSelectedCategoryId(c.id)}
     >
-      <ComboboxTrigger color={color}>{categoryName}</ComboboxTrigger>
+      <ComboboxTrigger ref={ref} color={color}>
+        {categoryName}
+      </ComboboxTrigger>
     </Combobox>
   );
-}
+});
 
 function PartitionCombobox(props: {
   partitions: Partitions;
@@ -164,6 +176,8 @@ export function TransactionForm(props: {
     return selectedCategory ? selectedCategory.kind : "";
   }, [selectedCategory]);
 
+  const categoryButtonRef = useRef<HTMLButtonElement>(null);
+
   let value: number | undefined = undefined;
   try {
     value = parseFloat(inputValue);
@@ -245,6 +259,8 @@ export function TransactionForm(props: {
       invalidateMany(queryClient, queryKeys);
     }
     invalidateMany(queryClient, queryKeys);
+
+    categoryButtonRef.current?.focus();
   };
 
   return (
@@ -260,7 +276,9 @@ export function TransactionForm(props: {
       <Table.Cell></Table.Cell>
       <Table.Cell>
         <QueryResult query={categories}>
-          {(categories) => <CategoryComboBox categories={categories} />}
+          {(categories) => (
+            <CategoryComboBox ref={categoryButtonRef} categories={categories} />
+          )}
         </QueryResult>
       </Table.Cell>
       <Table.Cell>
@@ -309,7 +327,7 @@ export function TransactionForm(props: {
           }}
           autoComplete="off"
           disabled={createTransaction.isLoading}
-          style={{ textAlign: "right" }}
+          style={{ textAlign: "right", width: "100%" }}
         />
       </Table.Cell>
       <Table.Cell>
