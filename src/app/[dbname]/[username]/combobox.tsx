@@ -108,7 +108,7 @@ export const ComboboxTrigger = forwardRef(function ComboboxTrigger(
       <button
         ref={ref}
         style={{ outlineColor: `var(--${props.color ?? "gray"}-9)` }}
-        onKeyUp={(ev) => {
+        onKeyDown={(ev) => {
           if (["ArrowDown"].includes(ev.key)) {
             ev.preventDefault();
             ev.stopPropagation();
