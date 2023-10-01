@@ -91,7 +91,11 @@ export function SideBar({ user }: { user: FindUserResult }) {
       top="0"
       left="0"
       bottom="0"
-      style={{ minWidth: "350px" }}
+      style={{
+        minWidth: "350px",
+        borderRight: "1px solid var(--gray-a5)",
+        backgroundColor: "var(--gray-a2)",
+      }}
     >
       <Flex direction="column" height="100%">
         <ScrollArea scrollbars="vertical">
