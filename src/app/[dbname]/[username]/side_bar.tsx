@@ -39,6 +39,7 @@ import {
   Grid,
   ContextMenu,
   Badge,
+  Section,
 } from "@radix-ui/themes";
 import { ChevronRightIcon, Cross1Icon, PlusIcon } from "@radix-ui/react-icons";
 import * as Accordion from "@radix-ui/react-accordion";
@@ -288,7 +289,6 @@ export function SideBar({ user }: { user: FindUserResult }) {
                   justify="between"
                   py="1"
                   px="4"
-                  mb="1"
                   className={css({
                     borderBottom: "1px solid var(--gray-a4)",
                     backgroundColor: "var(--gray-a3)",
@@ -481,26 +481,6 @@ function AccountLI({
           <FoldableList
             groupedItems={{ [account.id]: partitions }}
             openValues={accountGroup !== "others" ? [account.id] : []}
-            getHeaderExtraContent={() => {
-              return (
-                <LoadingValue
-                  expect={(value) => value >= 0}
-                  queryKey={[
-                    "accountBalance",
-                    {
-                      accountId: account.id,
-                    },
-                  ]}
-                  valueLoader={() =>
-                    rpc.post.getAccountBalance({
-                      accountId: account.id,
-                      userId: user.id,
-                      dbname: user.dbname,
-                    })
-                  }
-                />
-              );
-            }}
             getHeaderLabel={() => {
               return (
                 <WithRightClick rightClickItems={rightClickItems}>
@@ -518,6 +498,49 @@ function AccountLI({
                     {account.label}
                   </Text>
                 </WithRightClick>
+              );
+            }}
+            getHeaderExtraContent={() => {
+              return (
+                <GenericLoadingValue
+                  queryKey={[
+                    "accountBalance",
+                    {
+                      accountId: account.id,
+                    },
+                  ]}
+                  valueLoader={() =>
+                    rpc.post.getAccountBalance({
+                      accountId: account.id,
+                      userId: user.id,
+                      dbname: user.dbname,
+                    })
+                  }
+                >
+                  {(value) => {
+                    const parsedValue = parseFloat(value);
+                    let color: RadixColor;
+                    let weight: "medium" | "bold" = "medium";
+                    const asExpected = parsedValue >= 0;
+                    if (!asExpected) {
+                      color = "red";
+                      weight = "bold";
+                    }
+                    let result;
+                    if (isNaN(parsedValue)) {
+                      result = value;
+                    } else {
+                      result = formatValue(
+                        asExpected ? Math.abs(parsedValue) : parsedValue
+                      );
+                    }
+                    return (
+                      <Text color={color} weight={weight}>
+                        {result}
+                      </Text>
+                    );
+                  }}
+                </GenericLoadingValue>
               );
             }}
           >
@@ -560,9 +583,13 @@ function Accounts({ user }: { user: { id: string; dbname: string } }) {
           ...(groupedAccounts.common || []),
           ...(groupedAccounts.others || []),
         ];
-        return sortedAccounts.map((account) => (
-          <AccountLI account={account} user={user} key={account.id} />
-        ));
+        return (
+          <Flex direction="column" mb="2">
+            {sortedAccounts.map((account) => (
+              <AccountLI account={account} user={user} key={account.id} />
+            ))}
+          </Flex>
+        );
       }}
     </QueryResult>
   );
@@ -653,53 +680,70 @@ function PartitionLI({
       : []),
   ];
   const isSelected = store.partitionIds.includes(partition.id);
-  const variant = partition.is_private ? "outline" : "soft";
+  const variant = isSelected
+    ? "solid"
+    : partition.is_private
+    ? "outline"
+    : "soft";
   const _type = getPartitionType(partition, user.id);
-  const color = PARTITION_COLOR[_type];
+  const color = isSelected ? "cyan" : PARTITION_COLOR[_type];
   return (
-    <Flex justify="between">
-      <Flex gap="2">
-        <Box
-          pl="1"
-          className={css({
-            backgroundColor: isSelected
-              ? "var(--cyan-8)"
-              : canBeDeleted.data
-              ? "var(--red-8)"
-              : "var(--gray-a5)",
-          })}
-        />
-        <WithRightClick rightClickItems={rightClickItems}>
-          <Badge
-            my="1"
-            color={color}
-            variant={variant}
-            style={{ cursor: "pointer" }}
-            onClick={(e) => {
-              e.stopPropagation();
-              dispatch({ type: "TOGGLE_PARTITIONS", payload: [partition.id] });
-            }}
-          >
-            {partition.name}
-          </Badge>
-        </WithRightClick>
-      </Flex>
-      <LoadingValue
-        expect={(value) => value >= 0}
-        queryKey={[
-          "partitionBalance",
-          {
-            partitionId: partition.id,
-          },
-        ]}
-        valueLoader={() =>
-          rpc.post.getPartitionBalance({
-            partitionId: partition.id,
-            userId: user.id,
-            dbname: user.dbname,
-          })
-        }
-      />
+    <Flex justify="between" m="2">
+      <WithRightClick rightClickItems={rightClickItems}>
+        <Badge
+          color={color}
+          variant={variant}
+          style={{ cursor: "pointer" }}
+          onClick={(e) => {
+            e.stopPropagation();
+            dispatch({ type: "TOGGLE_PARTITIONS", payload: [partition.id] });
+          }}
+        >
+          {partition.name}
+        </Badge>
+      </WithRightClick>
+      <QueryResult
+        query={useQuery(
+          [
+            "partitionBalance",
+            {
+              partitionId: partition.id,
+            },
+          ],
+          () =>
+            rpc.post.getPartitionBalance({
+              partitionId: partition.id,
+              userId: user.id,
+              dbname: user.dbname,
+            })
+        )}
+        onLoading={<>...</>}
+        onUndefined={<>Missing Value</>}
+      >
+        {(value) => {
+          const parsedValue = parseFloat(value);
+          let color: RadixColor;
+          let weight: "regular" | "bold" = "regular";
+          const asExpected = parsedValue >= 0;
+          if (!asExpected) {
+            color = "red";
+            weight = "bold";
+          }
+          let result;
+          if (isNaN(parsedValue)) {
+            result = value;
+          } else {
+            result = formatValue(
+              asExpected ? Math.abs(parsedValue) : parsedValue
+            );
+          }
+          return (
+            <Text color={color} weight={weight}>
+              {result}
+            </Text>
+          );
+        }}
+      </QueryResult>
     </Flex>
   );
 }
@@ -811,7 +855,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
   );
 
   return (
-    <>
+    <Flex direction="column" mb="2">
       <QueryResult
         query={categories}
         onLoading={<>Loading categories...</>}
@@ -861,7 +905,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
           </FoldableList>
         )}
       </QueryResult>
-    </>
+    </Flex>
   );
 }
 
@@ -878,16 +922,7 @@ function FoldableList<X extends { name: string }>(props: {
         {Object.entries(props.groupedItems).map(([key, items]) => (
           <Accordion.Item value={key} key={key}>
             <Accordion.Header asChild>
-              <Flex
-                pb="1"
-                mb="1"
-                justify="between"
-                className={css({
-                  "&[data-state=open]": {
-                    borderBottom: "1px solid var(--gray-a5)",
-                  },
-                })}
-              >
+              <Flex py="1" pr="2" justify="between">
                 <Flex gap="1">
                   <Accordion.Trigger
                     className={css({
@@ -913,7 +948,14 @@ function FoldableList<X extends { name: string }>(props: {
               </Flex>
             </Accordion.Header>
             <AnimatedAccordionContent>
-              <Box mb="2">{items.map(props.children)}</Box>
+              <Box
+                className={css({
+                  border: "1px solid var(--gray-a5)",
+                  borderRadius: "var(--radius-3)",
+                })}
+              >
+                {items.map(props.children)}
+              </Box>
             </AnimatedAccordionContent>
           </Accordion.Item>
         ))}
@@ -1040,34 +1082,27 @@ function CategoryLI({
         ]
       : []),
   ];
+  const color = isSelected ? "cyan" : CATEGORY_COLOR[category.kind];
+  const variant = isSelected
+    ? "solid"
+    : category.is_private
+    ? "outline"
+    : "soft";
   return (
-    <Flex justify="between">
-      <Flex gap="2">
-        <Box
-          pl="1"
-          className={css({
-            backgroundColor: isSelected
-              ? "var(--cyan-8)"
-              : canBeRemoved
-              ? "var(--red-8)"
-              : "var(--gray-a5)",
-          })}
-        />
-        <WithRightClick rightClickItems={rightClickItems}>
-          <Badge
-            my="1"
-            color={CATEGORY_COLOR[category.kind]}
-            variant={category.is_private ? "outline" : "soft"}
-            style={{ cursor: "pointer" }}
-            onClick={(e) => {
-              e.stopPropagation();
-              dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
-            }}
-          >
-            {category.name}
-          </Badge>
-        </WithRightClick>
-      </Flex>
+    <Flex justify="between" m="2">
+      <WithRightClick rightClickItems={rightClickItems}>
+        <Badge
+          color={color}
+          variant={variant}
+          style={{ cursor: "pointer" }}
+          onClick={(e) => {
+            e.stopPropagation();
+            dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
+          }}
+        >
+          {category.name}
+        </Badge>
+      </WithRightClick>
       <GenericLoadingValue
         queryKey={[
           "categoryBalance",
@@ -1151,55 +1186,11 @@ function GenericLoadingValue(props: {
   );
 }
 
-function LoadingValue(props: {
-  expect: (value: number) => boolean;
-  queryKey: [string, ...any];
-  valueLoader: () => Promise<string>;
-}) {
-  return (
-    <GenericLoadingValue {...props}>
-      {(value) => {
-        const parsedValue = parseFloat(value);
-        let color: RadixColor;
-        let weight: "regular" | "bold" = "regular";
-        const asExpected = props.expect(parsedValue);
-        if (!asExpected) {
-          color = "red";
-          weight = "bold";
-        }
-        let result;
-        if (isNaN(parsedValue)) {
-          result = value;
-        } else {
-          result = formatValue(
-            asExpected ? Math.abs(parsedValue) : parsedValue
-          );
-        }
-        return (
-          <Text color={color} weight={weight}>
-            {result}
-          </Text>
-        );
-      }}
-    </GenericLoadingValue>
-  );
-}
-
 function TwoColumnInput(props: { children: React.ReactNode }) {
   return (
     <Grid asChild columns="125px 1fr" align="center">
       <label>{props.children}</label>
     </Grid>
-  );
-}
-
-function DeleteButton(props: {
-  onClick: MouseEventHandler<HTMLButtonElement>;
-}) {
-  return (
-    <IconButton color="crimson" variant="ghost" onClick={props.onClick}>
-      <Cross1Icon />
-    </IconButton>
   );
 }
 
