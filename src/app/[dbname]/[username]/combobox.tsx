@@ -11,7 +11,7 @@ import {
 import { Command } from "cmdk";
 import { useState } from "react";
 import { css } from "../../../../styled-system/css";
-import { CaretSortIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { RadixColor } from "@/utils/common";
 
 export function Combobox<
@@ -102,9 +102,8 @@ export function ComboboxTrigger(props: {
 }) {
   return (
     <Popover.Trigger>
-      <Badge
-        variant="outline"
-        color={props.color ?? "gray"}
+      <button
+        style={{ outlineColor: `var(--${props.color ?? "gray"}-9)` }}
         onKeyUp={(ev) => {
           if (["ArrowDown"].includes(ev.key)) {
             ev.preventDefault();
@@ -112,10 +111,15 @@ export function ComboboxTrigger(props: {
             ev.currentTarget.click();
           }
         }}
-        style={{ cursor: "pointer" }}
       >
-        <Text>{props.children}</Text>
-      </Badge>
+        <Badge
+          variant="outline"
+          color={props.color ?? "gray"}
+          style={{ cursor: "pointer" }}
+        >
+          <Text>{props.children}</Text>
+        </Badge>
+      </button>
     </Popover.Trigger>
   );
 }
