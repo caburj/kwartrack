@@ -26,7 +26,7 @@ input {
     margin: 0;
 
     &::placeholder {
-      color: var(--gray-9);
+      color: var(--gray-a9);
     }
   }
 
@@ -37,7 +37,7 @@ input {
     display: flex;
     align-items: center;
     padding: 0 var(--space-2);
-    color: var(--gray-12);
+    color: var(--gray-a12);
     user-select: none;
     will-change: background, color;
     transition: all 150ms ease;
@@ -54,18 +54,18 @@ input {
         z-index: 123;
         width: 3px;
         height: 100%;
-        background: var(--gray-9);
+        background: var(--gray-a9);
       }
     }
 
     &[data-disabled='true'] {
-      color: var(--gray-8);
+      color: var(--gray-a8);
       cursor: not-allowed;
     }
 
     &:active {
       transition-property: background;
-      background: var(--gray-4);
+      background: var(--gray-a4);
     }
 
     & + [cmdk-item] {
@@ -76,7 +76,7 @@ input {
   [cmdk-group-heading] {
     user-select: none;
     font-size: var(--font-size-1);
-    color: var(--gray-9);
+    color: var(--gray-a9);
     padding: var(--space-2) 0;
     display: flex;
     align-items: center;

@@ -38,7 +38,7 @@ export function Combobox<
             p="2"
             gap="1"
             className={css({
-              borderBottom: "1px solid var(--gray-6)",
+              borderBottom: "1px solid var(--gray-a6)",
             })}
           >
             <Grid align="center">

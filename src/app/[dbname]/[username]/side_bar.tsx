@@ -105,24 +105,26 @@ export function SideBar({ user }: { user: FindUserResult }) {
           >
             <Accordion.Item
               value="accounts"
-              className={css({ marginBottom: "8px" })}
+              className={css({
+                "&[data-state=open]": {
+                  borderBottom: "1px solid var(--gray-a6)",
+                },
+              })}
             >
               <Accordion.Header>
                 <Flex
                   align="center"
                   justify="between"
-                  pt="2"
-                  pb="1"
-                  mb="1"
+                  py="1"
                   px="4"
                   className={css({
-                    borderBottom: "1px solid var(--gray-4)",
-                    shadow: "0px 2px 2px -2px rgba(22, 23, 24, 0.35)",
+                    borderBottom: "1px solid var(--gray-a6)",
+                    backgroundColor: "var(--gray-a3)",
                   })}
                 >
                   <Accordion.Trigger>
                     <Text
-                      size="4"
+                      size="3"
                       weight="bold"
                       className={css({ cursor: "pointer" })}
                     >
@@ -279,26 +281,22 @@ export function SideBar({ user }: { user: FindUserResult }) {
                 <Accounts user={user} />
               </AnimatedAccordionContent>
             </Accordion.Item>
-            <Accordion.Item
-              value="categories"
-              className={css({ marginBottom: "8px" })}
-            >
+            <Accordion.Item value="categories">
               <Accordion.Header>
                 <Flex
                   align="center"
                   justify="between"
-                  pt="2"
-                  pb="1"
-                  mb="1"
+                  py="1"
                   px="4"
+                  mb="1"
                   className={css({
-                    borderBottom: "1px solid var(--gray-4)",
-                    shadow: "0px 2px 2px -2px rgba(22, 23, 24, 0.35)",
+                    borderBottom: "1px solid var(--gray-a6)",
+                    backgroundColor: "var(--gray-a3)",
                   })}
                 >
                   <Accordion.Trigger>
                     <Text
-                      size="4"
+                      size="3"
                       weight="bold"
                       className={css({ cursor: "pointer" })}
                     >
@@ -668,7 +666,7 @@ function PartitionLI({
               ? "var(--cyan-8)"
               : canBeDeleted.data
               ? "var(--red-8)"
-              : "var(--gray-6)",
+              : "var(--gray-a6)",
           })}
         />
         <WithRightClick rightClickItems={rightClickItems}>
@@ -886,7 +884,7 @@ function FoldableList<X extends { name: string }>(props: {
                 justify="between"
                 className={css({
                   "&[data-state=open]": {
-                    borderBottom: "1px solid var(--gray-4)",
+                    borderBottom: "1px solid var(--gray-a4)",
                   },
                 })}
               >
@@ -1052,7 +1050,7 @@ function CategoryLI({
               ? "var(--cyan-8)"
               : canBeRemoved
               ? "var(--red-8)"
-              : "var(--gray-6)",
+              : "var(--gray-a6)",
           })}
         />
         <WithRightClick rightClickItems={rightClickItems}>
