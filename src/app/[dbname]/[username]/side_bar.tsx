@@ -464,7 +464,7 @@ function AccountLI({
   const [store, dispatch] = useContext(UserPageStoreContext);
 
   const areAllPartitionsSelected = useMemo(() => {
-    if (partitions?.data) {
+    if (partitions?.data && partitions.data.length > 0) {
       return partitions.data.every((p) => store.partitionIds.includes(p.id));
     }
     return false;
@@ -473,7 +473,7 @@ function AccountLI({
   const accountGroup = getAccountGroup(account, user.id);
 
   return (
-    <QueryResult query={partitions} onUndefined={<>No partitions found</>}>
+    <QueryResult query={partitions}>
       {(partitions) => {
         return (
           <FoldableList

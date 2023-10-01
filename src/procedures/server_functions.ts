@@ -159,9 +159,7 @@ export const getPartitions = withValidation(
         .createClient({ database: dbname })
         .withGlobals({ current_user_id: userId })
     );
-    if (result.length !== 0) {
-      return result;
-    }
+    return result;
   }
 );
 
