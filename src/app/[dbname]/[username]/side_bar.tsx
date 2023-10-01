@@ -74,7 +74,7 @@ const newCategorySchema = object({
   isPrivate: boolean(),
 });
 
-export function SideBar({ user }: { user: FindUserResult }) {
+export function SideBar({ user, width }: { user: FindUserResult, width: number }) {
   const queryClient = useQueryClient();
   const categoryFormRef = useRef<HTMLFormElement>(null);
   const partitionFormRef = useRef<HTMLFormElement>(null);
@@ -93,7 +93,7 @@ export function SideBar({ user }: { user: FindUserResult }) {
       left="0"
       bottom="0"
       style={{
-        minWidth: "350px",
+        minWidth: `${width}px`,
         borderRight: "1px solid var(--gray-a5)",
         backgroundColor: "var(--gray-a2)",
       }}
