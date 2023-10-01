@@ -30,6 +30,7 @@ import { Flex, Table, IconButton } from "@radix-ui/themes";
 import { atom, useAtom } from "jotai";
 import { Combobox, ComboboxTrigger } from "./combobox";
 import { ChevronRightIcon, PaperPlaneIcon } from "@radix-ui/react-icons";
+import { css } from "../../../../styled-system/css";
 
 const selectedCategoryIdAtom = atom("");
 const selectedSourcePartitionIdAtom = atom("");
@@ -272,6 +273,12 @@ export function TransactionForm(props: {
           return onSubmit();
         }
       }}
+      className={css({
+        "& td:focus-within": {
+          outline: "2px solid var(--accent-a8)",
+          outlineOffset: "-2px",
+        },
+      })}
     >
       <Table.Cell></Table.Cell>
       <Table.Cell>
