@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { UserPageStoreProvider } from "./store";
 import { QueryResult } from "@/utils/common";
 import { Box, Flex } from "@radix-ui/themes";
-import { TransactionForm } from "./transaction_form";
 import { TransactionsTable } from "./transactions_table";
 import { SideBar } from "./side_bar";
 
@@ -49,7 +48,6 @@ export function UserPage({
             }}
           >
             <Flex direction="column" p="2" height="100%">
-              <TransactionForm user={user} />
               <TransactionsTable user={user} />
             </Flex>
           </Box>

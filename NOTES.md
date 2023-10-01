@@ -128,6 +128,8 @@
 
 * [ ] Authentication.
 
+* [ ] Bordered sidebar with darker (or different) background.
+
 
 # IDEA / NICE TO HAVE (MAYBE)
 

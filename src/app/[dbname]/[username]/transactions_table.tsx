@@ -21,7 +21,6 @@ import {
 } from "@/utils/common";
 import {
   Badge,
-  Box,
   Flex,
   IconButton,
   Popover,
@@ -38,6 +37,7 @@ import {
 } from "@radix-ui/react-icons";
 import { Combobox } from "./combobox";
 import { css } from "../../../../styled-system/css";
+import { TransactionForm } from "./transaction_form";
 
 type Transaction = Unpacked<
   NonNullable<Awaited<ReturnType<typeof rpc.post.findTransactions>>>[0]
@@ -249,9 +249,9 @@ export function TransactionsTable({
             isCounterpart={false}
             isEditable={isEditable}
           />
-          <Box px="1">
-            <ChevronRightIcon width="16" height="16" />
-          </Box>
+          <Flex align="center">
+            <ChevronRightIcon />
+          </Flex>
           <PartitionBadge
             partitions={partitions.data ?? []}
             transaction={transaction}
@@ -285,24 +285,22 @@ export function TransactionsTable({
 
   return (
     <>
-      <Flex justify="between" m="2">
-        <Flex gap="3" align="center">
-          <Text weight="medium">Items per page</Text>
-          <TextField.Root>
-            <TextField.Input
-              placeholder="Search the docs…"
-              type="number"
-              min="1"
-              max="100"
-              value={store.nPerPage}
-              onChange={(event) => {
-                const value = parseInt(event.target.value);
-                if (isNaN(value)) return;
-                dispatch({ type: "SET_N_PER_PAGE", payload: value });
-              }}
-            />
-          </TextField.Root>
-        </Flex>
+      <Flex m="2" mt="0" gap="3" align="center">
+        <Text weight="medium">Items per page</Text>
+        <TextField.Root>
+          <TextField.Input
+            placeholder="Search the docs…"
+            type="number"
+            min="1"
+            max="100"
+            value={store.nPerPage}
+            onChange={(event) => {
+              const value = parseInt(event.target.value);
+              if (isNaN(value)) return;
+              dispatch({ type: "SET_N_PER_PAGE", payload: value });
+            }}
+          />
+        </TextField.Root>
         <Flex gap="3" align="center">
           <IconButton
             onClick={decrementPage}
@@ -333,185 +331,197 @@ export function TransactionsTable({
               <Table.ColumnHeaderCell></Table.ColumnHeaderCell>
             </Table.Row>
           </Table.Header>
-          <QueryResult query={transactions}>
-            {([transactions]) => (
-              <Table.Body>
-                {transactions.map((transaction) => {
-                  const allowedCategories =
-                    categories.data?.[transaction.category.kind] ?? [];
-                  const variant = transaction.category.is_private
-                    ? "outline"
-                    : "soft";
-                  return (
-                    <Table.Row
-                      key={transaction.id}
-                      className={css({ "& td": { whiteSpace: "nowrap" } })}
-                    >
-                      <Table.Cell>{transaction.str_date.slice(5)}</Table.Cell>
-                      <Table.Cell>
-                        <Combobox
-                          groupedItems={{
-                            [transaction.category.kind]: allowedCategories,
-                          }}
-                          getGroupHeading={(key) => key}
-                          getItemDisplay={(cat) => getCategoryOptionName(cat)}
-                          getItemValue={(cat) =>
-                            `${
-                              transaction.category.kind
-                            } ${getCategoryOptionName(cat)}`
-                          }
-                          getItemColor={(cat) => CATEGORY_COLOR[cat.kind]}
-                          onSelectItem={async (cat) => {
-                            await updateTransaction.mutateAsync({
-                              transaction,
-                              categoryId: cat.id,
-                            });
-                            invalidateMany(queryClient, [
-                              ["transactions"],
-                              [
-                                "categoryBalance",
-                                { categoryId: transaction.category.id },
-                              ],
-                              ["categoryBalance", { categoryId: cat.id }],
-                              [
-                                "categoryCanBeDeleted",
-                                { categoryId: transaction.category.id },
-                              ],
-                              ["categoryCanBeDeleted", { categoryId: cat.id }],
-                            ]);
-                          }}
-                        >
-                          <Popover.Trigger>
-                            <Badge
-                              color={CATEGORY_COLOR[transaction.category.kind]}
-                              variant={variant}
-                              style={{ cursor: "pointer" }}
-                            >
-                              {transaction.category.name}
-                            </Badge>
-                          </Popover.Trigger>
-                        </Combobox>
-                      </Table.Cell>
-                      <Table.Cell>{getPartitionColumn(transaction)}</Table.Cell>
-                      <Table.Cell justify="end">
-                        {formatValue(Math.abs(parseFloat(transaction.value)))}
-                      </Table.Cell>
-                      <Table.Cell style={{ minWidth: "300px" }}>
-                        {transaction.description}
-                      </Table.Cell>
-                      <Table.Cell>
-                        {shouldShowDelete(transaction) && (
-                          <IconButton
-                            variant="ghost"
-                            color="crimson"
-                            onClick={async () => {
-                              setIsDeleting(true);
-                              await rpc.post.deleteTransaction({
-                                transactionId: transaction.id,
-                                userId: user.id,
-                                dbname: user.dbname,
+          <Table.Body>
+            <TransactionForm user={user} />
+            <QueryResult query={transactions}>
+              {([transactions]) => (
+                <>
+                  {transactions.map((transaction) => {
+                    const allowedCategories =
+                      categories.data?.[transaction.category.kind] ?? [];
+                    const variant = transaction.category.is_private
+                      ? "outline"
+                      : "soft";
+                    return (
+                      <Table.Row
+                        key={transaction.id}
+                        className={css({ "& td": { whiteSpace: "nowrap" } })}
+                      >
+                        <Table.Cell>{transaction.str_date.slice(5)}</Table.Cell>
+                        <Table.Cell>
+                          <Combobox
+                            groupedItems={{
+                              [transaction.category.kind]: allowedCategories,
+                            }}
+                            getGroupHeading={(key) => key}
+                            getItemDisplay={(cat) => getCategoryOptionName(cat)}
+                            getItemValue={(cat) =>
+                              `${
+                                transaction.category.kind
+                              } ${getCategoryOptionName(cat)}`
+                            }
+                            getItemColor={(cat) => CATEGORY_COLOR[cat.kind]}
+                            onSelectItem={async (cat) => {
+                              await updateTransaction.mutateAsync({
+                                transaction,
+                                categoryId: cat.id,
                               });
-                              const queryKeys: QueryKey[] = [
+                              invalidateMany(queryClient, [
                                 ["transactions"],
-                                ["user", user.id],
+                                [
+                                  "categoryBalance",
+                                  { categoryId: transaction.category.id },
+                                ],
+                                ["categoryBalance", { categoryId: cat.id }],
                                 [
                                   "categoryCanBeDeleted",
                                   { categoryId: transaction.category.id },
                                 ],
                                 [
-                                  "categoryBalance",
-                                  {
-                                    categoryId: transaction.category.id,
-                                  },
+                                  "categoryCanBeDeleted",
+                                  { categoryId: cat.id },
                                 ],
-                                [
-                                  "categoryKindBalance",
-                                  transaction.category.kind,
-                                ],
-                              ];
-                              if (transaction.source_partition) {
-                                queryKeys.push(
-                                  [
-                                    "partitionBalance",
-                                    {
-                                      partitionId:
-                                        transaction.source_partition.id,
-                                    },
-                                  ],
-                                  [
-                                    "partitionCanBeDeleted",
-                                    {
-                                      partitionId:
-                                        transaction.source_partition.id,
-                                    },
-                                  ],
-                                  [
-                                    "accountCanBeDeleted",
-                                    {
-                                      accountId:
-                                        transaction.source_partition.account.id,
-                                    },
-                                  ],
-                                  [
-                                    "accountBalance",
-                                    {
-                                      accountId:
-                                        transaction.source_partition.account.id,
-                                    },
-                                  ]
-                                );
-                              }
-                              if (transaction.counterpart) {
-                                queryKeys.push(
-                                  [
-                                    "partitionBalance",
-                                    {
-                                      partitionId:
-                                        transaction.counterpart.source_partition
-                                          .id,
-                                    },
-                                  ],
-                                  [
-                                    "partitionCanBeDeleted",
-                                    {
-                                      partitionId:
-                                        transaction.counterpart.source_partition
-                                          .id,
-                                    },
-                                  ],
-                                  [
-                                    "accountCanBeDeleted",
-                                    {
-                                      accountId:
-                                        transaction.counterpart.source_partition
-                                          .account.id,
-                                    },
-                                  ],
-                                  [
-                                    "accountBalance",
-                                    {
-                                      accountId:
-                                        transaction.counterpart.source_partition
-                                          .account.id,
-                                    },
-                                  ]
-                                );
-                              }
-                              invalidateMany(queryClient, queryKeys);
-                              setIsDeleting(false);
+                              ]);
                             }}
-                            disabled={isDeleting}
                           >
-                            <Cross1Icon width="16" height="16" />
-                          </IconButton>
-                        )}
-                      </Table.Cell>
-                    </Table.Row>
-                  );
-                })}
-              </Table.Body>
-            )}
-          </QueryResult>
+                            <Popover.Trigger>
+                              <Badge
+                                color={
+                                  CATEGORY_COLOR[transaction.category.kind]
+                                }
+                                variant={variant}
+                                style={{ cursor: "pointer" }}
+                              >
+                                {transaction.category.name}
+                              </Badge>
+                            </Popover.Trigger>
+                          </Combobox>
+                        </Table.Cell>
+                        <Table.Cell>
+                          {getPartitionColumn(transaction)}
+                        </Table.Cell>
+                        <Table.Cell justify="end">
+                          {formatValue(Math.abs(parseFloat(transaction.value)))}
+                        </Table.Cell>
+                        <Table.Cell style={{ minWidth: "300px" }}>
+                          {transaction.description}
+                        </Table.Cell>
+                        <Table.Cell>
+                          {shouldShowDelete(transaction) && (
+                            <IconButton
+                              variant="ghost"
+                              color="crimson"
+                              onClick={async () => {
+                                setIsDeleting(true);
+                                await rpc.post.deleteTransaction({
+                                  transactionId: transaction.id,
+                                  userId: user.id,
+                                  dbname: user.dbname,
+                                });
+                                const queryKeys: QueryKey[] = [
+                                  ["transactions"],
+                                  ["user", user.id],
+                                  [
+                                    "categoryCanBeDeleted",
+                                    { categoryId: transaction.category.id },
+                                  ],
+                                  [
+                                    "categoryBalance",
+                                    {
+                                      categoryId: transaction.category.id,
+                                    },
+                                  ],
+                                  [
+                                    "categoryKindBalance",
+                                    transaction.category.kind,
+                                  ],
+                                ];
+                                if (transaction.source_partition) {
+                                  queryKeys.push(
+                                    [
+                                      "partitionBalance",
+                                      {
+                                        partitionId:
+                                          transaction.source_partition.id,
+                                      },
+                                    ],
+                                    [
+                                      "partitionCanBeDeleted",
+                                      {
+                                        partitionId:
+                                          transaction.source_partition.id,
+                                      },
+                                    ],
+                                    [
+                                      "accountCanBeDeleted",
+                                      {
+                                        accountId:
+                                          transaction.source_partition.account
+                                            .id,
+                                      },
+                                    ],
+                                    [
+                                      "accountBalance",
+                                      {
+                                        accountId:
+                                          transaction.source_partition.account
+                                            .id,
+                                      },
+                                    ]
+                                  );
+                                }
+                                if (transaction.counterpart) {
+                                  queryKeys.push(
+                                    [
+                                      "partitionBalance",
+                                      {
+                                        partitionId:
+                                          transaction.counterpart
+                                            .source_partition.id,
+                                      },
+                                    ],
+                                    [
+                                      "partitionCanBeDeleted",
+                                      {
+                                        partitionId:
+                                          transaction.counterpart
+                                            .source_partition.id,
+                                      },
+                                    ],
+                                    [
+                                      "accountCanBeDeleted",
+                                      {
+                                        accountId:
+                                          transaction.counterpart
+                                            .source_partition.account.id,
+                                      },
+                                    ],
+                                    [
+                                      "accountBalance",
+                                      {
+                                        accountId:
+                                          transaction.counterpart
+                                            .source_partition.account.id,
+                                      },
+                                    ]
+                                  );
+                                }
+                                invalidateMany(queryClient, queryKeys);
+                                setIsDeleting(false);
+                              }}
+                              disabled={isDeleting}
+                            >
+                              <Cross1Icon width="16" height="16" />
+                            </IconButton>
+                          )}
+                        </Table.Cell>
+                      </Table.Row>
+                    );
+                  })}
+                </>
+              )}
+            </QueryResult>
+          </Table.Body>
         </Table.Root>
       </ScrollArea>
     </>

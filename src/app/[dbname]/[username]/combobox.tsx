@@ -74,7 +74,11 @@ export function Combobox<
                               setOpen(false);
                             }}
                           >
-                            <Badge color={color} variant={variant} style={{ cursor: "pointer" }}>
+                            <Badge
+                              color={color}
+                              variant={variant}
+                              style={{ cursor: "pointer" }}
+                            >
                               {props.getItemDisplay(item, key)}
                             </Badge>
                           </Command.Item>
@@ -98,7 +102,7 @@ export function ComboboxTrigger(props: {
 }) {
   return (
     <Popover.Trigger>
-      <Button
+      <Badge
         variant="outline"
         color={props.color ?? "gray"}
         onKeyUp={(ev) => {
@@ -108,17 +112,10 @@ export function ComboboxTrigger(props: {
             ev.currentTarget.click();
           }
         }}
+        style={{ cursor: "pointer" }}
       >
         <Text>{props.children}</Text>
-        <CaretSortIcon
-          width="18"
-          height="18"
-          className={css({
-            display: "inline-block",
-            verticalAlign: "middle",
-          })}
-        />
-      </Button>
+      </Badge>
     </Popover.Trigger>
   );
 }
