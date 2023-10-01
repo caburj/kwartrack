@@ -128,8 +128,12 @@
 
 * [ ] Authentication.
 
-* [ ] Bordered sidebar with darker (or different) background.
+* [ ] Allow navigating in the table cells using arrow keys and also editing.
+  - Highlight focused cell.
 
+* [ ] When only one partition is selected in the side bar, use that as default
+  partition.
+  - Do not automatically clear partition when selecting a category.
 
 # IDEA / NICE TO HAVE (MAYBE)
 
@@ -178,3 +182,5 @@
 * [X] fix: Resetting the transaction form doesn't work when making a transfer.
   - It's the same problem in the Partition dialog form, that's why it's many
     visible input elements at the moment.
+
+* [X] Bordered sidebar with darker (or different) background.

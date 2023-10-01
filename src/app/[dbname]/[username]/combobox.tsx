@@ -109,7 +109,7 @@ export const ComboboxTrigger = forwardRef(function ComboboxTrigger(
         ref={ref}
         style={{ outlineColor: `var(--${props.color ?? "gray"}-9)` }}
         onKeyDown={(ev) => {
-          if (["ArrowDown"].includes(ev.key)) {
+          if (["Space", "Enter"].includes(ev.key)) {
             ev.preventDefault();
             ev.stopPropagation();
             ev.currentTarget.click();
