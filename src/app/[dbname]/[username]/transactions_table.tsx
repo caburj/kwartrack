@@ -32,8 +32,9 @@ import {
 } from "@radix-ui/themes";
 import {
   Cross1Icon,
-  ArrowRightIcon,
-  ArrowLeftIcon,
+  ChevronRightIcon,
+  DoubleArrowLeftIcon,
+  DoubleArrowRightIcon,
 } from "@radix-ui/react-icons";
 import { Combobox } from "./combobox";
 import { css } from "../../../../styled-system/css";
@@ -249,7 +250,7 @@ export function TransactionsTable({
             isEditable={isEditable}
           />
           <Box px="1">
-            <ArrowRightIcon width="16" height="16" />
+            <ChevronRightIcon width="16" height="16" />
           </Box>
           <PartitionBadge
             partitions={partitions.data ?? []}
@@ -307,14 +308,14 @@ export function TransactionsTable({
             onClick={decrementPage}
             disabled={transactions.isLoading || currentPage === 1}
           >
-            <ArrowLeftIcon width="16" height="16" />
+            <DoubleArrowLeftIcon width="16" height="16" />
           </IconButton>
           <Text>{currentPage}</Text>
           <IconButton
             onClick={incrementPage}
             disabled={transactions.isLoading || !transactions.data?.[1]}
           >
-            <ArrowRightIcon width="16" height="16" />
+            <DoubleArrowRightIcon width="16" height="16" />
           </IconButton>
         </Flex>
       </Flex>
