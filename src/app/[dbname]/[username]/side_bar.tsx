@@ -107,7 +107,7 @@ export function SideBar({ user }: { user: FindUserResult }) {
               value="accounts"
               className={css({
                 "&[data-state=open]": {
-                  borderBottom: "1px solid var(--gray-a6)",
+                  borderBottom: "1px solid var(--gray-a5)",
                 },
               })}
             >
@@ -118,7 +118,7 @@ export function SideBar({ user }: { user: FindUserResult }) {
                   py="1"
                   px="4"
                   className={css({
-                    borderBottom: "1px solid var(--gray-a6)",
+                    borderBottom: "1px solid var(--gray-a5)",
                     backgroundColor: "var(--gray-a3)",
                   })}
                 >
@@ -290,7 +290,7 @@ export function SideBar({ user }: { user: FindUserResult }) {
                   px="4"
                   mb="1"
                   className={css({
-                    borderBottom: "1px solid var(--gray-a6)",
+                    borderBottom: "1px solid var(--gray-a4)",
                     backgroundColor: "var(--gray-a3)",
                   })}
                 >
@@ -666,7 +666,7 @@ function PartitionLI({
               ? "var(--cyan-8)"
               : canBeDeleted.data
               ? "var(--red-8)"
-              : "var(--gray-a6)",
+              : "var(--gray-a5)",
           })}
         />
         <WithRightClick rightClickItems={rightClickItems}>
@@ -884,7 +884,7 @@ function FoldableList<X extends { name: string }>(props: {
                 justify="between"
                 className={css({
                   "&[data-state=open]": {
-                    borderBottom: "1px solid var(--gray-a4)",
+                    borderBottom: "1px solid var(--gray-a5)",
                   },
                 })}
               >
@@ -1050,7 +1050,7 @@ function CategoryLI({
               ? "var(--cyan-8)"
               : canBeRemoved
               ? "var(--red-8)"
-              : "var(--gray-a6)",
+              : "var(--gray-a5)",
           })}
         />
         <WithRightClick rightClickItems={rightClickItems}>
