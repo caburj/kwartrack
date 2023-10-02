@@ -32,7 +32,14 @@ export function Combobox<
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       {props.children}
-      <Popover.Content style={{ padding: "0px" }}>
+      <Popover.Content
+        style={{ padding: "0px" }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.stopPropagation();
+          }
+        }}
+      >
         <Command loop className="linear">
           <Flex
             p="2"
@@ -107,7 +114,7 @@ export const ComboboxTrigger = forwardRef(function ComboboxTrigger(
     <Popover.Trigger>
       <button
         ref={ref}
-        style={{ outlineColor: `var(--${props.color ?? "gray"}-9)` }}
+        style={{ outline: "none" }}
         onKeyDown={(ev) => {
           if (["Space", "Enter"].includes(ev.key)) {
             ev.preventDefault();
