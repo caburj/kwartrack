@@ -5,7 +5,7 @@ import {
   Category,
   PARTITION_COLOR,
   Partitions,
-  QueryResult,
+  Unpacked,
   getCategoryOptionName,
   getPartitionType,
   invalidateMany,
@@ -20,6 +20,7 @@ import {
 import {
   ForwardedRef,
   forwardRef,
+  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -31,19 +32,22 @@ import { atom, useAtom } from "jotai";
 import { Combobox, ComboboxTrigger } from "./combobox";
 import { ChevronRightIcon, PaperPlaneIcon } from "@radix-ui/react-icons";
 import { css } from "../../../../styled-system/css";
+import { UserPageStoreContext } from "./store";
 
-const selectedCategoryIdAtom = atom("");
-const selectedSourcePartitionIdAtom = atom("");
-const selectedDestinationPartitionIdAtom = atom("");
+type PartitionOption = Unpacked<
+  Awaited<ReturnType<typeof rpc.post.getPartitionOptions>>
+>;
+type UserCategories = Awaited<ReturnType<typeof rpc.post.getUserCategories>>;
 
 const CategoryComboBox = forwardRef(function CategoryComboBox(
   props: { categories: Categories },
   ref: ForwardedRef<HTMLButtonElement>
 ) {
   const { categories } = props;
-  const [selectedCategoryId, setSelectedCategoryId] = useAtom(
-    selectedCategoryIdAtom
-  );
+
+  const [store, dispatch] = useContext(UserPageStoreContext);
+
+  const selectedCategoryId = store.selectedCategoryId;
 
   const selectedCategory = useMemo(() => {
     if (categories) {
@@ -70,7 +74,9 @@ const CategoryComboBox = forwardRef(function CategoryComboBox(
       }}
       getItemValue={(c, k) => `${k} ${getCategoryOptionName(c)}`}
       getItemDisplay={(c) => getCategoryOptionName(c)}
-      onSelectItem={(c) => setSelectedCategoryId(c.id)}
+      onSelectItem={(c) => {
+        dispatch({ type: "SET_SELECTED_CATEGORY_ID", payload: c.id });
+      }}
     >
       <ComboboxTrigger ref={ref} color={color}>
         {categoryName}
@@ -79,34 +85,27 @@ const CategoryComboBox = forwardRef(function CategoryComboBox(
   );
 });
 
-function PartitionCombobox(props: {
-  partitions: Partitions;
-  user: { id: string; dbname: string };
-  selectedCategory: Category | undefined;
-  selectedPartitionId: string;
-  setSelectedPartitionId: (id: string) => void;
-  placeholder: string;
-}) {
-  const {
-    partitions,
-    user,
-    selectedPartitionId,
-    setSelectedPartitionId,
-    selectedCategory,
-  } = props;
-
-  useEffect(() => {
-    // Always reset selected partition when category changes
-    if (selectedCategory) {
-      setSelectedPartitionId("");
-    }
-  }, [selectedCategory, setSelectedPartitionId]);
-
-  const groupedPartitions = useGroupedPartitions(partitions, user.id);
+const PartitionCombobox = forwardRef(function PartitionCombobox(
+  props: {
+    partitions: Partitions;
+    user: { id: string; dbname: string };
+    selectedCategory: Category | undefined;
+    selectedPartitionId: string;
+    command: "SET_SELECTED_SOURCE_ID" | "SET_SELECTED_DESTINATION_ID";
+    placeholder: string;
+  },
+  ref: ForwardedRef<HTMLButtonElement>
+) {
+  const { partitions, user, selectedPartitionId, command, selectedCategory } =
+    props;
 
   const selectedPartition = useMemo(() => {
     return partitions.find((p) => p.id === selectedPartitionId);
   }, [partitions, selectedPartitionId]);
+
+  const [store, dispatch] = useContext(UserPageStoreContext);
+
+  const groupedPartitions = useGroupedPartitions(partitions, user.id);
 
   const partitionName = selectedPartition
     ? `${selectedPartition.name} (${selectedPartition.account.label})`
@@ -129,55 +128,101 @@ function PartitionCombobox(props: {
         `${getPartitionType(p, user.id)} ${p.account.label} ${p.name}`
       }
       getItemDisplay={(p) => p.name}
-      onSelectItem={(p) => setSelectedPartitionId(p.id)}
+      onSelectItem={(p) => {
+        dispatch({ type: command, payload: p.id });
+      }}
     >
-      <ComboboxTrigger color={color}>{partitionName}</ComboboxTrigger>
+      <ComboboxTrigger ref={ref} color={color}>
+        {partitionName}
+      </ComboboxTrigger>
     </Combobox>
   );
-}
+});
 
-export function TransactionForm(props: {
+function TransactionFormMain(props: {
+  partitions: PartitionOption[];
+  groupedCategories: UserCategories;
   user: { id: string; dbname: string };
 }) {
-  const { user } = props;
+  const { partitions, groupedCategories, user } = props;
   const queryClient = useQueryClient();
-  const partitions = useQuery(["partitions", user.id], () => {
-    return rpc.post.getPartitionOptions({
-      userId: user.id,
-      dbname: user.dbname,
-    });
-  });
-  const categories = useQuery(["categories", user.id], () => {
-    return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
-  });
+
   const createTransaction = useMutation(rpc.post.createTransaction);
 
-  const [selectedCategoryId, setSelectedCategoryId] = useAtom(
-    selectedCategoryIdAtom
-  );
-  const [selectedSourcePartitionId, setSelectedSourceCategoryId] = useAtom(
-    selectedSourcePartitionIdAtom
-  );
-  const [selectedDestinationPartitionId, setSelectedDestinationCategoryId] =
-    useAtom(selectedDestinationPartitionIdAtom);
+  const [store, dispatch] = useContext(UserPageStoreContext);
+
+  const selectedSourceId = store.selectedSourceId;
+  const selectedDestinationId = store.selectedDestinationId;
+
   const [inputValue, setInputValue] = useState("");
   const [inputDescription, setInputDescription] = useState("");
 
+  const selectedCategoryId = store.selectedCategoryId;
+
+  const categories = useMemo(() => {
+    return [
+      ...groupedCategories.Expense,
+      ...groupedCategories.Income,
+      ...groupedCategories.Transfer,
+    ];
+  }, [groupedCategories]);
+
   const selectedCategory = useMemo(() => {
-    if (categories.data) {
-      return [
-        ...categories.data.Expense,
-        ...categories.data.Income,
-        ...categories.data.Transfer,
-      ].find((c) => c.id === selectedCategoryId);
-    }
+    return categories.find((c) => c.id === selectedCategoryId);
   }, [categories, selectedCategoryId]);
+
+  const mainPartitionFilter = useMemo(() => {
+    if (store.partitionIds.length === 1) {
+      const partitionFilter = partitions.find(
+        (p) => p.id === store.partitionIds[0]
+      );
+      if (partitionFilter) {
+        // if category is private, only return if partition is private
+        if (selectedCategory?.is_private) {
+          if (partitionFilter.is_private) {
+            return partitionFilter;
+          }
+        } else {
+          return partitionFilter;
+        }
+      }
+    }
+  }, [partitions, store.partitionIds, selectedCategory]);
+
+  const mainCategoryFilter = useMemo(() => {
+    if (store.categoryIds.length === 1) {
+      const category = categories.find((c) => c.id === store.categoryIds[0]);
+      return category;
+    }
+  }, [categories, store.categoryIds]);
+
+  useEffect(() => {
+    if (mainPartitionFilter && !selectedSourceId) {
+      dispatch({
+        type: "SET_SELECTED_SOURCE_ID",
+        payload: mainPartitionFilter.id,
+      });
+    }
+    if (mainCategoryFilter && !selectedCategoryId) {
+      dispatch({
+        type: "SET_SELECTED_CATEGORY_ID",
+        payload: mainCategoryFilter.id,
+      });
+    }
+  }, [
+    mainCategoryFilter,
+    mainPartitionFilter,
+    selectedCategoryId,
+    dispatch,
+    selectedSourceId,
+  ]);
 
   const inputCategoryKind = useMemo(() => {
     return selectedCategory ? selectedCategory.kind : "";
   }, [selectedCategory]);
 
   const categoryButtonRef = useRef<HTMLButtonElement>(null);
+  const partitionButtonRef = useRef<HTMLButtonElement>(null);
 
   let value: number | undefined = undefined;
   try {
@@ -201,8 +246,8 @@ export function TransactionForm(props: {
     const parsedData = dataSchema.parse({
       description: inputDescription,
       categoryId: selectedCategoryId,
-      sourcePartitionId: selectedSourcePartitionId,
-      destinationPartitionId: selectedDestinationPartitionId,
+      sourcePartitionId: selectedSourceId,
+      destinationPartitionId: selectedDestinationId,
       userId: user.id,
       value,
     });
@@ -211,9 +256,9 @@ export function TransactionForm(props: {
       dbname: user.dbname,
     });
     setInputDescription("");
-    setSelectedSourceCategoryId("");
-    setSelectedDestinationCategoryId("");
-    setSelectedCategoryId("");
+    dispatch({ type: "SET_SELECTED_CATEGORY_ID", payload: "" });
+    dispatch({ type: "SET_SELECTED_SOURCE_ID", payload: "" });
+    dispatch({ type: "SET_SELECTED_DESTINATION_ID", payload: "" });
     const queryKeys: QueryKey[] = [];
     if (transaction) {
       setInputValue("");
@@ -282,46 +327,42 @@ export function TransactionForm(props: {
     >
       <Table.Cell></Table.Cell>
       <Table.Cell>
-        <QueryResult query={categories}>
-          {(categories) => (
-            <CategoryComboBox ref={categoryButtonRef} categories={categories} />
-          )}
-        </QueryResult>
+        <CategoryComboBox
+          ref={categoryButtonRef}
+          categories={groupedCategories}
+        />
       </Table.Cell>
       <Table.Cell>
-        <QueryResult query={partitions}>
-          {(partitions) => (
-            <Flex>
+        <Flex>
+          <PartitionCombobox
+            partitions={partitions.filter((p) => p.account.is_owned)}
+            user={user}
+            selectedCategory={selectedCategory}
+            selectedPartitionId={selectedSourceId}
+            command="SET_SELECTED_SOURCE_ID"
+            placeholder={
+              inputCategoryKind == "Transfer"
+                ? "Source Partition"
+                : "Select Partition"
+            }
+            ref={partitionButtonRef}
+          />
+          {inputCategoryKind == "Transfer" ? (
+            <>
+              <Flex align="center">
+                <ChevronRightIcon />
+              </Flex>
               <PartitionCombobox
-                partitions={partitions.filter((p) => p.account.is_owned)}
+                partitions={partitions}
                 user={user}
                 selectedCategory={selectedCategory}
-                selectedPartitionId={selectedSourcePartitionId}
-                setSelectedPartitionId={setSelectedSourceCategoryId}
-                placeholder={
-                  inputCategoryKind == "Transfer"
-                    ? "Source Partition"
-                    : "Select Partition"
-                }
+                selectedPartitionId={selectedDestinationId}
+                command="SET_SELECTED_DESTINATION_ID"
+                placeholder="Destination Partition"
               />
-              {inputCategoryKind == "Transfer" ? (
-                <>
-                  <Flex align="center">
-                    <ChevronRightIcon />
-                  </Flex>
-                  <PartitionCombobox
-                    partitions={partitions}
-                    user={user}
-                    selectedCategory={selectedCategory}
-                    selectedPartitionId={selectedDestinationPartitionId}
-                    setSelectedPartitionId={setSelectedDestinationCategoryId}
-                    placeholder="Destination Partition"
-                  />
-                </>
-              ) : null}
-            </Flex>
-          )}
-        </QueryResult>
+            </>
+          ) : null}
+        </Flex>
       </Table.Cell>
       <Table.Cell>
         <input
@@ -366,5 +407,32 @@ export function TransactionForm(props: {
         </IconButton>
       </Table.Cell>
     </Table.Row>
+  );
+}
+
+export function TransactionForm(props: {
+  user: { id: string; dbname: string };
+}) {
+  const { user } = props;
+  const partitions = useQuery(["partitions", user.id], () => {
+    return rpc.post.getPartitionOptions({
+      userId: user.id,
+      dbname: user.dbname,
+    });
+  });
+  const categories = useQuery(["categories", user.id], () => {
+    return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
+  });
+
+  if (!partitions.data || !categories.data) {
+    return null;
+  }
+
+  return (
+    <TransactionFormMain
+      partitions={partitions.data}
+      groupedCategories={categories.data}
+      user={user}
+    />
   );
 }

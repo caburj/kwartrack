@@ -199,18 +199,21 @@ export function TransactionsTable({
     setCurrentPage((currentPage) => currentPage - 1);
   };
 
-  const transactions = useQuery(["transactions", store, currentPage], () => {
-    return rpc.post.findTransactions({
-      currentPage,
-      nPerPage: store.nPerPage,
-      partitionIds: store.partitionIds,
-      categoryIds: store.categoryIds,
-      ownerId: user.id,
-      dbname: user.dbname,
-      tssDate: store.tssDate?.toISOString(),
-      tseDate: store.tseDate?.toISOString(),
-    });
-  });
+  const transactions = useQuery(
+    ["transactions", currentPage, store.categoryIds, store.partitionIds],
+    () => {
+      return rpc.post.findTransactions({
+        currentPage,
+        nPerPage: store.nPerPage,
+        partitionIds: store.partitionIds,
+        categoryIds: store.categoryIds,
+        ownerId: user.id,
+        dbname: user.dbname,
+        tssDate: store.tssDate?.toISOString(),
+        tseDate: store.tseDate?.toISOString(),
+      });
+    }
+  );
 
   const categories = useQuery(["categories", user.id], () => {
     return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });

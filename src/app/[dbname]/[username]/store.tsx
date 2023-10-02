@@ -6,6 +6,9 @@ type UserPageStore = {
   tssDate: Date | undefined;
   tseDate: Date | undefined;
   nPerPage: number;
+  selectedCategoryId: string;
+  selectedSourceId: string;
+  selectedDestinationId: string;
 };
 
 type UserPageAction =
@@ -15,7 +18,10 @@ type UserPageAction =
   | { type: "TOGGLE_CATEGORY_KIND"; payload: string[] }
   | { type: "SET_N_PER_PAGE"; payload: number }
   | { type: "SET_TSS_DATE"; payload: Date | undefined }
-  | { type: "SET_TSE_DATE"; payload: Date | undefined };
+  | { type: "SET_TSE_DATE"; payload: Date | undefined }
+  | { type: "SET_SELECTED_CATEGORY_ID"; payload: string }
+  | { type: "SET_SELECTED_SOURCE_ID"; payload: string }
+  | { type: "SET_SELECTED_DESTINATION_ID"; payload: string };
 
 type UserPageDispatch = (action: UserPageAction) => void;
 
@@ -35,6 +41,9 @@ const initStore: UserPageStore = {
   nPerPage: 50,
   tssDate: firstDayOfCurrentMonth(),
   tseDate: lastDayOfCurrentMonth(),
+  selectedCategoryId: "",
+  selectedSourceId: "",
+  selectedDestinationId: "",
 };
 
 const userPageStoreReducer = (
@@ -51,7 +60,7 @@ const userPageStoreReducer = (
           partitionIds = [...partitionIds, id];
         }
       }
-      return { ...state, partitionIds };
+      return { ...state, partitionIds, selectedSourceId: "" };
     }
     case "TOGGLE_ACCOUNT": {
       // payload is partitionIds in the clicked account
@@ -85,7 +94,7 @@ const userPageStoreReducer = (
           categoryIds = [...categoryIds, id];
         }
       }
-      return { ...state, categoryIds };
+      return { ...state, categoryIds, selectedCategoryId: "" };
     }
     case "TOGGLE_CATEGORY_KIND": {
       let allSelected = true;
@@ -117,6 +126,15 @@ const userPageStoreReducer = (
     }
     case "SET_TSE_DATE": {
       return { ...state, tseDate: action.payload };
+    }
+    case "SET_SELECTED_CATEGORY_ID": {
+      return { ...state, selectedCategoryId: action.payload };
+    }
+    case "SET_SELECTED_SOURCE_ID": {
+      return { ...state, selectedSourceId: action.payload };
+    }
+    case "SET_SELECTED_DESTINATION_ID": {
+      return { ...state, selectedDestinationId: action.payload };
     }
   }
 };

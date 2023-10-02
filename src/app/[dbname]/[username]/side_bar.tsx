@@ -41,7 +41,7 @@ import {
   Badge,
   Section,
 } from "@radix-ui/themes";
-import { ChevronRightIcon, Cross1Icon, PlusIcon } from "@radix-ui/react-icons";
+import { ChevronRightIcon, PlusIcon } from "@radix-ui/react-icons";
 import * as Accordion from "@radix-ui/react-accordion";
 
 type FindUserResult = NonNullable<
@@ -74,7 +74,13 @@ const newCategorySchema = object({
   isPrivate: boolean(),
 });
 
-export function SideBar({ user, width }: { user: FindUserResult, width: number }) {
+export function SideBar({
+  user,
+  width,
+}: {
+  user: FindUserResult;
+  width: number;
+}) {
   const queryClient = useQueryClient();
   const categoryFormRef = useRef<HTMLFormElement>(null);
   const partitionFormRef = useRef<HTMLFormElement>(null);
