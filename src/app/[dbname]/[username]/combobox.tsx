@@ -107,6 +107,7 @@ export const ComboboxTrigger = forwardRef(function ComboboxTrigger(
   props: {
     children: React.ReactNode;
     color?: RadixColor;
+    variant?: "outline" | "soft";
   },
   ref: React.Ref<HTMLButtonElement>
 ) {
@@ -124,7 +125,7 @@ export const ComboboxTrigger = forwardRef(function ComboboxTrigger(
         }}
       >
         <Badge
-          variant="outline"
+          variant={props.variant ?? "soft"}
           color={props.color ?? "gray"}
           style={{ cursor: "pointer" }}
         >

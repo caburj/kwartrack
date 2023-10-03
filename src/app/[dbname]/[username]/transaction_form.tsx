@@ -64,6 +64,7 @@ const CategoryComboBox = forwardRef(function CategoryComboBox(
     : "Select Category";
 
   const color = selectedCategory && CATEGORY_COLOR[selectedCategory.kind];
+  const variant = selectedCategory?.is_private ? "outline" : "soft";
 
   return (
     <Combobox
@@ -78,7 +79,7 @@ const CategoryComboBox = forwardRef(function CategoryComboBox(
         dispatch({ type: "SET_SELECTED_CATEGORY_ID", payload: c.id });
       }}
     >
-      <ComboboxTrigger ref={ref} color={color}>
+      <ComboboxTrigger ref={ref} color={color} variant={variant}>
         {categoryName}
       </ComboboxTrigger>
     </Combobox>
@@ -108,12 +109,14 @@ const PartitionCombobox = forwardRef(function PartitionCombobox(
   const groupedPartitions = useGroupedPartitions(partitions, user.id);
 
   const partitionName = selectedPartition
-    ? `${selectedPartition.name} (${selectedPartition.account.label})`
+    ? `${selectedPartition.account.label} - ${selectedPartition.name}`
     : props.placeholder;
 
   const color =
     selectedPartition &&
     PARTITION_COLOR[getPartitionType(selectedPartition, user.id)];
+
+  const variant = selectedPartition?.is_private ? "outline" : "soft";
 
   return (
     <Combobox
@@ -132,7 +135,7 @@ const PartitionCombobox = forwardRef(function PartitionCombobox(
         dispatch({ type: command, payload: p.id });
       }}
     >
-      <ComboboxTrigger ref={ref} color={color}>
+      <ComboboxTrigger ref={ref} color={color} variant={variant}>
         {partitionName}
       </ComboboxTrigger>
     </Combobox>

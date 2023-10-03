@@ -128,13 +128,6 @@
 
 * [ ] Authentication.
 
-* [ ] Allow navigating in the table cells using arrow keys and also editing.
-  - Highlight focused cell.
-
-* [ ] When only one partition is selected in the side bar, use that as default
-  partition.
-  - Do not automatically clear partition when selecting a category.
-
 # IDEA / NICE TO HAVE (MAYBE)
 
 * [ ] Each transaction row should be a different query.
@@ -149,6 +142,10 @@
 
 * [ ] Undo/Redo
   - This is probably very difficult.
+
+* [ ] Allow navigating in the table cells using arrow keys and also editing.
+  - Highlight focused cell.
+
 
 
 # DONE
@@ -184,3 +181,7 @@
     visible input elements at the moment.
 
 * [X] Bordered sidebar with darker (or different) background.
+
+* [X] When only one partition is selected in the side bar, use that as default
+  partition.
+  - Do not automatically clear partition when selecting a category.
