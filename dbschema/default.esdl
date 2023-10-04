@@ -80,6 +80,10 @@ module default {
     counterpart: ETransaction {
       constraint exclusive;
       annotation description := "The counterpart transaction if this is a transfer.";
+
+      # When this transaction or counterpart is deleted, delete the other one.
+      on source delete delete target;
+      on target delete delete source;
     }
 
     property is_counterpart := exists .<counterpart[is ETransaction];
@@ -91,6 +95,7 @@ module default {
   type ELoan {
     required transaction: ETransaction {
       constraint exclusive;
+      on source delete delete target;
     }
     required amount_to_pay: decimal;
     property amount := math::abs(.transaction.value);
@@ -103,6 +108,7 @@ module default {
     required loan: ELoan;
     required transaction: ETransaction {
       constraint exclusive;
+      on source delete delete target;
     }
   }
 }

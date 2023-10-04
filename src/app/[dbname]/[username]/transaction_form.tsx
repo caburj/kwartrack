@@ -302,10 +302,8 @@ function TransactionFormMain(props: {
         [
           "accountBalance",
           { accountId: counterpart.source_partition.account.id },
-        ],
-        ["categoryKindBalance", counterpart.category.kind]
+        ]
       );
-      invalidateMany(queryClient, queryKeys);
     }
     invalidateMany(queryClient, queryKeys);
 

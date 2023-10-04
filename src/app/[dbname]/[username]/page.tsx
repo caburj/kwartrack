@@ -31,7 +31,7 @@ export function UserPage({
   const user = useQuery(["user", username], () => {
     return rpc.post.findUser({ username, dbname });
   });
-  const [width, setWidth] = useState(400);
+  const [width, setWidth] = useState(375);
   const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {

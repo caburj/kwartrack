@@ -211,6 +211,7 @@ export const findTransactions = withValidation(
     nPerPage: number([minValue(1)]),
     partitionIds: array(string()),
     categoryIds: array(string()),
+    loanIds: array(string()),
     ownerId: string(),
     dbname: string(),
     tssDate: optional(string()),
@@ -221,14 +222,15 @@ export const findTransactions = withValidation(
     nPerPage,
     partitionIds,
     categoryIds,
+    loanIds,
     ownerId,
     dbname,
     tssDate,
     tseDate,
   }) => {
     const query = e.params(
-      { pIds: e.array(e.uuid), cIds: e.array(e.uuid) },
-      ({ pIds, cIds }) =>
+      { pIds: e.array(e.uuid), cIds: e.array(e.uuid), lIds: e.array(e.uuid) },
+      ({ pIds, cIds, lIds }) =>
         e.select(e.ETransaction, (transaction) => {
           let baseFilter = e.op(
             e.op(
@@ -243,48 +245,67 @@ export const findTransactions = withValidation(
               e.any(transaction.counterpart.is_visible)
             )
           );
-          if (tssDate) {
-            baseFilter = e.op(
-              baseFilter,
-              "and",
-              e.op(transaction.date, ">=", new Date(tssDate))
+
+          let filter;
+
+          if (loanIds.length === 0) {
+            if (tssDate) {
+              baseFilter = e.op(
+                baseFilter,
+                "and",
+                e.op(transaction.date, ">=", new Date(tssDate))
+              );
+            }
+            if (tseDate) {
+              baseFilter = e.op(
+                baseFilter,
+                "and",
+                e.op(
+                  transaction.date,
+                  "<",
+                  // add one day to the end date to include it in the range
+                  new Date(new Date(tseDate).getTime() + 86400000)
+                )
+              );
+            }
+            const cFilter = e.op(
+              transaction.category.id,
+              "in",
+              e.array_unpack(cIds)
             );
-          }
-          if (tseDate) {
-            baseFilter = e.op(
+            const pFilter = e.op(
+              e.op(
+                transaction.source_partition.id,
+                "union",
+                transaction.counterpart.source_partition.id
+              ),
+              "in",
+              e.array_unpack(pIds)
+            );
+            if (partitionIds.length !== 0 && categoryIds.length !== 0) {
+              filter = e.op(baseFilter, "and", e.op(cFilter, "and", pFilter));
+            } else if (partitionIds.length !== 0) {
+              filter = e.op(baseFilter, "and", pFilter);
+            } else if (categoryIds.length !== 0) {
+              filter = e.op(baseFilter, "and", cFilter);
+            } else {
+              filter = baseFilter;
+            }
+          } else {
+            // I want to get all transaction that are linked to the loan
+            filter = e.op(
               baseFilter,
               "and",
               e.op(
-                transaction.date,
-                "<",
-                // add one day to the end date to include it in the range
-                new Date(new Date(tseDate).getTime() + 86400000)
+                e.op(
+                  transaction["<transaction[is ELoan]"].id,
+                  "union",
+                  transaction["<transaction[is EPayment]"].loan.id
+                ),
+                "in",
+                e.array_unpack(lIds)
               )
             );
-          }
-          let filter;
-          const cFilter = e.op(
-            transaction.category.id,
-            "in",
-            e.array_unpack(cIds)
-          );
-          const pFilter = e.op(
-            e.op(
-              transaction.source_partition.id,
-              "union",
-              transaction.counterpart.source_partition.id
-            ),
-            "in",
-            e.array_unpack(pIds)
-          );
-          if (partitionIds.length !== 0 && categoryIds.length !== 0) {
-            filter = e.op(baseFilter, "and", e.op(cFilter, "and", pFilter));
-          } else if (partitionIds.length !== 0) {
-            filter = e.op(baseFilter, "and", pFilter);
-          } else if (categoryIds.length !== 0) {
-            filter = e.op(baseFilter, "and", cFilter);
-          } else {
-            filter = baseFilter;
           }
 
           const partitionFields = {
@@ -305,6 +326,11 @@ export const findTransactions = withValidation(
           return {
             id: true,
             value: true,
+            is_loan: e.op("exists", transaction["<transaction[is ELoan]"]),
+            is_payment: e.op(
+              "exists",
+              transaction["<transaction[is EPayment]"]
+            ),
             source_partition: partitionFields,
             counterpart: {
               id: true,
@@ -340,6 +366,7 @@ export const findTransactions = withValidation(
     const result = await query.run(client, {
       pIds: partitionIds,
       cIds: categoryIds,
+      lIds: loanIds,
     });
     const hasNextPage = result.length === nPerPage + 1;
     if (result.length !== 0) {
@@ -387,24 +414,24 @@ export const findTransactions = withValidation(
   }
 );
 
-export const createTransaction = withValidation(
+/**
+ * Takes `ETransaction` inputs and returns a function that takes an edgedb client
+ * transaction to create the `ETransaction` in the database.
+ */
+const makeTransactionCreator = withValidation(
   object({
     value: number([minValue(0)]),
     sourcePartitionId: string(),
     categoryId: string(),
     description: optional(string()),
-    userId: string(),
     destinationPartitionId: optional(string()),
-    dbname: string(),
   }),
-  async ({
+  ({
     value,
     sourcePartitionId,
     categoryId,
     description,
-    userId,
     destinationPartitionId,
-    dbname,
   }) => {
     if (sourcePartitionId === destinationPartitionId) {
       throw new Error("Source and destination partitions cannot be the same.");
@@ -473,12 +500,7 @@ export const createTransaction = withValidation(
           ),
         }))
     );
-
-    const client = edgedb
-      .createClient({ database: dbname })
-      .withGlobals({ current_user_id: userId });
-
-    const result = await client.transaction(async (tx) => {
+    return async (tx: Transaction) => {
       const selectedCategory = await e
         .select(e.ECategory, (category) => ({
           filter_single: e.op(category.id, "=", e.uuid(categoryId)),
@@ -553,8 +575,41 @@ export const createTransaction = withValidation(
         transaction: transaction || undefined,
         counterpart: counterpart || undefined,
       };
-    });
-    return result;
+    };
+  }
+);
+
+export const createTransaction = withValidation(
+  object({
+    value: number([minValue(0)]),
+    sourcePartitionId: string(),
+    categoryId: string(),
+    description: optional(string()),
+    userId: string(),
+    destinationPartitionId: optional(string()),
+    dbname: string(),
+  }),
+  ({
+    value,
+    sourcePartitionId,
+    categoryId,
+    description,
+    userId,
+    destinationPartitionId,
+    dbname,
+  }) => {
+    const client = edgedb
+      .createClient({ database: dbname })
+      .withGlobals({ current_user_id: userId });
+    return client.transaction(
+      makeTransactionCreator({
+        value,
+        sourcePartitionId,
+        categoryId,
+        description,
+        destinationPartitionId,
+      })
+    );
   }
 );
 
@@ -569,33 +624,12 @@ export const deleteTransaction = withValidation(
       })
     );
 
-    return edgedb
-      .createClient({ database: dbname })
-      .withGlobals({ current_user_id: userId })
-      .transaction(async (tx) => {
-        const toDelete = await e
-          .select(e.ETransaction, (transaction) => ({
-            filter_single: e.op(transaction.id, "=", e.uuid(transactionId)),
-            kind: transaction.category.kind,
-            counterpart: {
-              id: true,
-            },
-          }))
-          .run(tx);
-        if (!toDelete) {
-          throw new Error("Transaction not found.");
-        }
-        await deleteQuery.run(tx, { id: transactionId });
-        if (toDelete.kind === "Transfer") {
-          if (!toDelete.counterpart) {
-            throw new Error(
-              "Unable to delete transfer transaction. Counterpart not found."
-            );
-          } else {
-            await deleteQuery.run(tx, { id: toDelete.counterpart.id });
-          }
-        }
-      });
+    return deleteQuery.run(
+      edgedb
+        .createClient({ database: dbname })
+        .withGlobals({ current_user_id: userId }),
+      { id: transactionId }
+    );
   }
 );
 
@@ -1345,5 +1379,328 @@ export const updateTransaction = withValidation(
     });
 
     return true;
+  }
+);
+
+export const makeALoan = withValidation(
+  object({
+    sourcePartitionId: string(),
+    destinationPartitionId: string(),
+    categoryId: string(),
+    userId: string(),
+    dbname: string(),
+    amount: number([minValue(0)]),
+    description: optional(string()),
+    toPay: optional(number([minValue(0)])),
+  }),
+  async ({
+    sourcePartitionId,
+    destinationPartitionId,
+    categoryId,
+    userId,
+    dbname,
+    amount,
+    description,
+    toPay,
+  }) => {
+    if (amount === 0) {
+      throw new Error("Amount cannot be zero.");
+    }
+    toPay = toPay || amount;
+
+    const createLoanQuery = e.params(
+      {
+        transactionId: e.uuid,
+        toPay: e.decimal,
+      },
+      ({ transactionId, toPay }) => {
+        return e.insert(e.ELoan, {
+          transaction: e.select(e.ETransaction, (transaction) => ({
+            filter_single: e.op(transaction.id, "=", transactionId),
+          })),
+          amount_to_pay: toPay,
+        });
+      }
+    );
+
+    const client = edgedb
+      .createClient({ database: dbname })
+      .withGlobals({ current_user_id: userId });
+
+    const sourcePartitionFields = {
+      id: true,
+      name: true,
+      account: {
+        id: true,
+        name: true,
+      },
+    } as const;
+
+    return client.transaction(async (tx) => {
+      const createTransaction = makeTransactionCreator({
+        value: amount,
+        sourcePartitionId,
+        categoryId,
+        description,
+        destinationPartitionId,
+      });
+      const { transaction } = await createTransaction(tx);
+      if (!transaction) {
+        throw new Error("Failed to create the transaction.");
+      }
+
+      const { id: loanId } = await createLoanQuery.run(tx, {
+        transactionId: transaction.id,
+        toPay: toPay!.toString(),
+      });
+
+      return e
+        .select(e.ELoan, (loan) => ({
+          filter_single: e.op(loan.id, "=", e.uuid(loanId)),
+          id: true,
+          amount_to_pay: true,
+          transaction: {
+            id: true,
+            value: true,
+            description: true,
+            category: {
+              id: true,
+              name: true,
+              kind: true,
+            },
+            source_partition: sourcePartitionFields,
+            counterpart: {
+              id: true,
+              source_partition: sourcePartitionFields,
+            },
+          },
+        }))
+        .run(tx);
+    });
+  }
+);
+
+const partitionFields = {
+  id: true,
+  name: true,
+  is_owned: true,
+  is_private: true,
+  owners: {
+    id: true,
+    name: true,
+    username: true,
+  },
+  account: {
+    id: true,
+    name: true,
+  },
+} as const;
+
+/**
+ * IMPORTANT: Don't call this function. It's only used to get the type of the
+ * partition.
+ */
+const dummyPartitionFunction = (dbname: string) => {
+  const client = edgedb.createClient({ database: dbname });
+  const query = e.select(e.EPartition, () => ({
+    ...partitionFields,
+  }));
+  return query.run(client);
+};
+
+type Partition = Awaited<ReturnType<typeof dummyPartitionFunction>>[number];
+
+const getPartitionLabel = (partition: Partition) => {
+  const accountName = !partition.is_owned
+    ? `${partition.owners[0].name}'s ${partition.account.name}`
+    : partition.account.name;
+
+  const label = `${accountName} - ${partition.name}`;
+  return !partition.is_owned && partition.is_private ? "Private" : label;
+};
+
+/**
+ * Get all loans that are made on the partitions owned by the user.
+ */
+export const getPartitionsWithLoans = withValidation(
+  object({
+    userId: string(),
+    dbname: string(),
+  }),
+  async ({ userId, dbname }) => {
+    const client = edgedb.createClient({ database: dbname }).withGlobals({
+      current_user_id: userId,
+    });
+
+    const partitionsWithLoansQuery = e.select(e.EPartition, (partition) => {
+      return {
+        ...partitionFields,
+        filter: e.op(
+          e.any(
+            e.op(
+              "not",
+              partition["<source_partition[is ETransaction]"][
+                "<transaction[is ELoan]"
+              ].is_paid
+            )
+          ),
+          "and",
+          partition.is_owned
+        ),
+      };
+    });
+
+    const result = await partitionsWithLoansQuery.run(client);
+
+    return result.map((p) => {
+      return {
+        ...p,
+        label: getPartitionLabel(p),
+      };
+    });
+  }
+);
+
+export const getUnpaidLoans = withValidation(
+  object({
+    userId: string(),
+    partitionId: string(),
+    dbname: string(),
+  }),
+  async ({ userId, partitionId, dbname }) => {
+    const client = edgedb.createClient({ database: dbname }).withGlobals({
+      current_user_id: userId,
+    });
+
+    const loansQuery = e.select(e.ELoan, (loan) => ({
+      filter: e.op(
+        e.op(loan.transaction.source_partition.id, "=", e.uuid(partitionId)),
+        "and",
+        e.op("not", loan.is_paid)
+      ),
+      id: true,
+      amount_to_pay: true,
+      amount_paid: true,
+      amount: true,
+      remaining_amount: e.op(loan.amount_to_pay, "-", loan.amount_paid),
+      transaction: {
+        id: true,
+        value: true,
+        description: true,
+        source_partition: partitionFields,
+        category: {
+          id: true,
+          name: true,
+          kind: true,
+          is_private: true,
+        },
+        counterpart: {
+          id: true,
+          source_partition: partitionFields,
+        },
+      },
+    }));
+
+    const result = await loansQuery.run(client);
+
+    return result.map((loan) => {
+      return {
+        ...loan,
+        transaction: {
+          ...loan.transaction,
+          counterpart: loan.transaction.counterpart
+            ? {
+                ...loan.transaction.counterpart,
+                source_partition: {
+                  ...loan.transaction.counterpart.source_partition,
+                  label: getPartitionLabel(
+                    loan.transaction.counterpart.source_partition
+                  ),
+                },
+              }
+            : null,
+        },
+      };
+    });
+  }
+);
+
+export const makeAPayment = withValidation(
+  object({
+    userId: string(),
+    dbname: string(),
+    loanId: string(),
+    amount: number([minValue(0)]),
+    description: optional(string()),
+  }),
+  async ({ userId, dbname, loanId, amount, description }) => {
+    const client = edgedb.createClient({ database: dbname }).withGlobals({
+      current_user_id: userId,
+    });
+
+    const loanQuery = e.select(e.ELoan, (loan) => ({
+      filter_single: e.op(loan.id, "=", e.uuid(loanId)),
+      id: true,
+      amount_to_pay: true,
+      amount_paid: true,
+      amount: true,
+      transaction: {
+        id: true,
+        category: {
+          id: true,
+        },
+        source_partition: {
+          id: true,
+        },
+        counterpart: {
+          id: true,
+          source_partition: {
+            id: true,
+          },
+        },
+      },
+    }));
+
+    return client.transaction(async (tx) => {
+      const loan = await loanQuery.run(tx);
+      if (!loan) {
+        throw new Error("Loan not found.");
+      }
+      if (!loan.transaction.counterpart) {
+        throw new Error("Loan counterpart not found.");
+      }
+
+      const sourcePartitionId =
+        loan.transaction.counterpart.source_partition.id;
+      const destinationPartitionId = loan.transaction.source_partition.id;
+      const categoryId = loan.transaction.category.id;
+
+      const createTransaction = makeTransactionCreator({
+        value: amount,
+        sourcePartitionId,
+        destinationPartitionId,
+        categoryId,
+        description,
+      });
+
+      const { transaction: newTransaction } = await createTransaction(tx);
+
+      if (!newTransaction) {
+        throw new Error("Failed to create the transaction.");
+      }
+
+      const payment = await e
+        .insert(e.EPayment, {
+          transaction: e.select(e.ETransaction, (t) => ({
+            filter_single: e.op(t.id, "=", e.uuid(newTransaction.id)),
+          })),
+          loan: e.select(e.ELoan, (loan) => ({
+            filter_single: e.op(loan.id, "=", e.uuid(loanId)),
+          })),
+        })
+        .run(tx);
+
+      return payment;
+    });
   }
 );

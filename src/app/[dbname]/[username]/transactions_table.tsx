@@ -200,13 +200,14 @@ export function TransactionsTable({
   };
 
   const transactions = useQuery(
-    ["transactions", currentPage, store.categoryIds, store.partitionIds],
+    ["transactions", currentPage, store.categoryIds, store.partitionIds, store.loanIds],
     () => {
       return rpc.post.findTransactions({
         currentPage,
         nPerPage: store.nPerPage,
         partitionIds: store.partitionIds,
         categoryIds: store.categoryIds,
+        loanIds: store.loanIds,
         ownerId: user.id,
         dbname: user.dbname,
         tssDate: store.tssDate?.toISOString(),

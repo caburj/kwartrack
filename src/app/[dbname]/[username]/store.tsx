@@ -3,6 +3,7 @@ import { useReducer, createContext, ReactNode } from "react";
 type UserPageStore = {
   partitionIds: string[];
   categoryIds: string[];
+  loanIds: string[];
   tssDate: Date | undefined;
   tseDate: Date | undefined;
   nPerPage: number;
@@ -21,7 +22,8 @@ type UserPageAction =
   | { type: "SET_TSE_DATE"; payload: Date | undefined }
   | { type: "SET_SELECTED_CATEGORY_ID"; payload: string }
   | { type: "SET_SELECTED_SOURCE_ID"; payload: string }
-  | { type: "SET_SELECTED_DESTINATION_ID"; payload: string };
+  | { type: "SET_SELECTED_DESTINATION_ID"; payload: string }
+  | { type: "TOGGLE_LOAN_IDS"; payload: string[] }
 
 type UserPageDispatch = (action: UserPageAction) => void;
 
@@ -38,6 +40,7 @@ const lastDayOfCurrentMonth = () => {
 const initStore: UserPageStore = {
   partitionIds: [],
   categoryIds: [],
+  loanIds: [],
   nPerPage: 50,
   tssDate: firstDayOfCurrentMonth(),
   tseDate: lastDayOfCurrentMonth(),
@@ -135,6 +138,17 @@ const userPageStoreReducer = (
     }
     case "SET_SELECTED_DESTINATION_ID": {
       return { ...state, selectedDestinationId: action.payload };
+    }
+    case "TOGGLE_LOAN_IDS": {
+      let loanIds = state.loanIds;
+      for (const id of action.payload) {
+        if (loanIds.includes(id)) {
+          loanIds = loanIds.filter((_id) => _id !== id);
+        } else {
+          loanIds = [...loanIds, id];
+        }
+      }
+      return { ...state, loanIds };
     }
   }
 };

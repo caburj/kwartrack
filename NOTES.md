@@ -27,6 +27,7 @@
 * [ ] Prettier display for the number-of-items-per-page input.
 
 * [ ] Properly handle "undefined" result from rpc, also error.
+  - Use toast notification. https://sonner.emilkowal.ski
 
 * [ ] A better way to invalidate queries when making mutations.
   - Can we find a declarative way?
@@ -128,6 +129,11 @@
 
 * [ ] Authentication.
 
+* [ ] Allow deleting loans and payments.
+  * [ ] Show an indicator that a transaction is a loan or payment.
+  * [ ] Do not allow editing loan/payment transaction.
+
+
 # IDEA / NICE TO HAVE (MAYBE)
 
 * [ ] Each transaction row should be a different query.
@@ -145,7 +151,6 @@
 
 * [ ] Allow navigating in the table cells using arrow keys and also editing.
   - Highlight focused cell.
-
 
 
 # DONE
@@ -185,3 +190,9 @@
 * [X] When only one partition is selected in the side bar, use that as default
   partition.
   - Do not automatically clear partition when selecting a category.
+
+* [X] Loans
+  * [X] Allow making payments.
+  * [X] Filter loans. When clicking a loan, show the linked transactions (which
+    includes the payments).
+  * [X] Show "Private" as name if private. Also, show prefixed account name.
