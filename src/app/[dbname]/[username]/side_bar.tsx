@@ -54,6 +54,7 @@ import {
   Grid,
   ContextMenu,
   Badge,
+  Tooltip,
 } from "@radix-ui/themes";
 import { ChevronRightIcon, PlusIcon } from "@radix-ui/react-icons";
 import * as Accordion from "@radix-ui/react-accordion";
@@ -159,7 +160,10 @@ export function SideBar({
     >
       <Flex direction="column" height="100%">
         <ScrollArea scrollbars="vertical">
-          <Accordion.Root type="multiple" defaultValue={["Accounts", "Categories"]}>
+          <Accordion.Root
+            type="multiple"
+            defaultValue={["Accounts", "Categories"]}
+          >
             <SideBarFoldable
               value="Accounts"
               headerButton={
@@ -545,7 +549,7 @@ const LoanItem = ({
       ],
       ["categoryKindBalance", transaction.category.kind],
       ["unpaidLoans", user.id, lender.id],
-      ["partitionsWithLoans", user.id],
+      ["partitionsWithLoans", user.id]
     );
     if (counterpart) {
       queryKeys.push(
@@ -571,19 +575,21 @@ const LoanItem = ({
     <Flex direction="column" m="2" mt="1" key={loan.id}>
       <Flex justify="between" my="1">
         <WithRightClick rightClickItems={rightClickItems}>
-          <Badge
-            color={borrowerColor}
-            variant={borrowerVariant}
-            style={{ cursor: "pointer" }}
-            onClick={() => {
-              return dispatch({
-                type: "TOGGLE_LOAN_IDS",
-                payload: [loan.id],
-              });
-            }}
-          >
-            {borrower.label}
-          </Badge>
+          <Tooltip content={loan.transaction.description || "No description"}>
+            <Badge
+              color={borrowerColor}
+              variant={borrowerVariant}
+              style={{ cursor: "pointer" }}
+              onClick={() => {
+                return dispatch({
+                  type: "TOGGLE_LOAN_IDS",
+                  payload: [loan.id],
+                });
+              }}
+            >
+              {borrower.label}
+            </Badge>
+          </Tooltip>
         </WithRightClick>
         <Text weight="medium">{formatValue(parseFloat(loan.amount))}</Text>
       </Flex>
@@ -1107,7 +1113,7 @@ function PartitionLI({
         { accountId: transaction.source_partition.account.id },
       ],
       ["categoryKindBalance", transaction.category.kind],
-      ["partitionsWithLoans", user.id],
+      ["partitionsWithLoans", user.id]
     );
     if (counterpart) {
       queryKeys.push(

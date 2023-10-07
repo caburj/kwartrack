@@ -202,3 +202,5 @@
   * [X] Show an indicator that a transaction is a loan or payment.
   * [X] Do not allow deleting/editing a loan if it already has a payment.
   * [X] Do not allow deleting/editing a payment.
+
+* [X] Show description in tooltip for unpaid loans.
