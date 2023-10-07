@@ -407,7 +407,7 @@ export function SideBar({
             >
               <Categories user={user} />
             </SideBarFoldable>
-            <Loans user={user} />
+            <ActiveLoans user={user} />
           </Accordion.Root>
         </ScrollArea>
         <DateRange user={user} />
@@ -416,7 +416,10 @@ export function SideBar({
   );
 }
 
-const Loans = ({ user }: { user: { id: string; dbname: string } }) => {
+/**
+ * Shows the list of loans that are not yet fully-paid.
+ */
+const ActiveLoans = ({ user }: { user: { id: string; dbname: string } }) => {
   const partitionsWithLoans = useQuery(["partitionsWithLoans", user.id], () => {
     return rpc.post.getPartitionsWithLoans({
       userId: user.id,
@@ -425,7 +428,7 @@ const Loans = ({ user }: { user: { id: string; dbname: string } }) => {
   });
 
   return (
-    <SideBarFoldable value="Loans">
+    <SideBarFoldable value="Active Loans">
       <Flex direction="column" my="2">
         <QueryResult
           query={partitionsWithLoans}

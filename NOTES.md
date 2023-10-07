@@ -153,6 +153,8 @@
 * [ ] Allow navigating in the table cells using arrow keys and also editing.
   - Highlight focused cell.
 
+* [ ] Show paid loans.
+
 
 # DONE
 
