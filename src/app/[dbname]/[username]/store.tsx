@@ -24,6 +24,7 @@ type UserPageAction =
   | { type: "SET_SELECTED_SOURCE_ID"; payload: string }
   | { type: "SET_SELECTED_DESTINATION_ID"; payload: string }
   | { type: "TOGGLE_LOAN_IDS"; payload: string[] }
+  | { type: "REMOVE_LOAN_IDS"; payload: string[] };
 
 type UserPageDispatch = (action: UserPageAction) => void;
 
@@ -149,6 +150,12 @@ const userPageStoreReducer = (
         }
       }
       return { ...state, loanIds };
+    }
+    case "REMOVE_LOAN_IDS": {
+      return {
+        ...state,
+        loanIds: state.loanIds.filter((id) => !action.payload.includes(id)),
+      };
     }
   }
 };

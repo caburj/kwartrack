@@ -38,6 +38,8 @@ import {
 import { Combobox } from "./combobox";
 import { css } from "../../../../styled-system/css";
 import { TransactionForm } from "./transaction_form";
+import { GiPayMoney } from "react-icons/gi";
+import { BiMoneyWithdraw } from "react-icons/bi";
 
 type Transaction = Unpacked<
   NonNullable<Awaited<ReturnType<typeof rpc.post.findTransactions>>>[0]
@@ -145,17 +147,17 @@ function PartitionBadge({
   partition,
   user,
   isCounterpart,
-  isEditable,
 }: {
   partitions: Partitions;
   transaction: Transaction;
   partition: Partition;
   user: { id: string; dbname: string };
   isCounterpart: boolean;
-  isEditable: boolean;
 }) {
   if (partition) {
-    if (isEditable) {
+    const _type = getPartitionType(partition, user.id);
+    const color = PARTITION_COLOR[_type];
+    if (isEditable(transaction)) {
       return (
         <EditablePartitionBadge
           partitions={partitions}
@@ -167,7 +169,7 @@ function PartitionBadge({
       );
     } else {
       return (
-        <Badge color={PARTITION_COLOR.others} variant="soft">
+        <Badge color={color} variant="surface">
           {partition.label}
         </Badge>
       );
@@ -180,6 +182,28 @@ function PartitionBadge({
     );
   }
 }
+
+function isEditable(transaction: Transaction) {
+  return (
+    !(transaction.is_loan && transaction.has_payments) &&
+    !transaction.is_payment &&
+    (transaction.source_partition?.account.is_owned || false)
+  );
+}
+
+const CategoryText = ({ transaction }: { transaction: Transaction }) => {
+  const categoryLabel = transaction.category.name;
+  const icon = transaction.is_loan ? (
+    <BiMoneyWithdraw />
+  ) : (
+    (transaction.is_payment && <GiPayMoney />) || null
+  );
+  return (
+    <>
+      {categoryLabel} {icon}
+    </>
+  );
+};
 
 export function TransactionsTable({
   user,
@@ -200,7 +224,13 @@ export function TransactionsTable({
   };
 
   const transactions = useQuery(
-    ["transactions", currentPage, store.categoryIds, store.partitionIds, store.loanIds],
+    [
+      "transactions",
+      currentPage,
+      store.categoryIds,
+      store.partitionIds,
+      store.loanIds,
+    ],
     () => {
       return rpc.post.findTransactions({
         currentPage,
@@ -241,7 +271,6 @@ export function TransactionsTable({
   );
 
   const getPartitionColumn = (transaction: Transaction) => {
-    const isEditable = transaction.source_partition?.account.is_owned || false;
     if (transaction.kind === "Transfer") {
       return (
         <Flex>
@@ -251,7 +280,6 @@ export function TransactionsTable({
             partition={transaction.source_partition}
             user={user}
             isCounterpart={false}
-            isEditable={isEditable}
           />
           <Flex align="center">
             <ChevronRightIcon />
@@ -262,7 +290,6 @@ export function TransactionsTable({
             partition={transaction.counterpart?.source_partition || null}
             user={user}
             isCounterpart={true}
-            isEditable={isEditable}
           />
         </Flex>
       );
@@ -274,7 +301,6 @@ export function TransactionsTable({
           partition={transaction.source_partition}
           user={user}
           isCounterpart={false}
-          isEditable={isEditable}
         />
       );
     }
@@ -284,7 +310,10 @@ export function TransactionsTable({
     const transactions = [transaction, transaction.counterpart].filter(
       Boolean
     ) as Transaction[];
-    return transactions.some((t) => t.source_partition?.account.is_owned);
+    return (
+      transactions.some((t) => t.source_partition?.account.is_owned) &&
+      isEditable(transaction)
+    );
   };
 
   return (
@@ -349,57 +378,81 @@ export function TransactionsTable({
                     return (
                       <Table.Row
                         key={transaction.id}
-                        className={css({ "& td": { whiteSpace: "nowrap" } })}
+                        className={css({
+                          "& td": { whiteSpace: "nowrap" },
+                          "& .delete-button": {
+                            opacity: "0",
+                            transition: "opacity 0.2s ease-in-out",
+                          },
+                          "&:hover": {
+                            "& .delete-button": {
+                              opacity: "1",
+                            },
+                          },
+                        })}
                       >
                         <Table.Cell>{transaction.str_date.slice(5)}</Table.Cell>
                         <Table.Cell>
-                          <Combobox
-                            groupedItems={{
-                              [transaction.category.kind]: allowedCategories,
-                            }}
-                            getGroupHeading={(key) => key}
-                            getItemDisplay={(cat) => getCategoryOptionName(cat)}
-                            getItemValue={(cat) =>
-                              `${
-                                transaction.category.kind
-                              } ${getCategoryOptionName(cat)}`
-                            }
-                            getItemColor={(cat) => CATEGORY_COLOR[cat.kind]}
-                            onSelectItem={async (cat) => {
-                              await updateTransaction.mutateAsync({
-                                transaction,
-                                categoryId: cat.id,
-                              });
-                              invalidateMany(queryClient, [
-                                ["transactions"],
-                                [
-                                  "categoryBalance",
-                                  { categoryId: transaction.category.id },
-                                ],
-                                ["categoryBalance", { categoryId: cat.id }],
-                                [
-                                  "categoryCanBeDeleted",
-                                  { categoryId: transaction.category.id },
-                                ],
-                                [
-                                  "categoryCanBeDeleted",
-                                  { categoryId: cat.id },
-                                ],
-                              ]);
-                            }}
-                          >
-                            <Popover.Trigger>
-                              <Badge
-                                color={
-                                  CATEGORY_COLOR[transaction.category.kind]
-                                }
-                                variant={variant}
-                                style={{ cursor: "pointer" }}
-                              >
-                                {transaction.category.name}
-                              </Badge>
-                            </Popover.Trigger>
-                          </Combobox>
+                          {isEditable(transaction) ? (
+                            <Combobox
+                              groupedItems={{
+                                [transaction.category.kind]: allowedCategories,
+                              }}
+                              getGroupHeading={(key) => key}
+                              getItemDisplay={(cat) =>
+                                getCategoryOptionName(cat)
+                              }
+                              getItemValue={(cat) =>
+                                `${
+                                  transaction.category.kind
+                                } ${getCategoryOptionName(cat)}`
+                              }
+                              getItemColor={(cat) => CATEGORY_COLOR[cat.kind]}
+                              onSelectItem={async (cat) => {
+                                await updateTransaction.mutateAsync({
+                                  transaction,
+                                  categoryId: cat.id,
+                                });
+                                invalidateMany(queryClient, [
+                                  ["transactions"],
+                                  [
+                                    "categoryBalance",
+                                    { categoryId: transaction.category.id },
+                                  ],
+                                  ["categoryBalance", { categoryId: cat.id }],
+                                  [
+                                    "categoryCanBeDeleted",
+                                    { categoryId: transaction.category.id },
+                                  ],
+                                  [
+                                    "categoryCanBeDeleted",
+                                    { categoryId: cat.id },
+                                  ],
+                                ]);
+                              }}
+                            >
+                              <Popover.Trigger>
+                                <Badge
+                                  color={
+                                    CATEGORY_COLOR[transaction.category.kind]
+                                  }
+                                  variant={variant}
+                                  style={{ cursor: "pointer" }}
+                                >
+                                  <CategoryText
+                                    transaction={transaction}
+                                  />
+                                </Badge>
+                              </Popover.Trigger>
+                            </Combobox>
+                          ) : (
+                            <Badge
+                              color={CATEGORY_COLOR[transaction.category.kind]}
+                              variant="surface"
+                            >
+                              <CategoryText transaction={transaction} />
+                            </Badge>
+                          )}
                         </Table.Cell>
                         <Table.Cell>
                           {getPartitionColumn(transaction)}
@@ -413,15 +466,18 @@ export function TransactionsTable({
                         <Table.Cell>
                           {shouldShowDelete(transaction) && (
                             <IconButton
+                              className="delete-button"
                               variant="ghost"
                               color="crimson"
                               onClick={async () => {
                                 setIsDeleting(true);
-                                await rpc.post.deleteTransaction({
-                                  transactionId: transaction.id,
-                                  userId: user.id,
-                                  dbname: user.dbname,
-                                });
+                                const result = await rpc.post.deleteTransaction(
+                                  {
+                                    transactionId: transaction.id,
+                                    userId: user.id,
+                                    dbname: user.dbname,
+                                  }
+                                );
                                 const queryKeys: QueryKey[] = [
                                   ["transactions"],
                                   ["user", user.id],
@@ -471,6 +527,12 @@ export function TransactionsTable({
                                           transaction.source_partition.account
                                             .id,
                                       },
+                                    ],
+                                    ["partitionsWithLoans", user.id],
+                                    [
+                                      "unpaidLoans",
+                                      user.id,
+                                      transaction.source_partition.id,
                                     ]
                                   );
                                 }
@@ -509,6 +571,14 @@ export function TransactionsTable({
                                       },
                                     ]
                                   );
+                                }
+                                if (result) {
+                                  if ("loanId" in result) {
+                                    dispatch({
+                                      type: "REMOVE_LOAN_IDS",
+                                      payload: [result.loanId],
+                                    });
+                                  }
                                 }
                                 invalidateMany(queryClient, queryKeys);
                                 setIsDeleting(false);

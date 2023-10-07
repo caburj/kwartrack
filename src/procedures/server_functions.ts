@@ -327,6 +327,10 @@ export const findTransactions = withValidation(
             id: true,
             value: true,
             is_loan: e.op("exists", transaction["<transaction[is ELoan]"]),
+            has_payments: e.op(
+              "exists",
+              transaction["<transaction[is ELoan]"]["<loan[is EPayment]"]
+            ),
             is_payment: e.op(
               "exists",
               transaction["<transaction[is EPayment]"]
@@ -616,20 +620,44 @@ export const createTransaction = withValidation(
 export const deleteTransaction = withValidation(
   object({ transactionId: string(), userId: string(), dbname: string() }),
   async ({ transactionId, userId, dbname }) => {
-    const deleteQuery = e.params({ id: e.uuid }, ({ id }) =>
-      e.delete(e.ETransaction, (transaction) => {
-        return {
-          filter_single: e.op(transaction.id, "=", id),
-        };
-      })
-    );
+    const getLinkedUnpaidLoan = e.params({ tId: e.uuid }, ({ tId }) => {
+      return e.select(e.ELoan, (loan) => ({
+        filter_single: e.op(
+          e.op(loan.transaction.id, "=", tId),
+          "and",
+          e.op("not", e.op("exists", loan["<loan[is EPayment]"]))
+        ),
+      }));
+    });
 
-    return deleteQuery.run(
-      edgedb
-        .createClient({ database: dbname })
-        .withGlobals({ current_user_id: userId }),
-      { id: transactionId }
-    );
+    const client = edgedb
+      .createClient({ database: dbname })
+      .withGlobals({ current_user_id: userId });
+
+    return client.transaction(async (tx) => {
+      const unpaidLoan = await getLinkedUnpaidLoan.run(tx, {
+        tId: transactionId,
+      });
+      if (!unpaidLoan) {
+        return e
+          .delete(e.ETransaction, (transaction) => ({
+            filter_single: e.op(transaction.id, "=", e.uuid(transactionId)),
+          }))
+          .run(tx);
+      } else {
+        const deletedLoan = await e
+          .delete(e.ELoan, (loan) => ({
+            filter_single: e.op(loan.id, "=", e.uuid(unpaidLoan.id)),
+          }))
+          .run(tx);
+        if (deletedLoan) {
+          return {
+            loanId: deletedLoan.id,
+            id: transactionId,
+          };
+        }
+      }
+    });
   }
 );
 

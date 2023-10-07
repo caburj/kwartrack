@@ -9,6 +9,11 @@
     private category.
   - A private partition with private category transactions can't be changed to a
     public partition.
+- Badge variant convention
+  - Owned Private -> outline
+  - Owned visible -> soft
+  - Not editable -> surface
+  - Not owned private -> outline
 
 
 # TODO
@@ -129,10 +134,6 @@
 
 * [ ] Authentication.
 
-* [ ] Allow deleting loans and payments.
-  * [ ] Show an indicator that a transaction is a loan or payment.
-  * [ ] Do not allow editing loan/payment transaction.
-
 
 # IDEA / NICE TO HAVE (MAYBE)
 
@@ -196,3 +197,8 @@
   * [X] Filter loans. When clicking a loan, show the linked transactions (which
     includes the payments).
   * [X] Show "Private" as name if private. Also, show prefixed account name.
+
+* [X] Allow editing loan transactions
+  * [X] Show an indicator that a transaction is a loan or payment.
+  * [X] Do not allow deleting/editing a loan if it already has a payment.
+  * [X] Do not allow deleting/editing a payment.
