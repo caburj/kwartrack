@@ -17,8 +17,7 @@ export function createRPCHandler(
     if (!procedure) {
       throw new Error(`Procedure ${procedureName} not found`);
     }
-    const result = await procedure(Object.fromEntries(searchParams));
-    return NextResponse.json(result);
+    return makeResponse(() => procedure(Object.fromEntries(searchParams)));
   };
 
   const POST = async (
@@ -31,11 +30,7 @@ export function createRPCHandler(
       throw new Error(`Procedure ${procedureName} not found`);
     }
     const input = await req.json();
-    const result = await procedure(input);
-    if (result === undefined) {
-      return NextResponse.json(null);
-    }
-    return NextResponse.json(result);
+    return makeResponse(() => procedure(input));
   };
 
   return { GET, POST };
@@ -53,7 +48,7 @@ export function createRPCClient<T extends any>(): { get: T; post: T } {
           const url = new URL(`/api/rpc/${name}`, window.location.href);
           url.search = new URLSearchParams(params).toString();
           const response = await fetch(url.toString());
-          return response.json();
+          return processResponse(response);
         };
       },
     }
@@ -69,11 +64,35 @@ export function createRPCClient<T extends any>(): { get: T; post: T } {
             method: "POST",
             body: JSON.stringify(params),
           });
-          return response.json();
+          return processResponse(response);
         };
       },
     }
   );
 
   return { get, post };
+}
+
+async function makeResponse(getResult: () => any) {
+  try {
+    const result = (await getResult()) ?? null;
+    return Response.json(result);
+  } catch (error) {
+    return NextResponse.json(
+      { error: (error as Error).message },
+      { status: 500 }
+    );
+  }
+}
+
+async function processResponse(response: Response) {
+  if (!response.ok) {
+    const result = await response.json();
+    if (result.error) {
+      throw new Error(result.error);
+    } else {
+      throw new Error(response.statusText);
+    }
+  }
+  return response.json();
 }

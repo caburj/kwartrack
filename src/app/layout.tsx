@@ -5,6 +5,7 @@ import { Providers } from "./providers";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Theme } from "@radix-ui/themes";
+import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,6 +28,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
             {props.children}
           </Theme>
         </Providers>
+        <Toaster closeButton richColors theme="system" />
       </body>
     </html>
   );

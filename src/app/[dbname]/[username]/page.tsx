@@ -57,7 +57,7 @@ export function UserPage({
     <QueryResult
       query={user}
       onLoading={<>Loading {`${username}'s accounts`}...</>}
-      onUndefined={<>{`${username}'s data`} not found</>}
+      onUndefined={<>{`${username}'s`} data not found</>}
     >
       {(user) => (
         <Flex gap="3">
