@@ -20,13 +20,7 @@
 
 # TODO PRE 0.1
 
-* [ ] Migration.
-  - Looks like piecewise migrations are needed when developing new features.
-
 * [ ] Prepare a script to migrate all db in a given edgedb instance.
-
-* [ ] Properly handle "undefined" result from rpc, also error.
-  - Use toast notification. https://sonner.emilkowal.ski
 
 * [ ] Allow editing the accounts, partitions, and categories.
   - Always edit mode in the sidebar?
@@ -96,6 +90,9 @@
   - Can we find a declarative way?
 
 * [ ] Allow changing the color of each partition and category.
+
+* [ ] Migration.
+  - Looks like piecewise migrations are needed when developing new features.
 
 
 # IDEA / NICE TO HAVE (MAYBE)
@@ -204,6 +201,10 @@
 
 * [X] Better controls at the top of the transactions table.
   * [X] Prettify the date section.
+
+* [X] Properly handle "undefined" result from rpc, also error.
+  - Use toast notification. https://sonner.emilkowal.ski
+
 
 # CANCELLED
 
