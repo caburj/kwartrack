@@ -1360,14 +1360,25 @@ export const updateTransaction = withValidation(
     partitionId: optional(string()),
   }),
   async ({ userId, dbname, transactionId, categoryId, partitionId }) => {
-    const updateCategoryQuery = e.params(
+    const selectTransactionQuery = e.params(
       {
         id: e.uuid,
+      },
+      ({ id }) =>
+        e.select(e.ETransaction, (transaction) => ({
+          filter_single: e.op(transaction.id, "=", id),
+          counterpart: { id: true },
+        }))
+    );
+
+    const updateCategoryQuery = e.params(
+      {
+        ids: e.array(e.uuid),
         categoryId: e.uuid,
       },
-      ({ id, categoryId }) =>
+      ({ ids, categoryId }) =>
         e.update(e.ETransaction, (transaction) => ({
-          filter_single: e.op(transaction.id, "=", id),
+          filter: e.op(transaction.id, "in", e.array_unpack(ids)),
           set: {
             category: e.select(e.ECategory, (category) => ({
               filter_single: e.op(category.id, "=", categoryId),
@@ -1399,7 +1410,14 @@ export const updateTransaction = withValidation(
 
     await client.transaction(async (tx) => {
       if (categoryId) {
-        await updateCategoryQuery.run(tx, { id: transactionId, categoryId });
+        const transaction = await selectTransactionQuery.run(tx, {
+          id: transactionId,
+        });
+        const ids = [transactionId];
+        if (transaction?.counterpart) {
+          ids.push(transaction.counterpart.id);
+        }
+        await updateCategoryQuery.run(tx, { ids, categoryId });
       }
       if (partitionId) {
         await updatePartitionQuery.run(tx, { id: transactionId, partitionId });
