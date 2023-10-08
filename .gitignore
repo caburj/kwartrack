@@ -39,3 +39,6 @@ styled-system
 styled-system-static
 
 dbschema/edgeql-js
+
+dist
+compiled

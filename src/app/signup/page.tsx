@@ -2,7 +2,7 @@ import { createNewUser } from "@/procedures/server_functions";
 import { redirect } from "next/navigation";
 import { object, string } from "valibot";
 
-export async function signup(data: FormData) {
+async function signup(data: FormData) {
   "use server";
 
   const email = data.get("email");

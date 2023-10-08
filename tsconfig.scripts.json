@@ -1,0 +1,12 @@
+{
+  "extends": "@tsconfig/node-lts/tsconfig.json",
+  "compilerOptions": {
+    "sourceMap": true,
+    "outDir": "./compiled",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["./scripts/**/*.ts"],
+  "exclude": ["node_modules"]
+}

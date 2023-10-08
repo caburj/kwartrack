@@ -76,7 +76,7 @@ export function createRPCClient<T extends any>(): { get: T; post: T } {
 async function makeResponse(getResult: () => any) {
   try {
     const result = (await getResult()) ?? null;
-    return Response.json(result);
+    return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
       { error: (error as Error).message },

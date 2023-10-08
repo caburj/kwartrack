@@ -15,6 +15,8 @@
     "jsx": "preserve",
     "incremental": true,
     "noErrorTruncation": true,
+    "sourceMap": true,
+    "downlevelIteration": true,
     "plugins": [
       {
         "name": "next"

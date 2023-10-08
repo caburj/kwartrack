@@ -1,7 +1,7 @@
 import { findUserByEmail } from "@/procedures/server_functions";
 import { redirect } from "next/navigation";
 
-export async function login(data: FormData) {
+async function login(data: FormData) {
   "use server";
 
   const email = data.get("email");

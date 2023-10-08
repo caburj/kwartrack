@@ -22,7 +22,7 @@ export default function Main(props: {
   );
 }
 
-export function UserPage({
+function UserPage({
   username,
   dbname,
 }: {

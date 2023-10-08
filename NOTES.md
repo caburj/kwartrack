@@ -83,6 +83,9 @@
 
 * [ ] Authentication.
 
+* [ ] It's correct to disallow editing a payment transaction. However, user
+  should be able to delete a payment.
+
 
 # TODO POST 0.1
 
