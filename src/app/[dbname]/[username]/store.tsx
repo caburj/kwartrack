@@ -41,6 +41,12 @@ const getLastDayOfMonth = (date: Date) => {
   return new Date(Date.UTC(date.getFullYear(), date.getMonth() + 1, 0));
 };
 
+const plusMonths = (date: Date, n: number) => {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + n);
+  return new Date(d);
+};
+
 const initStore: UserPageStore = {
   partitionIds: [],
   categoryIds: [],
@@ -145,13 +151,21 @@ const userPageStoreReducer = (
     }
     case "SET_PREV_MONTH": {
       const d = state.tssDate || new Date();
-      d.setMonth(d.getMonth() - 1);
-      return { ...state, tssDate: getFirstDayOfMonth(d), tseDate: getLastDayOfMonth(d) };
+      const x = plusMonths(d, -1);
+      return {
+        ...state,
+        tssDate: getFirstDayOfMonth(x),
+        tseDate: getLastDayOfMonth(x),
+      };
     }
     case "SET_NEXT_MONTH": {
       const d = state.tssDate || new Date();
-      d.setMonth(d.getMonth() + 1);
-      return { ...state, tssDate: getFirstDayOfMonth(d), tseDate: getLastDayOfMonth(d) };
+      const x = plusMonths(d, 1);
+      return {
+        ...state,
+        tssDate: getFirstDayOfMonth(x),
+        tseDate: getLastDayOfMonth(x),
+      };
     }
     case "SET_SELECTED_CATEGORY_ID": {
       return { ...state, selectedCategoryId: action.payload };
