@@ -373,48 +373,46 @@ export const findTransactions = withValidation(
       lIds: loanIds,
     });
     const hasNextPage = result.length === nPerPage + 1;
-    if (result.length !== 0) {
-      return [
-        result
-          .map((tx) => {
-            return {
-              ...tx,
-              source_partition: tx.is_visible
+    return [
+      result
+        .map((tx) => {
+          return {
+            ...tx,
+            source_partition: tx.is_visible
+              ? {
+                  ...tx.source_partition,
+                  label: `${computeAccountLabel(
+                    tx.source_partition.account
+                  )} - ${tx.source_partition.name}`,
+                  account: {
+                    ...tx.source_partition.account,
+                    label: computeAccountLabel(tx.source_partition.account),
+                  },
+                }
+              : null,
+            counterpart:
+              tx.counterpart && tx.counterpart.is_visible
                 ? {
-                    ...tx.source_partition,
-                    label: `${computeAccountLabel(
-                      tx.source_partition.account
-                    )} - ${tx.source_partition.name}`,
-                    account: {
-                      ...tx.source_partition.account,
-                      label: computeAccountLabel(tx.source_partition.account),
+                    ...tx.counterpart,
+                    source_partition: {
+                      ...tx.counterpart.source_partition,
+                      label: `${computeAccountLabel(
+                        tx.counterpart.source_partition.account
+                      )} - ${tx.counterpart.source_partition.name}`,
+                      account: {
+                        ...tx.counterpart.source_partition.account,
+                        label: computeAccountLabel(
+                          tx.counterpart.source_partition.account
+                        ),
+                      },
                     },
                   }
                 : null,
-              counterpart:
-                tx.counterpart && tx.counterpart.is_visible
-                  ? {
-                      ...tx.counterpart,
-                      source_partition: {
-                        ...tx.counterpart.source_partition,
-                        label: `${computeAccountLabel(
-                          tx.counterpart.source_partition.account
-                        )} - ${tx.counterpart.source_partition.name}`,
-                        account: {
-                          ...tx.counterpart.source_partition.account,
-                          label: computeAccountLabel(
-                            tx.counterpart.source_partition.account
-                          ),
-                        },
-                      },
-                    }
-                  : null,
-            };
-          })
-          .slice(0, nPerPage),
-        hasNextPage,
-      ] as const;
-    }
+          };
+        })
+        .slice(0, nPerPage),
+      hasNextPage,
+    ] as const;
   }
 );
 

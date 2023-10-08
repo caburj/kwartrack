@@ -9,6 +9,7 @@ import { TransactionsTable } from "./transactions_table";
 import { SideBar } from "./side_bar";
 import { useEffect, useState } from "react";
 import { css } from "../../../../styled-system/css";
+import "react-datepicker/dist/react-datepicker.css";
 
 export default function Main(props: {
   params: { username: string; dbname: string };

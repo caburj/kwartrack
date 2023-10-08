@@ -4,9 +4,10 @@ type UserPageStore = {
   partitionIds: string[];
   categoryIds: string[];
   loanIds: string[];
-  tssDate: Date | undefined;
-  tseDate: Date | undefined;
+  tssDate: Date | null;
+  tseDate: Date | null;
   nPerPage: number;
+  currentPage: number;
   selectedCategoryId: string;
   selectedSourceId: string;
   selectedDestinationId: string;
@@ -18,23 +19,25 @@ type UserPageAction =
   | { type: "TOGGLE_CATEGORIES"; payload: string[] }
   | { type: "TOGGLE_CATEGORY_KIND"; payload: string[] }
   | { type: "SET_N_PER_PAGE"; payload: number }
-  | { type: "SET_TSS_DATE"; payload: Date | undefined }
-  | { type: "SET_TSE_DATE"; payload: Date | undefined }
+  | { type: "SET_TSS_DATE"; payload: Date | null }
+  | { type: "SET_TSE_DATE"; payload: Date | null }
+  | { type: "SET_THIS_MONTH" }
+  | { type: "SET_PREV_MONTH" }
+  | { type: "SET_NEXT_MONTH" }
   | { type: "SET_SELECTED_CATEGORY_ID"; payload: string }
   | { type: "SET_SELECTED_SOURCE_ID"; payload: string }
   | { type: "SET_SELECTED_DESTINATION_ID"; payload: string }
   | { type: "TOGGLE_LOAN_IDS"; payload: string[] }
-  | { type: "REMOVE_LOAN_IDS"; payload: string[] };
+  | { type: "REMOVE_LOAN_IDS"; payload: string[] }
+  | { type: "SET_CURRENT_PAGE"; payload: number };
 
 type UserPageDispatch = (action: UserPageAction) => void;
 
-const firstDayOfCurrentMonth = () => {
-  const date = new Date();
+const getFirstDayOfMonth = (date: Date) => {
   return new Date(Date.UTC(date.getFullYear(), date.getMonth(), 1));
 };
 
-const lastDayOfCurrentMonth = () => {
-  const date = new Date();
+const getLastDayOfMonth = (date: Date) => {
   return new Date(Date.UTC(date.getFullYear(), date.getMonth() + 1, 0));
 };
 
@@ -43,8 +46,9 @@ const initStore: UserPageStore = {
   categoryIds: [],
   loanIds: [],
   nPerPage: 50,
-  tssDate: firstDayOfCurrentMonth(),
-  tseDate: lastDayOfCurrentMonth(),
+  currentPage: 1,
+  tssDate: getFirstDayOfMonth(new Date()),
+  tseDate: getLastDayOfMonth(new Date()),
   selectedCategoryId: "",
   selectedSourceId: "",
   selectedDestinationId: "",
@@ -131,6 +135,24 @@ const userPageStoreReducer = (
     case "SET_TSE_DATE": {
       return { ...state, tseDate: action.payload };
     }
+    case "SET_THIS_MONTH": {
+      const today = new Date();
+      return {
+        ...state,
+        tssDate: getFirstDayOfMonth(today),
+        tseDate: getLastDayOfMonth(today),
+      };
+    }
+    case "SET_PREV_MONTH": {
+      const d = state.tssDate || new Date();
+      d.setMonth(d.getMonth() - 1);
+      return { ...state, tssDate: getFirstDayOfMonth(d), tseDate: getLastDayOfMonth(d) };
+    }
+    case "SET_NEXT_MONTH": {
+      const d = state.tssDate || new Date();
+      d.setMonth(d.getMonth() + 1);
+      return { ...state, tssDate: getFirstDayOfMonth(d), tseDate: getLastDayOfMonth(d) };
+    }
     case "SET_SELECTED_CATEGORY_ID": {
       return { ...state, selectedCategoryId: action.payload };
     }
@@ -156,6 +178,9 @@ const userPageStoreReducer = (
         ...state,
         loanIds: state.loanIds.filter((id) => !action.payload.includes(id)),
       };
+    }
+    case "SET_CURRENT_PAGE": {
+      return { ...state, currentPage: action.payload };
     }
   }
 };

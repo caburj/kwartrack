@@ -4,7 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useContext, useState } from "react";
+import { ForwardedRef, forwardRef, useContext, useState } from "react";
 import { UserPageStoreContext } from "./store";
 import { rpc } from "@/app/rpc_client";
 import {
@@ -20,6 +20,7 @@ import {
   useGroupedPartitions,
 } from "@/utils/common";
 import {
+  Button,
   Badge,
   Flex,
   IconButton,
@@ -28,18 +29,21 @@ import {
   Table,
   TextField,
   ScrollArea,
+  Link,
 } from "@radix-ui/themes";
 import {
   Cross1Icon,
+  ChevronLeftIcon,
   ChevronRightIcon,
-  DoubleArrowLeftIcon,
-  DoubleArrowRightIcon,
+  TriangleRightIcon,
 } from "@radix-ui/react-icons";
 import { Combobox } from "./combobox";
 import { css } from "../../../../styled-system/css";
 import { TransactionForm } from "./transaction_form";
 import { GiPayMoney } from "react-icons/gi";
 import { BiMoneyWithdraw } from "react-icons/bi";
+
+import DatePicker from "react-datepicker";
 
 type Transaction = Unpacked<
   NonNullable<Awaited<ReturnType<typeof rpc.post.findTransactions>>>[0]
@@ -205,6 +209,126 @@ const CategoryText = ({ transaction }: { transaction: Transaction }) => {
   );
 };
 
+const CustomDatePickerButton = forwardRef(function CustomInput(
+  { value, onClick }: any,
+  ref: ForwardedRef<HTMLButtonElement>
+) {
+  return (
+    <Button onClick={onClick} ref={ref} variant="outline">
+      {value}
+    </Button>
+  );
+});
+
+const TableControls = (props: {
+  isTableLoading: boolean;
+  hasNextPage: boolean;
+}) => {
+  const [store, dispatch] = useContext(UserPageStoreContext);
+
+  const currentPage = store.currentPage;
+
+  const incrementPage = () => {
+    dispatch({ type: "SET_CURRENT_PAGE", payload: currentPage + 1 });
+  };
+
+  const decrementPage = () => {
+    dispatch({ type: "SET_CURRENT_PAGE", payload: currentPage - 1 });
+  };
+
+  return (
+    <Flex justify="between">
+      <Flex my="2" mt="0" align="center">
+        <IconButton
+          mr="2"
+          variant="surface"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            dispatch({ type: "SET_PREV_MONTH" });
+          }}
+        >
+          <ChevronLeftIcon />
+        </IconButton>
+        <DatePicker
+          selected={store.tssDate}
+          onChange={(date) => {
+            dispatch({
+              type: "SET_TSS_DATE",
+              payload: date,
+            });
+          }}
+          customInput={<CustomDatePickerButton />}
+        />
+        <TriangleRightIcon />
+        <DatePicker
+          selected={store.tseDate}
+          onChange={(date) => {
+            dispatch({
+              type: "SET_TSE_DATE",
+              payload: date,
+            });
+          }}
+          customInput={<CustomDatePickerButton />}
+        />
+        <IconButton
+          ml="2"
+          variant="surface"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            dispatch({ type: "SET_NEXT_MONTH" });
+          }}
+        >
+          <ChevronRightIcon />
+        </IconButton>
+        <Link
+          ml="2"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            dispatch({ type: "SET_THIS_MONTH" });
+          }}
+        >
+          This Month
+        </Link>
+      </Flex>
+      <Flex my="2" mt="0" gap="3" align="center">
+        <Text weight="medium">Items per page</Text>
+        <TextField.Root>
+          <TextField.Input
+            placeholder="Search the docs…"
+            type="number"
+            min="1"
+            max="100"
+            value={store.nPerPage}
+            onChange={(event) => {
+              const value = parseInt(event.target.value);
+              if (isNaN(value)) return;
+              dispatch({ type: "SET_N_PER_PAGE", payload: value });
+            }}
+          />
+        </TextField.Root>
+        <Flex gap="3" align="center">
+          <IconButton
+            onClick={decrementPage}
+            disabled={props.isTableLoading || currentPage === 1}
+          >
+            <ChevronLeftIcon />
+          </IconButton>
+          <Text>{currentPage}</Text>
+          <IconButton
+            onClick={incrementPage}
+            disabled={props.isTableLoading || !props.hasNextPage}
+          >
+            <ChevronRightIcon />
+          </IconButton>
+        </Flex>
+      </Flex>
+    </Flex>
+  );
+};
+
 export function TransactionsTable({
   user,
 }: {
@@ -212,16 +336,10 @@ export function TransactionsTable({
 }) {
   const queryClient = useQueryClient();
   const [store, dispatch] = useContext(UserPageStoreContext);
+
+  const currentPage = store.currentPage;
+
   const [isDeleting, setIsDeleting] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const incrementPage = () => {
-    setCurrentPage((currentPage) => currentPage + 1);
-  };
-
-  const decrementPage = () => {
-    setCurrentPage((currentPage) => currentPage - 1);
-  };
 
   const transactions = useQuery(
     [
@@ -230,6 +348,9 @@ export function TransactionsTable({
       store.categoryIds,
       store.partitionIds,
       store.loanIds,
+      store.tssDate,
+      store.tseDate,
+      store.nPerPage,
     ],
     () => {
       return rpc.post.findTransactions({
@@ -318,38 +439,10 @@ export function TransactionsTable({
 
   return (
     <>
-      <Flex m="2" mt="0" gap="3" align="center">
-        <Text weight="medium">Items per page</Text>
-        <TextField.Root>
-          <TextField.Input
-            placeholder="Search the docs…"
-            type="number"
-            min="1"
-            max="100"
-            value={store.nPerPage}
-            onChange={(event) => {
-              const value = parseInt(event.target.value);
-              if (isNaN(value)) return;
-              dispatch({ type: "SET_N_PER_PAGE", payload: value });
-            }}
-          />
-        </TextField.Root>
-        <Flex gap="3" align="center">
-          <IconButton
-            onClick={decrementPage}
-            disabled={transactions.isLoading || currentPage === 1}
-          >
-            <DoubleArrowLeftIcon width="16" height="16" />
-          </IconButton>
-          <Text>{currentPage}</Text>
-          <IconButton
-            onClick={incrementPage}
-            disabled={transactions.isLoading || !transactions.data?.[1]}
-          >
-            <DoubleArrowRightIcon width="16" height="16" />
-          </IconButton>
-        </Flex>
-      </Flex>
+      <TableControls
+        isTableLoading={transactions.isLoading}
+        hasNextPage={transactions.data?.[1] ?? false}
+      />
       <ScrollArea>
         <Table.Root variant="surface" size="1" mb="4">
           <Table.Header>
@@ -439,9 +532,7 @@ export function TransactionsTable({
                                   variant={variant}
                                   style={{ cursor: "pointer" }}
                                 >
-                                  <CategoryText
-                                    transaction={transaction}
-                                  />
+                                  <CategoryText transaction={transaction} />
                                 </Badge>
                               </Popover.Trigger>
                             </Combobox>

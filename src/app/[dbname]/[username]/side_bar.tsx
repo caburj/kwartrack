@@ -410,7 +410,6 @@ export function SideBar({
             <ActiveLoans user={user} />
           </Accordion.Root>
         </ScrollArea>
-        <DateRange user={user} />
       </Flex>
     </Box>
   );
@@ -1711,46 +1710,6 @@ function CategoryLI({
           />
         )}
       </GenericLoadingValue>
-    </Flex>
-  );
-}
-
-function DateRange({ user }: { user: { id: string; dbname: string } }) {
-  const [store, dispatch] = useContext(UserPageStoreContext);
-  return (
-    <Flex direction="column" gap="1" px="4" py="2">
-      <Flex justify="between">
-        <label htmlFor="startDate">Start Date</label>
-        <input
-          type="date"
-          name="startDate"
-          value={store.tssDate?.toISOString().split("T")[0] ?? ""}
-          onChange={(event) => {
-            dispatch({
-              type: "SET_TSS_DATE",
-              payload: event.target.value
-                ? new Date(event.target.value)
-                : undefined,
-            });
-          }}
-        />
-      </Flex>
-      <Flex justify="between">
-        <label htmlFor="endDate">End Date</label>
-        <input
-          type="date"
-          name="endDate"
-          value={store.tseDate?.toISOString().split("T")[0] ?? ""}
-          onChange={(event) => {
-            dispatch({
-              type: "SET_TSE_DATE",
-              payload: event.target.value
-                ? new Date(event.target.value)
-                : undefined,
-            });
-          }}
-        />
-      </Flex>
     </Flex>
   );
 }

@@ -27,6 +27,7 @@
     "next": "13.4.12",
     "next-themes": "^0.2.1",
     "react": "18.2.0",
+    "react-datepicker": "^4.18.0",
     "react-dom": "18.2.0",
     "react-icons": "^4.11.0",
     "sass": "^1.68.0",
@@ -35,6 +36,7 @@
   },
   "devDependencies": {
     "@edgedb/generate": "^0.3.2",
-    "@pandacss/dev": "^0.15.1"
+    "@pandacss/dev": "^0.15.1",
+    "@types/react-datepicker": "^4.15.1"
   }
 }

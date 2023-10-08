@@ -18,30 +18,21 @@
 
 # TODO
 
-* [ ] A way to reinitialize the database.
-  - During dev, we want to start from scratch.
-  - When starting from scratch, the micro migration steps should be ignored.
-    - There is no point in running the migration steps, it can just be
-      initialized with the latest schema.
+# TODO PRE 0.1
 
 * [ ] Migration.
   - Looks like piecewise migrations are needed when developing new features.
 
 * [ ] Prepare a script to migrate all db in a given edgedb instance.
 
-* [ ] Prettier display for the number-of-items-per-page input.
-
 * [ ] Properly handle "undefined" result from rpc, also error.
   - Use toast notification. https://sonner.emilkowal.ski
-
-* [ ] A better way to invalidate queries when making mutations.
-  - Can we find a declarative way?
 
 * [ ] Allow editing the accounts, partitions, and categories.
   - Always edit mode in the sidebar?
 
-* [ ] Allow hiding emptied accounts -- accounts with transactions but with 0
-  balance.
+* [ ] Allow hiding emptied accounts -- accounts with transactions but with 0 or
+  less balance.
   - Maybe show the delete button, but instead of completely deleting the
     account, only archive it.
     - And archived accounts should be hidden.
@@ -89,6 +80,44 @@
           simple explanations.
       * [ ] Then redirect to the main UI.
 
+* [ ] Allow editing amount, description and date.
+  - Clicking the date will show the date picker.
+  - Amount and description is rendered as input.
+    - Update the transaction at onBlur.
+
+* [ ] Rename repo to "kwartrack".
+
+* [ ] Authentication.
+
+
+# TODO POST 0.1
+
+* [ ] A better way to invalidate queries when making mutations.
+  - Can we find a declarative way?
+
+* [ ] Allow changing the color of each partition and category.
+
+
+# IDEA / NICE TO HAVE (MAYBE)
+
+* [ ] Each transaction row should be a different query.
+  - One query to ask for the ids of the transactions to display.
+    - Each id will correspond to a transaction row and data in each row will be
+      fetched by a query.
+  - With this, when editing a transaction, we don't need to fetch the whole
+    table.
+  - As a result, initial page load is slow, but modification is fast.
+  - ! Looks like it's not a good idea because it's rare to make modifications in
+      the records.
+
+* [ ] Undo/Redo
+  - This is probably very difficult.
+
+* [ ] Allow navigating in the table cells using arrow keys and also editing.
+  - Highlight focused cell.
+
+* [ ] Show paid loans.
+
 * [ ] When an account contains one partition:
   - When selecting a partition, the account should be one of the options.
     Selecting it will select the single linked partition.
@@ -120,40 +149,6 @@
         - Budget:     $50
         - Personal:   $30
         - Savings:    $20
-
-* [ ] Prettify the date section.
-
-* [ ] Allow changing the color of each partition and category.
-
-* [ ] Allow editing amount, description and date.
-  - Clicking the date will show the date picker.
-  - Amount and description is rendered as input.
-    - Update the transaction at onBlur.
-
-* [ ] Rename repo to "kwartrack".
-
-* [ ] Authentication.
-
-
-# IDEA / NICE TO HAVE (MAYBE)
-
-* [ ] Each transaction row should be a different query.
-  - One query to ask for the ids of the transactions to display.
-    - Each id will correspond to a transaction row and data in each row will be
-      fetched by a query.
-  - With this, when editing a transaction, we don't need to fetch the whole
-    table.
-  - As a result, initial page load is slow, but modification is fast.
-  - ! Looks like it's not a good idea because it's rare to make modifications in
-      the records.
-
-* [ ] Undo/Redo
-  - This is probably very difficult.
-
-* [ ] Allow navigating in the table cells using arrow keys and also editing.
-  - Highlight focused cell.
-
-* [ ] Show paid loans.
 
 
 # DONE
@@ -206,3 +201,16 @@
   * [X] Do not allow deleting/editing a payment.
 
 * [X] Show description in tooltip for unpaid loans.
+
+* [X] Better controls at the top of the transactions table.
+  * [X] Prettify the date section.
+
+# CANCELLED
+
+* [ ] A way to reinitialize the database.
+  - During dev, we want to start from scratch.
+  - When starting from scratch, the micro migration steps should be ignored.
+    - There is no point in running the migration steps, it can just be
+      initialized with the latest schema.
+  - Just use `edgedb database drop <dbname>` and sign-up a new user to create a
+    new db.
