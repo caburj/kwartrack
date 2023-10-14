@@ -51,14 +51,13 @@ import {
   Button,
   Select,
   Switch,
-  Grid,
   ContextMenu,
   Badge,
-  Tooltip,
 } from "@radix-ui/themes";
 import { ChevronRightIcon, PlusIcon } from "@radix-ui/react-icons";
 import * as Accordion from "@radix-ui/react-accordion";
 import { Combobox, ComboboxTrigger } from "./combobox";
+import { TwoColumnInput } from "@/utils/common";
 
 type FindUserResult = NonNullable<
   Unpacked<Awaited<ReturnType<typeof rpc.post.findUser>>>
@@ -1727,14 +1726,6 @@ function GenericLoadingValue(props: {
     >
       {props.children}
     </QueryResult>
-  );
-}
-
-function TwoColumnInput(props: { children: React.ReactNode }) {
-  return (
-    <Grid asChild columns="125px 1fr" align="center">
-      <label>{props.children}</label>
-    </Grid>
   );
 }
 

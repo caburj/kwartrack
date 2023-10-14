@@ -86,6 +86,10 @@
 * [ ] It's correct to disallow editing a payment transaction. However, user
   should be able to delete a payment.
 
+* [ ] Reset the current page whenever the filter is changed.
+
+* [ ] Loading of the transactions table.
+
 
 # TODO POST 0.1
 

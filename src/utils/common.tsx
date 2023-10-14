@@ -1,5 +1,5 @@
 import { rpc } from "@/app/rpc_client";
-import { textPropDefs } from "@radix-ui/themes";
+import { Flex, Grid, textPropDefs } from "@radix-ui/themes";
 import { UseQueryResult, QueryClient, QueryKey } from "@tanstack/react-query";
 import { ReactHTML, useMemo } from "react";
 
@@ -126,4 +126,54 @@ export function useGroupedPartitions(
   }, [sortedPartitions]);
 
   return groupedPartitions;
+}
+
+export function TwoColumnInput(props: { children: React.ReactNode }) {
+  return (
+    <Grid asChild columns="125px 1fr" align="center">
+      <label>{props.children}</label>
+    </Grid>
+  );
+}
+
+export function Centered(props: { children: React.ReactNode }) {
+  return (
+    <Flex
+      position="fixed"
+      top="0"
+      left="0"
+      bottom="0"
+      right="0"
+      direction="column"
+      justify="center"
+      align="center"
+    >
+      {props.children}
+    </Flex>
+  );
+}
+
+export function Positioned(props: {
+  children: React.ReactNode;
+  position: "fixed" | "absolute";
+  top?: string;
+  left?: string;
+  bottom?: string;
+  right?: string;
+  padding?: string;
+}) {
+  return (
+    <Flex
+      position={props.position}
+      style={{
+        padding: props.padding,
+        top: props.top,
+        left: props.left,
+        bottom: props.bottom,
+        right: props.right,
+      }}
+    >
+      {props.children}
+    </Flex>
+  );
 }

@@ -1,31 +1,24 @@
 import { findUserByEmail } from "@/procedures/server_functions";
+import { currentUser } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
 
-async function login(data: FormData) {
-  "use server";
-
-  const email = data.get("email");
-  if (typeof email !== "string") {
-    throw new Error("Email is not a string");
+export default async function Home() {
+  const user = await currentUser();
+  if (user === null) {
+    return redirect("/sign-in");
   }
-  const user = await findUserByEmail({ email });
-  if (user === undefined) {
-    throw new Error("User not found");
-  }
-  return redirect(`/${user.dbname}/${user.username}`);
-}
 
-export default function Home() {
-  return (
-    <form action={login}>
-      <label htmlFor="email">Email</label>
-      <input
-        type="email"
-        id="email"
-        name="email"
-        placeholder="Enter your email"
-      />
-      <input type="submit" value="Submit" />
-    </form>
-  );
+  const primaryEmail = user?.emailAddresses.find(
+    (email) => email.id === user.primaryEmailAddressId
+  )?.emailAddress;
+
+  if (primaryEmail === undefined) {
+    throw new Error("Primary email not found");
+  }
+
+  const eUser = await findUserByEmail({ email: primaryEmail });
+  if (eUser === undefined) {
+    return redirect("/onboarding");
+  }
+  return redirect(`/${eUser.dbname}/${eUser.username}`);
 }

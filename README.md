@@ -1,38 +1,18 @@
-# Change in thinking
+# Getting started
 
-- Simple as possible
-- edgedb
-- nextjs
-- authentication, simple as possible
-- no centralized server, user deploys his own
+.env
 
-# RPC API Proposal
+```conf
+# edgedb cloud (db) requirements
+EDGEDB_INSTANCE=
+EDGEDB_SECRET_KEY=
 
-```ts
-// declaration of server procedures
-const procedures = {
-  getUser: (id) => {
-    return { id, name: 'John' }
-  },
-  assertUser: (id) => {
-    // you want to use getUser here
-    procedures.getUser(id)
-  }
-}
+# clerk (auth) requirements
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
 
-// consume the procedure from the client
-const client = createClient<typeof procedures>();
-const user = await client.getUser(1);
-const assertedUser = await client.assertUser(1);
-
-// at client.callMethod
-// create the request
-// fetch('/api/rpc', { method: 'POST', body: JSON.stringify({ method: 'getUser', args: [1] }) })
-
-// route handler of the rpc request
-// file: api/rpc/route.ts
-// import { procedures } from './procedures.ts'
-// export default async (req, res) => {
-//   const { method, args } = req.body;
-//   const result = await procedures[method](...args);
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/
 ```

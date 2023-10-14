@@ -921,6 +921,12 @@ export const getCategoryKindBalance = withValidation(
 export const createNewUser = withValidation(
   object({ username: string(), email: string(), name: string() }),
   async ({ username, email, name }) => {
+    const isUsernameOkay = await checkUsername({ username });
+
+    if (!isUsernameOkay) {
+      throw new Error("Username already taken.");
+    }
+
     const masterdbClient = edgedb.createClient({
       database: "masterdb",
     });
@@ -1746,5 +1752,24 @@ export const makeAPayment = withValidation(
 
       return payment;
     });
+  }
+);
+
+/**
+ * [username] is valid if it's not taken.
+ */
+export const checkUsername = withValidation(
+  object({ username: string() }),
+  async ({ username }) => {
+    if (username.length < 2) {
+      return false;
+    }
+    const client = edgedb.createClient({ database: "masterdb" });
+    const result = await e
+      .select(e.masterdb.EUser, (user) => ({
+        filter_single: e.op(user.username, "=", username),
+      }))
+      .run(client);
+    return result === null;
   }
 );
