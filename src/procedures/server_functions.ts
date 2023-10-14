@@ -628,6 +628,15 @@ export const deleteTransaction = withValidation(
       }));
     });
 
+    const getLinkedPayment = e.params({ tId: e.uuid }, ({ tId }) => {
+      return e.select(e.EPayment, (payment) => ({
+        filter_single: e.op(payment.transaction.id, "=", tId),
+        loan: {
+          id: true,
+        },
+      }));
+    });
+
     const client = edgedb
       .createClient({ database: dbname })
       .withGlobals({ current_user_id: userId });
@@ -637,6 +646,21 @@ export const deleteTransaction = withValidation(
         tId: transactionId,
       });
       if (!unpaidLoan) {
+        const payment = await getLinkedPayment.run(tx, { tId: transactionId });
+
+        if (payment) {
+          await e
+            .delete(e.EPayment, (payment) => ({
+              filter_single: e.op(
+                payment.transaction.id,
+                "=",
+                e.uuid(transactionId)
+              ),
+            }))
+            .run(tx);
+          return { id: transactionId };
+        }
+
         return e
           .delete(e.ETransaction, (transaction) => ({
             filter_single: e.op(transaction.id, "=", e.uuid(transactionId)),

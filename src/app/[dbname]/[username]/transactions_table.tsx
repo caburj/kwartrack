@@ -433,7 +433,7 @@ export function TransactionsTable({
     ) as Transaction[];
     return (
       transactions.some((t) => t.source_partition?.account.is_owned) &&
-      isEditable(transaction)
+      (transaction.is_payment || isEditable(transaction))
     );
   };
 
@@ -619,12 +619,7 @@ export function TransactionsTable({
                                             .id,
                                       },
                                     ],
-                                    ["partitionsWithLoans", user.id],
-                                    [
-                                      "unpaidLoans",
-                                      user.id,
-                                      transaction.source_partition.id,
-                                    ]
+                                    ["partitionsWithLoans", user.id]
                                   );
                                 }
                                 if (transaction.counterpart) {
@@ -660,11 +655,17 @@ export function TransactionsTable({
                                           transaction.counterpart
                                             .source_partition.account.id,
                                       },
+                                    ],
+                                    [
+                                      "unpaidLoans",
+                                      user.id,
+                                      transaction.counterpart.source_partition
+                                        .id,
                                     ]
                                   );
                                 }
                                 if (result) {
-                                  if ("loanId" in result) {
+                                  if ("loanId" in result && result.loanId) {
                                     dispatch({
                                       type: "REMOVE_LOAN_IDS",
                                       payload: [result.loanId],
