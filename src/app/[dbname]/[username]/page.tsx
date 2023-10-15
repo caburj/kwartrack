@@ -10,6 +10,7 @@ import { SideBar } from "./side_bar";
 import { useEffect, useState } from "react";
 import { css } from "../../../../styled-system/css";
 import "react-datepicker/dist/react-datepicker.css";
+import "react-loading-skeleton/dist/skeleton.css";
 
 export default function Main(props: {
   params: { username: string; dbname: string };
@@ -22,13 +23,7 @@ export default function Main(props: {
   );
 }
 
-function UserPage({
-  username,
-  dbname,
-}: {
-  username: string;
-  dbname: string;
-}) {
+function UserPage({ username, dbname }: { username: string; dbname: string }) {
   const user = useQuery(["user", username], () => {
     return rpc.post.findUser({ username, dbname });
   });

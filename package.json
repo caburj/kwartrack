@@ -32,6 +32,7 @@
     "react-datepicker": "^4.18.0",
     "react-dom": "18.2.0",
     "react-icons": "^4.11.0",
+    "react-loading-skeleton": "^3.3.1",
     "sass": "^1.68.0",
     "sonner": "^1.0.3",
     "typescript": "5.1.6",

@@ -81,10 +81,6 @@
 
 * [ ] Rename repo to "kwartrack".
 
-* [ ] Reset the current page whenever the filter is changed.
-
-* [ ] Loading of the transactions table.
-
 
 # TODO POST 0.1
 
@@ -211,6 +207,10 @@
 
 * [X] It's correct to disallow editing a payment transaction. However, user
   should be able to delete a payment.
+
+* [X] Reset the current page whenever the filter is changed.
+
+* [X] Loading of the transactions table.
 
 
 # CANCELLED

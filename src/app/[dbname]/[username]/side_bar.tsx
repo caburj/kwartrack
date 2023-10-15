@@ -58,6 +58,7 @@ import { ChevronRightIcon, PlusIcon } from "@radix-ui/react-icons";
 import * as Accordion from "@radix-ui/react-accordion";
 import { Combobox, ComboboxTrigger } from "./combobox";
 import { TwoColumnInput } from "@/utils/common";
+import Skeleton from "react-loading-skeleton";
 
 type FindUserResult = NonNullable<
   Unpacked<Awaited<ReturnType<typeof rpc.post.findUser>>>
@@ -706,7 +707,29 @@ const PartitionLoans = ({
     });
   });
   return (
-    <QueryResult query={unpaidLoans}>
+    <QueryResult
+      query={unpaidLoans}
+      onLoading={
+        <Flex direction="column" my="2">
+          {[...Array(1)].map((_, i) => (
+            <Flex direction="column" key={i} mx="2" my="1">
+              <Flex justify="between">
+                <Skeleton style={{ minWidth: "150px" }} />
+                <Skeleton style={{ minWidth: "50px" }} />
+              </Flex>
+              <Box className={css({ mb: "1" })}>
+                {[...Array(2)].map((_, i) => (
+                  <Flex key={i} justify="between">
+                    <Skeleton style={{ minWidth: "100px" }} />
+                    <Skeleton style={{ minWidth: "50px" }} />
+                  </Flex>
+                ))}
+              </Box>
+            </Flex>
+          ))}
+        </Flex>
+      }
+    >
       {(loans) =>
         loans.map((loan) => (
           <LoanItem key={loan.id} lender={partition} loan={loan} user={user} />
@@ -787,7 +810,10 @@ function AccountLI({
   const accountGroup = getAccountGroup(account, user.id);
 
   return (
-    <QueryResult query={partitions}>
+    <QueryResult
+      query={partitions}
+      onLoading={<FoldableListSkeleton nItems={1} />}
+    >
       {(partitions) => {
         return (
           <FoldableList
@@ -883,7 +909,11 @@ function Accounts({ user }: { user: { id: string; dbname: string } }) {
   return (
     <QueryResult
       query={accounts}
-      onLoading={<>Loading accounts...</>}
+      onLoading={
+        <Box mb="2">
+          <FoldableListSkeleton />
+        </Box>
+      }
       onUndefined={<>No accounts found</>}
     >
       {(accounts) => {
@@ -1171,8 +1201,7 @@ function PartitionLI({
               dbname: user.dbname,
             })
         )}
-        onLoading={<>...</>}
-        onUndefined={<>Missing Value</>}
+        onLoading={<Skeleton style={{ minWidth: "50px" }} />}
       >
         {(value) => {
           const parsedValue = parseFloat(value);
@@ -1439,7 +1468,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
     <Flex direction="column" mb="2">
       <QueryResult
         query={categories}
-        onLoading={<>Loading categories...</>}
+        onLoading={<FoldableListSkeleton />}
         onUndefined={<>No categories found</>}
       >
         {(categories) => (
@@ -1721,8 +1750,7 @@ function GenericLoadingValue(props: {
   return (
     <QueryResult
       query={useQuery(props.queryKey, props.valueLoader)}
-      onLoading={<>...</>}
-      onUndefined={<>Missing Value</>}
+      onLoading={<Skeleton style={{ minWidth: "50px" }} />}
     >
       {props.children}
     </QueryResult>
@@ -1743,4 +1771,35 @@ function getAccountGroup(
   } else {
     return "others";
   }
+}
+
+function FoldableListSkeleton({ nItems = 3 }: { nItems?: number }) {
+  return (
+    <Flex direction="column">
+      {[...Array(nItems)].map((_, i) => (
+        <Flex direction="column" px="4" key={i}>
+          <Flex py="1" pr="2" justify="between">
+            <Flex gap="1">
+              <Skeleton style={{ minWidth: "100px" }} />
+            </Flex>
+            <Skeleton style={{ minWidth: "50px" }} />
+          </Flex>
+          <Box
+            className={css({
+              my: "1",
+              py: "1",
+              border: "1px solid var(--gray-a5)",
+              borderRadius: "var(--radius-3)",
+            })}
+          >
+            {[...Array(2)].map((_, i) => (
+              <Box key={i} mx="2">
+                <Skeleton />
+              </Box>
+            ))}
+          </Box>
+        </Flex>
+      ))}
+    </Flex>
+  );
 }

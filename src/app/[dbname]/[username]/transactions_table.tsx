@@ -44,6 +44,7 @@ import { GiPayMoney } from "react-icons/gi";
 import { BiMoneyWithdraw } from "react-icons/bi";
 
 import DatePicker from "react-datepicker";
+import Skeleton from "react-loading-skeleton";
 
 type Transaction = Unpacked<
   NonNullable<Awaited<ReturnType<typeof rpc.post.findTransactions>>>[0]
@@ -459,7 +460,29 @@ export function TransactionsTable({
           </Table.Header>
           <Table.Body>
             <TransactionForm user={user} />
-            <QueryResult query={transactions}>
+            <QueryResult
+              query={transactions}
+              onLoading={Array.from({ length: 10 }).map((_, i) => (
+                <Table.Row key={i}>
+                  <Table.Cell>
+                    <Skeleton />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Skeleton />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Skeleton />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Skeleton />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Skeleton />
+                  </Table.Cell>
+                  <Table.Cell></Table.Cell>
+                </Table.Row>
+              ))}
+            >
               {([transactions]) => (
                 <>
                   {transactions.map((transaction) => {
