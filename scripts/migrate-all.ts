@@ -17,17 +17,17 @@ const execAsync = (
 
 const EDGEDB_INSTANCE = process.env.EDGEDB_INSTANCE;
 
-const command = EDGEDB_INSTANCE
+const edgedb = EDGEDB_INSTANCE
   ? `edgedb -I ${EDGEDB_INSTANCE}`
   : "edgedb";
 
 const main = async () => {
-  const { stdout } = await execAsync(`${command} list databases`);
+  const { stdout } = await execAsync(`${edgedb} list databases`);
   const dbNames = stdout.split("\n").filter(Boolean);
   for (const dbName of dbNames) {
     console.log(`Migrating "${dbName}"...`);
     const { stdout, stderr } = await execAsync(
-      `${command} migrate -d ${dbName}`
+      `${edgedb} migrate -d ${dbName}`
     );
     if (stdout) {
       console.log(stdout);

@@ -74,7 +74,7 @@ const userPageStoreReducer = (
           partitionIds = [...partitionIds, id];
         }
       }
-      return { ...state, partitionIds, selectedSourceId: "" };
+      return { ...state, partitionIds, selectedSourceId: "", currentPage: 1 };
     }
     case "TOGGLE_ACCOUNT": {
       // payload is partitionIds in the clicked account
@@ -91,11 +91,13 @@ const userPageStoreReducer = (
           partitionIds: state.partitionIds.filter(
             (id) => !action.payload.includes(id)
           ),
+          currentPage: 1,
         };
       } else {
         return {
           ...state,
           partitionIds: [...state.partitionIds, ...action.payload],
+          currentPage: 1,
         };
       }
     }
@@ -108,7 +110,7 @@ const userPageStoreReducer = (
           categoryIds = [...categoryIds, id];
         }
       }
-      return { ...state, categoryIds, selectedCategoryId: "" };
+      return { ...state, categoryIds, selectedCategoryId: "", currentPage: 1 };
     }
     case "TOGGLE_CATEGORY_KIND": {
       let allSelected = true;
@@ -124,11 +126,13 @@ const userPageStoreReducer = (
           categoryIds: state.categoryIds.filter(
             (id) => !action.payload.includes(id)
           ),
+          currentPage: 1,
         };
       } else {
         return {
           ...state,
           categoryIds: [...state.categoryIds, ...action.payload],
+          currentPage: 1,
         };
       }
     }
@@ -136,10 +140,10 @@ const userPageStoreReducer = (
       return { ...state, nPerPage: action.payload };
     }
     case "SET_TSS_DATE": {
-      return { ...state, tssDate: action.payload };
+      return { ...state, tssDate: action.payload, currentPage: 1 };
     }
     case "SET_TSE_DATE": {
-      return { ...state, tseDate: action.payload };
+      return { ...state, tseDate: action.payload, currentPage: 1 };
     }
     case "SET_THIS_MONTH": {
       const today = new Date();
@@ -147,6 +151,7 @@ const userPageStoreReducer = (
         ...state,
         tssDate: getFirstDayOfMonth(today),
         tseDate: getLastDayOfMonth(today),
+        currentPage: 1,
       };
     }
     case "SET_PREV_MONTH": {
@@ -156,6 +161,7 @@ const userPageStoreReducer = (
         ...state,
         tssDate: getFirstDayOfMonth(x),
         tseDate: getLastDayOfMonth(x),
+        currentPage: 1,
       };
     }
     case "SET_NEXT_MONTH": {
@@ -165,6 +171,7 @@ const userPageStoreReducer = (
         ...state,
         tssDate: getFirstDayOfMonth(x),
         tseDate: getLastDayOfMonth(x),
+        currentPage: 1,
       };
     }
     case "SET_SELECTED_CATEGORY_ID": {
@@ -185,12 +192,13 @@ const userPageStoreReducer = (
           loanIds = [...loanIds, id];
         }
       }
-      return { ...state, loanIds };
+      return { ...state, loanIds, currentPage: 1 };
     }
     case "REMOVE_LOAN_IDS": {
       return {
         ...state,
         loanIds: state.loanIds.filter((id) => !action.payload.includes(id)),
+        currentPage: 1,
       };
     }
     case "SET_CURRENT_PAGE": {
