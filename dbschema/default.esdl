@@ -41,6 +41,10 @@ module default {
       default := false;
       annotation description := "Only the owners can see this partition and its transactions."
     }
+    required property archived: bool {
+      default := false;
+      annotation description := "Archived partitions are hidden by default. And can't be used for new transactions."
+    }
 
     multi link owners := .account.owners;
     property is_owned := .account.is_owned;

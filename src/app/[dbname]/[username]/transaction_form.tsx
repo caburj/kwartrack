@@ -272,10 +272,6 @@ function TransactionFormMain(props: {
           ["categoryCanBeDeleted", { categoryId: parsedData.categoryId }],
           ["partitionBalance", { partitionId: parsedData.sourcePartitionId }],
           [
-            "partitionCanBeDeleted",
-            { partitionId: parsedData.sourcePartitionId },
-          ],
-          [
             "accountCanBeDeleted",
             { accountId: transaction.source_partition.account.id },
           ],
@@ -292,10 +288,6 @@ function TransactionFormMain(props: {
           [
             "partitionBalance",
             { partitionId: parsedData.destinationPartitionId },
-          ],
-          [
-            "partitionCanBeDeleted",
-            { partitionId: counterpart.source_partition.id },
           ],
           [
             "accountCanBeDeleted",

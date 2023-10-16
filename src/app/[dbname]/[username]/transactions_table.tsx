@@ -130,8 +130,6 @@ function EditablePartitionBadge({
           ["transactions"],
           ["partitionBalance", { partitionId: par.id }],
           ["partitionBalance", { partitionId: partition.id }],
-          ["partitionCanBeDeleted", { partitionId: par.id }],
-          ["partitionCanBeDeleted", { partitionId: partition.id }],
           ["accountBalance", { accountId: par.account.id }],
           ["accountBalance", { accountId: partition.account.id }],
         ]);
@@ -162,7 +160,7 @@ function PartitionBadge({
   if (partition) {
     const _type = getPartitionType(partition, user.id);
     const color = PARTITION_COLOR[_type];
-    if (isEditable(transaction)) {
+    if (isEditable(transaction) && !partition.archived) {
       return (
         <EditablePartitionBadge
           partitions={partitions}
@@ -620,13 +618,6 @@ export function TransactionsTable({
                                       },
                                     ],
                                     [
-                                      "partitionCanBeDeleted",
-                                      {
-                                        partitionId:
-                                          transaction.source_partition.id,
-                                      },
-                                    ],
-                                    [
                                       "accountCanBeDeleted",
                                       {
                                         accountId:
@@ -649,14 +640,6 @@ export function TransactionsTable({
                                   queryKeys.push(
                                     [
                                       "partitionBalance",
-                                      {
-                                        partitionId:
-                                          transaction.counterpart
-                                            .source_partition.id,
-                                      },
-                                    ],
-                                    [
-                                      "partitionCanBeDeleted",
                                       {
                                         partitionId:
                                           transaction.counterpart

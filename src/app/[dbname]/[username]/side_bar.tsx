@@ -59,6 +59,7 @@ import * as Accordion from "@radix-ui/react-accordion";
 import { Combobox, ComboboxTrigger } from "./combobox";
 import { TwoColumnInput } from "@/utils/common";
 import Skeleton from "react-loading-skeleton";
+import { toast } from "sonner";
 
 type FindUserResult = NonNullable<
   Unpacked<Awaited<ReturnType<typeof rpc.post.findUser>>>
@@ -538,10 +539,6 @@ const LoanItem = ({
       ["categoryCanBeDeleted", { categoryId: transaction.category.id }],
       ["partitionBalance", { partitionId: transaction.source_partition.id }],
       [
-        "partitionCanBeDeleted",
-        { partitionId: transaction.source_partition.id },
-      ],
-      [
         "accountCanBeDeleted",
         { accountId: transaction.source_partition.account.id },
       ],
@@ -556,10 +553,6 @@ const LoanItem = ({
     if (counterpart) {
       queryKeys.push(
         ["partitionBalance", { partitionId: counterpart.source_partition.id }],
-        [
-          "partitionCanBeDeleted",
-          { partitionId: counterpart.source_partition.id },
-        ],
         [
           "accountCanBeDeleted",
           { accountId: counterpart.source_partition.account.id },
@@ -981,32 +974,25 @@ function PartitionLI({
   });
 
   const deletePartition = useMutation(
-    () => {
+    (archive: boolean) => {
       return rpc.post.deletePartition({
         partitionId: partition.id,
         dbname: user.dbname,
         userId: user.id,
+        archive,
       });
     },
     {
       onSuccess: () => {
         invalidateMany(queryClient, [
-          ["partitions", user.id, partition.account.id],
+          ["transactions"],
+          ["partitions", user.id],
           ["accountCanBeDeleted", { accountId: partition.account.id }],
         ]);
       },
     }
   );
-  const canBeDeleted = useQuery(
-    ["partitionCanBeDeleted", { partitionId: partition.id }],
-    () => {
-      return rpc.post.partitionCanBeDeleted({
-        partitionId: partition.id,
-        dbname: user.dbname,
-        userId: user.id,
-      });
-    }
-  );
+
   const updatePartition = useMutation(
     (name: string) => {
       return rpc.post.updatePartition({
@@ -1036,14 +1022,33 @@ function PartitionLI({
           } as RightClickItem,
         ]
       : []),
-    ...(canBeDeleted.data
+    ...(partition.is_owned
       ? [
           {
             label: "Delete",
             color: "red" as RadixColor,
-            onClick: (e) => {
+            onClick: async (e) => {
               e.stopPropagation();
-              return deletePartition.mutateAsync();
+              const isDeleted = await deletePartition.mutateAsync(false);
+              if (!isDeleted) {
+                toast(
+                  `There are transactions linked to '${partition.name}', are you sure you want to delete it?`,
+                  {
+                    action: {
+                      label: "Yes",
+                      onClick: async () => {
+                        const isArchived = await deletePartition.mutateAsync(
+                          true
+                        );
+                        if (!isArchived) {
+                          toast.error("Failed to delete partition.");
+                        }
+                      },
+                    },
+                    cancel: { label: "No", onClick: () => {} },
+                  }
+                );
+              }
             },
           } as RightClickItem,
         ]
@@ -1132,7 +1137,6 @@ function PartitionLI({
       ["categoryBalance", { categoryId: loanCategoryId }],
       ["categoryCanBeDeleted", { categoryId: loanCategoryId }],
       ["partitionBalance", { partitionId: partition.id }],
-      ["partitionCanBeDeleted", { partitionId: partition.id }],
       [
         "accountCanBeDeleted",
         { accountId: transaction.source_partition.account.id },
@@ -1147,10 +1151,6 @@ function PartitionLI({
     if (counterpart) {
       queryKeys.push(
         ["partitionBalance", { partitionId: selectedDestinationId }],
-        [
-          "partitionCanBeDeleted",
-          { partitionId: counterpart.source_partition.id },
-        ],
         [
           "accountCanBeDeleted",
           { accountId: counterpart.source_partition.account.id },

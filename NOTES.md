@@ -20,16 +20,8 @@
 
 # TODO PRE 0.1
 
-* [ ] Prepare a script to migrate all db in a given edgedb instance.
-
 * [ ] Allow editing the accounts, partitions, and categories.
   - Always edit mode in the sidebar?
-
-* [ ] Allow hiding emptied accounts -- accounts with transactions but with 0 or
-  less balance.
-  - Maybe show the delete button, but instead of completely deleting the
-    account, only archive it.
-    - And archived accounts should be hidden.
 
 * [ ] User registration.
   - 2 cases
@@ -211,6 +203,15 @@
 * [X] Reset the current page whenever the filter is changed.
 
 * [X] Loading of the transactions table.
+
+* [X] Prepare a script to migrate all db in a given edgedb instance.
+  - script: `migrate-all`
+
+* [X] Allow hiding emptied accounts -- accounts with transactions but with 0 or
+  less balance.
+  - Maybe show the delete button, but instead of completely deleting the
+    account, only archive it.
+    - And archived accounts should be hidden.
 
 
 # CANCELLED

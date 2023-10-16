@@ -147,7 +147,11 @@ export const getPartitions = withValidation(
         },
         is_private: true,
         is_owned: true,
-        filter: e.op(belongToAccount, "and", partition.is_visible),
+        filter: e.op(
+          e.op(belongToAccount, "and", partition.is_visible),
+          "and",
+          e.op("not", partition.archived)
+        ),
         order_by: {
           expression: partition.name,
           direction: e.ASC,
@@ -181,7 +185,11 @@ export const getPartitionOptions = withValidation(
           is_owned: true,
         },
         is_private: true,
-        filter: partition.is_visible,
+        filter: e.op(
+          partition.is_visible,
+          "and",
+          e.op("not", partition.archived)
+        ),
         order_by: {
           expression: partition.name,
           direction: e.ASC,
@@ -321,6 +329,7 @@ export const findTransactions = withValidation(
               is_owned: true,
             },
             is_private: true,
+            archived: true,
           } as const;
 
           return {
@@ -1192,64 +1201,65 @@ export const createPartition = withValidation(
   }
 );
 
-const _canDeletePartition = async (
-  partitionId: string,
-  tx: Transaction | edgedb.Client
-) => {
-  const transactionsCountQuery = e.params({ id: e.uuid }, ({ id }) =>
-    e.count(
-      e.select(e.ETransaction, (transaction) => ({
-        filter: e.op(transaction.source_partition.id, "=", id),
-      }))
-    )
-  );
-  const isOwnedQuery = e.params({ id: e.uuid }, ({ id }) =>
-    e.select(e.EPartition, (partition) => ({
-      filter_single: e.op(
-        e.op(partition.id, "=", id),
-        "and",
-        partition.is_owned
-      ),
-    }))
-  );
-
-  const isOwned = await isOwnedQuery.run(tx, { id: partitionId });
-  const count = await transactionsCountQuery.run(tx, { id: partitionId });
-  return Boolean(isOwned) && count === 0;
-};
-
-export const partitionCanBeDeleted = withValidation(
-  object({ partitionId: string(), userId: string(), dbname: string() }),
-  async ({ partitionId, userId, dbname }) => {
-    return _canDeletePartition(
-      partitionId,
-      edgedb.createClient({ database: dbname }).withGlobals({
-        current_user_id: userId,
-      })
-    );
-  }
-);
-
 export const deletePartition = withValidation(
-  object({ partitionId: string(), userId: string(), dbname: string() }),
-  async ({ partitionId, userId, dbname }) => {
+  object({
+    partitionId: string(),
+    userId: string(),
+    dbname: string(),
+    archive: boolean(),
+  }),
+  async ({ partitionId, userId, dbname, archive }) => {
+    const transactionsCountQuery = e.params({ id: e.uuid }, ({ id }) =>
+      e.count(
+        e.select(e.ETransaction, (transaction) => ({
+          filter: e.op(transaction.source_partition.id, "=", id),
+        }))
+      )
+    );
+
     const deleteQuery = e.params({ id: e.uuid }, ({ id }) =>
       e.delete(e.EPartition, (partition) => ({
         filter_single: e.op(partition.id, "=", id),
       }))
     );
-    return edgedb
-      .createClient({ database: dbname })
-      .withGlobals({
-        current_user_id: userId,
-      })
-      .transaction(async (tx) => {
-        const canDelete = await _canDeletePartition(partitionId, tx);
-        if (!canDelete) {
-          throw new Error("Partition has linked transactions.");
+
+    const archiveQuery = e.params({ id: e.uuid }, ({ id }) =>
+      e.update(e.EPartition, (partition) => ({
+        filter_single: e.op(partition.id, "=", id),
+        set: { archived: true },
+      }))
+    );
+
+    const client = edgedb.createClient({ database: dbname }).withGlobals({
+      current_user_id: userId,
+    });
+
+    return client.transaction(async (tx) => {
+      const partition = await e
+        .select(e.EPartition, (partition) => ({
+          filter_single: e.op(partition.id, "=", e.uuid(partitionId)),
+          is_owned: true,
+        }))
+        .run(tx);
+      if (!partition) {
+        throw new Error("Partition not found.");
+      }
+      if (!partition.is_owned) {
+        throw new Error("Partition is not owned by the user.");
+      }
+      const txCount = await transactionsCountQuery.run(tx, { id: partitionId });
+      if (txCount !== 0) {
+        if (!archive) {
+          return false;
+        } else {
+          await archiveQuery.run(tx, { id: partitionId });
+          return true;
         }
+      } else {
         await deleteQuery.run(tx, { id: partitionId });
-      });
+        return true;
+      }
+    });
   }
 );
 
