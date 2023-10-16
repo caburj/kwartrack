@@ -66,10 +66,8 @@
           simple explanations.
       * [ ] Then redirect to the main UI.
 
-* [ ] Allow editing amount, description and date.
+* [ ] Allow editing date
   - Clicking the date will show the date picker.
-  - Amount and description is rendered as input.
-    - Update the transaction at onBlur.
 
 * [ ] Rename repo to "kwartrack".
 
@@ -212,6 +210,10 @@
   - Maybe show the delete button, but instead of completely deleting the
     account, only archive it.
     - And archived accounts should be hidden.
+
+* [X] Allow editing amount and description.
+  - Amount and description is rendered as input.
+    - Update the transaction at onBlur.
 
 
 # CANCELLED
