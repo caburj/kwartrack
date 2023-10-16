@@ -1482,6 +1482,67 @@ export const updateTransaction = withValidation(
   }
 );
 
+export const updateTransactionValue = withValidation(
+  object({
+    userId: string(),
+    dbname: string(),
+    transactionId: string(),
+    value: number([minValue(0)]),
+  }),
+  async ({ userId, dbname, transactionId, value }) => {
+    const client = edgedb.createClient({ database: dbname }).withGlobals({
+      current_user_id: userId,
+    });
+
+    const updateValueQuery = e.params(
+      {
+        id: e.uuid,
+        value: e.decimal,
+      },
+      ({ id, value }) =>
+        e.update(e.ETransaction, (transaction) => ({
+          filter_single: e.op(transaction.id, "=", id),
+          set: { value },
+        }))
+    );
+
+    return client.transaction(async (tx) => {
+      const transaction = await e
+        .select(e.ETransaction, (transaction) => ({
+          filter_single: e.op(transaction.id, "=", e.uuid(transactionId)),
+          id: true,
+          counterpart: { id: true },
+          category: { kind: true },
+        }))
+        .run(tx);
+
+      if (!transaction) {
+        throw new Error("Transaction not found.");
+      }
+
+      const tId = transaction.id;
+      const cId = transaction.counterpart?.id;
+
+      if (transaction.category.kind === "Transfer") {
+        await updateValueQuery.run(tx, { id: tId, value: (-value).toString() });
+        if (!cId) {
+          // should never happen
+          throw new Error("Counterpart not found.");
+        }
+        await updateValueQuery.run(tx, { id: cId, value: value.toString() });
+      } else if (transaction.category.kind === "Income") {
+        await updateValueQuery.run(tx, { id: tId, value: value.toString() });
+      } else if (transaction.category.kind === "Expense") {
+        await updateValueQuery.run(tx, { id: tId, value: (-value).toString() });
+      } else {
+        // should never happen
+        throw new Error("Invalid category kind.");
+      }
+      return true;
+    });
+  }
+);
+
 export const makeALoan = withValidation(
   object({
     sourcePartitionId: string(),

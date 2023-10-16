@@ -45,6 +45,7 @@ import { BiMoneyWithdraw } from "react-icons/bi";
 
 import DatePicker from "react-datepicker";
 import Skeleton from "react-loading-skeleton";
+import { toast } from "sonner";
 
 type Transaction = Unpacked<
   NonNullable<Awaited<ReturnType<typeof rpc.post.findTransactions>>>[0]
@@ -569,8 +570,22 @@ export function TransactionsTable({
                         <Table.Cell>
                           {getPartitionColumn(transaction)}
                         </Table.Cell>
-                        <EditableAmountField {...{ transaction, user }} />
-                        <EditableDescriptionField {...{ transaction, user }} />
+                        <Table.Cell justify="end">
+                          {isEditable(transaction) ? (
+                            <EditableAmountField {...{ transaction, user }} />
+                          ) : (
+                            formatValue(Math.abs(parseFloat(transaction.value)))
+                          )}
+                        </Table.Cell>
+                        <Table.Cell style={{ minWidth: "300px" }}>
+                          {isEditable(transaction) ? (
+                            <EditableDescriptionField
+                              {...{ transaction, user }}
+                            />
+                          ) : (
+                            transaction.description
+                          )}
+                        </Table.Cell>
                         <Table.Cell>
                           {shouldShowDelete(transaction) && (
                             <IconButton
@@ -586,86 +601,10 @@ export function TransactionsTable({
                                     dbname: user.dbname,
                                   }
                                 );
-                                const queryKeys: QueryKey[] = [
-                                  ["transactions"],
-                                  ["user", user.id],
-                                  [
-                                    "categoryCanBeDeleted",
-                                    { categoryId: transaction.category.id },
-                                  ],
-                                  [
-                                    "categoryBalance",
-                                    {
-                                      categoryId: transaction.category.id,
-                                    },
-                                  ],
-                                  [
-                                    "categoryKindBalance",
-                                    transaction.category.kind,
-                                  ],
-                                ];
-                                if (transaction.source_partition) {
-                                  queryKeys.push(
-                                    [
-                                      "partitionBalance",
-                                      {
-                                        partitionId:
-                                          transaction.source_partition.id,
-                                      },
-                                    ],
-                                    [
-                                      "accountCanBeDeleted",
-                                      {
-                                        accountId:
-                                          transaction.source_partition.account
-                                            .id,
-                                      },
-                                    ],
-                                    [
-                                      "accountBalance",
-                                      {
-                                        accountId:
-                                          transaction.source_partition.account
-                                            .id,
-                                      },
-                                    ],
-                                    ["partitionsWithLoans", user.id]
-                                  );
-                                }
-                                if (transaction.counterpart) {
-                                  queryKeys.push(
-                                    [
-                                      "partitionBalance",
-                                      {
-                                        partitionId:
-                                          transaction.counterpart
-                                            .source_partition.id,
-                                      },
-                                    ],
-                                    [
-                                      "accountCanBeDeleted",
-                                      {
-                                        accountId:
-                                          transaction.counterpart
-                                            .source_partition.account.id,
-                                      },
-                                    ],
-                                    [
-                                      "accountBalance",
-                                      {
-                                        accountId:
-                                          transaction.counterpart
-                                            .source_partition.account.id,
-                                      },
-                                    ],
-                                    [
-                                      "unpaidLoans",
-                                      user.id,
-                                      transaction.counterpart.source_partition
-                                        .id,
-                                    ]
-                                  );
-                                }
+                                const queryKeys = getQueryKeysToInvalidate(
+                                  transaction,
+                                  user
+                                );
                                 if (result) {
                                   if ("loanId" in result && result.loanId) {
                                     dispatch({
@@ -701,10 +640,55 @@ const EditableAmountField = (props: {
   user: { id: string; dbname: string };
 }) => {
   const { transaction, user } = props;
+  const originalValue = formatValue(Math.abs(parseFloat(transaction.value)));
+  const [value, setValue] = useState(originalValue);
+
+  const queryClient = useQueryClient();
+  const updateTransactionValue = useMutation(
+    async () => {
+      const parsedValue = parseFloat(value);
+      if (isNaN(parsedValue)) {
+        toast.error("Invalid value");
+        return false;
+      }
+
+      return rpc.post.updateTransactionValue({
+        transactionId: transaction.id,
+        userId: user.id,
+        dbname: user.dbname,
+        value: parseFloat(value),
+      });
+    },
+    {
+      onSuccess: (success) => {
+        const newValue = success ? value : originalValue;
+        setValue(formatValue(Math.abs(parseFloat(newValue))));
+
+        if (!success) return;
+        const queryKeys = getQueryKeysToInvalidate(transaction, user);
+        invalidateMany(queryClient, queryKeys);
+      },
+    }
+  );
+
   return (
-    <Table.Cell justify="end">
-      {formatValue(Math.abs(parseFloat(transaction.value)))}
-    </Table.Cell>
+    <input
+      inputMode="decimal"
+      type="text"
+      value={value}
+      style={{ width: "100%" }}
+      onInput={(e) => {
+        setValue(e.currentTarget.value);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          updateTransactionValue.mutate();
+        }
+      }}
+      onBlur={() => {
+        updateTransactionValue.mutate();
+      }}
+    />
   );
 };
 
@@ -734,29 +718,92 @@ const EditableDescriptionField = (props: {
   );
 
   return (
-    <Table.Cell style={{ minWidth: "300px" }}>
-      <input
-        type="text"
-        value={value}
-        style={{ width: "100%" }}
-        onInput={(e) => {
-          setValue(e.currentTarget.value);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            updateTransaction.mutate({
-              transaction,
-              description: value,
-            });
-          }
-        }}
-        onBlur={() => {
+    <input
+      type="text"
+      value={value}
+      style={{ width: "100%" }}
+      onInput={(e) => {
+        setValue(e.currentTarget.value);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
           updateTransaction.mutate({
             transaction,
             description: value,
           });
-        }}
-      />
-    </Table.Cell>
+        }
+      }}
+      onBlur={() => {
+        updateTransaction.mutate({
+          transaction,
+          description: value,
+        });
+      }}
+    />
   );
+};
+
+const getQueryKeysToInvalidate = (
+  transaction: Transaction,
+  user: { id: string; dbname: string }
+) => {
+  const queryKeys: QueryKey[] = [
+    ["transactions"],
+    ["user", user.id],
+    ["categoryCanBeDeleted", { categoryId: transaction.category.id }],
+    [
+      "categoryBalance",
+      {
+        categoryId: transaction.category.id,
+      },
+    ],
+    ["categoryKindBalance", transaction.category.kind],
+  ];
+  if (transaction.source_partition) {
+    queryKeys.push(
+      [
+        "partitionBalance",
+        {
+          partitionId: transaction.source_partition.id,
+        },
+      ],
+      [
+        "accountCanBeDeleted",
+        {
+          accountId: transaction.source_partition.account.id,
+        },
+      ],
+      [
+        "accountBalance",
+        {
+          accountId: transaction.source_partition.account.id,
+        },
+      ],
+      ["partitionsWithLoans", user.id]
+    );
+  }
+  if (transaction.counterpart) {
+    queryKeys.push(
+      [
+        "partitionBalance",
+        {
+          partitionId: transaction.counterpart.source_partition.id,
+        },
+      ],
+      [
+        "accountCanBeDeleted",
+        {
+          accountId: transaction.counterpart.source_partition.account.id,
+        },
+      ],
+      [
+        "accountBalance",
+        {
+          accountId: transaction.counterpart.source_partition.account.id,
+        },
+      ],
+      ["unpaidLoans", user.id, transaction.counterpart.source_partition.id]
+    );
+  }
+  return queryKeys;
 };
