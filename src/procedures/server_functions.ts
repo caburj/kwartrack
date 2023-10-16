@@ -1396,8 +1396,16 @@ export const updateTransaction = withValidation(
     transactionId: string(),
     categoryId: optional(string()),
     partitionId: optional(string()),
+    description: optional(string()),
   }),
-  async ({ userId, dbname, transactionId, categoryId, partitionId }) => {
+  async ({
+    userId,
+    dbname,
+    transactionId,
+    categoryId,
+    partitionId,
+    description,
+  }) => {
     const selectTransactionQuery = e.params(
       {
         id: e.uuid,
@@ -1459,6 +1467,14 @@ export const updateTransaction = withValidation(
       }
       if (partitionId) {
         await updatePartitionQuery.run(tx, { id: transactionId, partitionId });
+      }
+      if (typeof description === "string") {
+        await e
+          .update(e.ETransaction, (transaction) => ({
+            filter_single: e.op(transaction.id, "=", e.uuid(transactionId)),
+            set: { description },
+          }))
+          .run(tx);
       }
     });
 

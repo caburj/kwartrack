@@ -569,12 +569,8 @@ export function TransactionsTable({
                         <Table.Cell>
                           {getPartitionColumn(transaction)}
                         </Table.Cell>
-                        <Table.Cell justify="end">
-                          {formatValue(Math.abs(parseFloat(transaction.value)))}
-                        </Table.Cell>
-                        <Table.Cell style={{ minWidth: "300px" }}>
-                          {transaction.description}
-                        </Table.Cell>
+                        <EditableAmountField {...{ transaction, user }} />
+                        <EditableDescriptionField {...{ transaction, user }} />
                         <Table.Cell>
                           {shouldShowDelete(transaction) && (
                             <IconButton
@@ -699,3 +695,68 @@ export function TransactionsTable({
     </>
   );
 }
+
+const EditableAmountField = (props: {
+  transaction: Transaction;
+  user: { id: string; dbname: string };
+}) => {
+  const { transaction, user } = props;
+  return (
+    <Table.Cell justify="end">
+      {formatValue(Math.abs(parseFloat(transaction.value)))}
+    </Table.Cell>
+  );
+};
+
+const EditableDescriptionField = (props: {
+  transaction: Transaction;
+  user: { id: string; dbname: string };
+}) => {
+  const { transaction, user } = props;
+  const [value, setValue] = useState(transaction.description || "");
+
+  const queryClient = useQueryClient();
+  const updateTransaction = useMutation(
+    async (arg: { transaction: Transaction; description: string }) => {
+      const { transaction, description } = arg;
+      return rpc.post.updateTransaction({
+        transactionId: transaction.id,
+        userId: user.id,
+        dbname: user.dbname,
+        description,
+      });
+    },
+    {
+      onSuccess: () => {
+        invalidateMany(queryClient, [["transactions"]]);
+      },
+    }
+  );
+
+  return (
+    <Table.Cell style={{ minWidth: "300px" }}>
+      <input
+        type="text"
+        value={value}
+        style={{ width: "100%" }}
+        onInput={(e) => {
+          setValue(e.currentTarget.value);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            updateTransaction.mutate({
+              transaction,
+              description: value,
+            });
+          }
+        }}
+        onBlur={() => {
+          updateTransaction.mutate({
+            transaction,
+            description: value,
+          });
+        }}
+      />
+    </Table.Cell>
+  );
+};

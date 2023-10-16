@@ -3,7 +3,7 @@
 import { useUser } from "@clerk/nextjs";
 import { notFound } from "next/navigation";
 import { Box, Card, Flex, Text, TextFieldInput } from "@radix-ui/themes";
-import { TwoColumnInput } from "@/utils/common";
+import { TwoColumnInput, debounce } from "@/utils/common";
 import { FormEvent, useCallback, useMemo, useState } from "react";
 import { rpc } from "../rpc_client";
 import { signup } from "./signup";
@@ -124,19 +124,3 @@ const RegisterForm = ({
     </Flex>
   );
 };
-
-function debounce<C extends (...args: any[]) => any>(
-  callback: C,
-  delay: number
-) {
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  return (...args: Parameters<C>) => {
-    if (timeoutId !== null) {
-      clearTimeout(timeoutId);
-    }
-    timeoutId = setTimeout(() => {
-      callback(...args);
-      timeoutId = null;
-    }, delay);
-  };
-}
