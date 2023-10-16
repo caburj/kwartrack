@@ -21,10 +21,47 @@ export function groupBy<T, K extends string>(
   return result;
 }
 
+/**
+ * TODO: only allow 2 decimal places
+ * TODO: parsing and formatting should be in the backend
+ * Source: https://stackoverflow.com/questions/55364947/is-there-any-javascript-standard-api-to-parse-to-number-according-to-locale
+ */
+function createParser(locale: string) {
+  const parts = new Intl.NumberFormat(locale).formatToParts(-12345.6);
+  const numerals = [
+    ...new Intl.NumberFormat(locale, { useGrouping: false }).format(9876543210),
+  ].reverse();
+  const index = new Map(numerals.map((d, i) => [d, i]));
+  const group = new RegExp(
+    `[${parts.find((d) => d.type === "group")!.value}]`,
+    "g"
+  );
+  const decimal = new RegExp(
+    `[${parts.find((d) => d.type === "decimal")!.value}]`
+  );
+  const numeral = new RegExp(`[${numerals.join("")}]`, "g");
+  const parse = (string: string) => {
+    return (string = string
+      .trim()
+      .replace(group, "")
+      .replace(decimal, ".")
+      .replace(numeral, (x) => index.get(x)!.toString()))
+      ? +string
+      : NaN;
+  };
+  return parse;
+}
+
+const sp = createParser("en-US");
+
 const nf = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
   minimumFractionDigits: 2,
 });
+
+export function parseValue(value: string) {
+  return sp(value);
+}
 
 export function formatValue(value: number) {
   return nf.format(value);

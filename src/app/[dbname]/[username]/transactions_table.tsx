@@ -17,6 +17,7 @@ import {
   getCategoryOptionName,
   getPartitionType,
   invalidateMany,
+  parseValue,
   useGroupedPartitions,
 } from "@/utils/common";
 import {
@@ -574,7 +575,7 @@ export function TransactionsTable({
                           {isEditable(transaction) ? (
                             <EditableAmountField {...{ transaction, user }} />
                           ) : (
-                            formatValue(Math.abs(parseFloat(transaction.value)))
+                            formatValue(Math.abs(parseValue(transaction.value)))
                           )}
                         </Table.Cell>
                         <Table.Cell style={{ minWidth: "300px" }}>
@@ -640,13 +641,13 @@ const EditableAmountField = (props: {
   user: { id: string; dbname: string };
 }) => {
   const { transaction, user } = props;
-  const originalValue = formatValue(Math.abs(parseFloat(transaction.value)));
+  const originalValue = formatValue(Math.abs(parseValue(transaction.value)));
   const [value, setValue] = useState(originalValue);
 
   const queryClient = useQueryClient();
   const updateTransactionValue = useMutation(
     async () => {
-      const parsedValue = parseFloat(value);
+      const parsedValue = parseValue(value);
       if (isNaN(parsedValue)) {
         toast.error("Invalid value");
         return false;
@@ -656,13 +657,13 @@ const EditableAmountField = (props: {
         transactionId: transaction.id,
         userId: user.id,
         dbname: user.dbname,
-        value: parseFloat(value),
+        value: parseValue(value),
       });
     },
     {
       onSuccess: (success) => {
         const newValue = success ? value : originalValue;
-        setValue(formatValue(Math.abs(parseFloat(newValue))));
+        setValue(formatValue(Math.abs(parseValue(newValue))));
 
         if (!success) return;
         const queryKeys = getQueryKeysToInvalidate(transaction, user);

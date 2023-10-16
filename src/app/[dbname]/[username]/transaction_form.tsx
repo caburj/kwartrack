@@ -9,6 +9,7 @@ import {
   getCategoryOptionName,
   getPartitionType,
   invalidateMany,
+  parseValue,
   useGroupedPartitions,
 } from "@/utils/common";
 import {
@@ -229,7 +230,7 @@ function TransactionFormMain(props: {
 
   let value: number | undefined = undefined;
   try {
-    value = parseFloat(inputValue);
+    value = parseValue(inputValue);
   } catch (_error) {}
 
   const disableSubmit =
