@@ -1268,13 +1268,15 @@ export const updatePartition = withValidation(
     userId: string(),
     partitionId: string(),
     name: string(),
+    isPrivate: boolean(),
     dbname: string(),
   }),
-  async ({ userId, partitionId, name, dbname }) => {
+  async ({ userId, partitionId, name, dbname, isPrivate }) => {
     const updateNameQuery = e.params(
       {
         id: e.uuid,
         name: e.str,
+        isPrivate: e.bool,
       },
       ({ id, name }) =>
         e.update(e.EPartition, (partition) => ({
@@ -1283,9 +1285,7 @@ export const updatePartition = withValidation(
             "and",
             e.op(partition.id, "=", id)
           ),
-          set: {
-            name,
-          },
+          set: { name, is_private: isPrivate },
         }))
     );
     return updateNameQuery.run(
@@ -1295,6 +1295,7 @@ export const updatePartition = withValidation(
       {
         id: partitionId,
         name: name.trim(),
+        isPrivate,
       }
     );
   }

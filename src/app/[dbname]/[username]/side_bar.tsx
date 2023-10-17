@@ -10,6 +10,8 @@ import {
   ReactNode,
   useCallback,
   useMemo,
+  forwardRef,
+  ForwardedRef,
 } from "react";
 import {
   useQuery,
@@ -456,7 +458,11 @@ const ActiveLoans = ({ user }: { user: { id: string; dbname: string } }) => {
                 }}
               >
                 {(partition) => (
-                  <PartitionLoans partition={partition} user={user} />
+                  <PartitionLoans
+                    partition={partition}
+                    user={user}
+                    key={partition.id}
+                  />
                 )}
               </FoldableList>
             );
@@ -955,9 +961,9 @@ function PartitionLI({
 }) {
   const queryClient = useQueryClient();
   const [store, dispatch] = useContext(UserPageStoreContext);
-  const [name, setName] = useState(partition.name);
 
   const hiddenDialogTriggerRef = useRef<HTMLButtonElement>(null);
+  const editPartitionTriggerRef = useRef<HTMLButtonElement>(null);
 
   const [selectedDestinationId, setSelectedDestinationId] = useState("");
   const [loanCategoryId, setLoanCategoryId] = useState("");
@@ -993,23 +999,6 @@ function PartitionLI({
     }
   );
 
-  const updatePartition = useMutation(
-    (name: string) => {
-      return rpc.post.updatePartition({
-        partitionId: partition.id,
-        dbname: user.dbname,
-        userId: user.id,
-        name,
-      });
-    },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: ["partitions", user.id],
-        });
-      },
-    }
-  );
   const rightClickItems = [
     ...(categories.data
       ? [
@@ -1024,6 +1013,13 @@ function PartitionLI({
       : []),
     ...(partition.is_owned
       ? [
+          {
+            label: "Edit",
+            onClick: (e) => {
+              e.stopPropagation();
+              editPartitionTriggerRef.current?.click();
+            },
+          } as RightClickItem,
           {
             label: "Delete",
             color: "red" as RadixColor,
@@ -1354,9 +1350,111 @@ function PartitionLI({
           </Flex>
         </Dialog.Content>
       </Dialog.Root>
+      <EditPartitionDialog
+        partition={partition}
+        user={user}
+        ref={editPartitionTriggerRef}
+      />
     </Flex>
   );
 }
+
+const EditPartitionDialog = forwardRef(function EditPartitionDialog(
+  props: {
+    partition: Partition;
+    user: { id: string; dbname: string };
+  },
+  ref: ForwardedRef<HTMLButtonElement>
+) {
+  const { partition, user } = props;
+  const editPartitionFormId = `edit-partition-form-${partition.id}`;
+
+  const queryClient = useQueryClient();
+
+  const updatePartition = useMutation(
+    async ({ name, isPrivate }: { name: string; isPrivate: boolean }) => {
+      return rpc.post.updatePartition({
+        partitionId: partition.id,
+        dbname: props.user.dbname,
+        userId: props.user.id,
+        name,
+        isPrivate,
+      });
+    },
+    {
+      onSuccess: () => {
+        invalidateMany(queryClient, [
+          ["partitions", user.id, partition.account.id],
+          ["transactions"],
+          ["unpaidLoans", user.id, partition.id],
+          ["partitionsWithLoans", user.id],
+        ]);
+      },
+    }
+  );
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger>
+        <button ref={ref} hidden></button>
+      </Dialog.Trigger>
+      <Dialog.Content style={{ maxWidth: 500 }}>
+        <Dialog.Title>Edit partition</Dialog.Title>
+        <Separator size="4" mb="4" />
+        <Flex direction="column" gap="3" asChild>
+          <form
+            id={editPartitionFormId}
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const form = document.getElementById(editPartitionFormId);
+              const formdata = new FormData(form as HTMLFormElement);
+              const schema = object({
+                name: string([minLength(1)]),
+                isPrivate: boolean(),
+              });
+              const fdata = Object.fromEntries(formdata.entries());
+              const parsedData = schema.parse({
+                name: fdata.name,
+                isPrivate: fdata.isPrivate === "on",
+              });
+              const result = await updatePartition.mutateAsync(parsedData);
+              if (!result) {
+                throw new Error("Something went wrong");
+              }
+            }}
+          >
+            <TwoColumnInput>
+              <Text as="div" size="2" mb="1" weight="bold">
+                Name
+              </Text>
+              <TextField.Input
+                name="name"
+                placeholder="Enter partition name"
+                defaultValue={partition.name}
+              />
+            </TwoColumnInput>
+            <TwoColumnInput>
+              <Text as="div" size="2" mb="1" weight="bold">
+                Private
+              </Text>
+              <Switch name="isPrivate" defaultChecked={partition.is_private} />
+            </TwoColumnInput>
+          </form>
+        </Flex>
+        <Separator size="4" mt="4" />
+        <Flex gap="3" mt="4" justify="start" direction="row-reverse">
+          <Dialog.Close type="submit" form={editPartitionFormId}>
+            <Button>Save</Button>
+          </Dialog.Close>
+          <Dialog.Close>
+            <Button variant="soft" color="gray">
+              Discard
+            </Button>
+          </Dialog.Close>
+        </Flex>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+});
 
 function categoryValueProps({
   value,
