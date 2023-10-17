@@ -10,6 +10,7 @@ import {
   number,
   minValue,
   boolean,
+  minLength,
 } from "valibot";
 import { Transaction } from "edgedb/dist/transaction";
 
@@ -1885,5 +1886,40 @@ export const checkUsername = withValidation(
       }))
       .run(client);
     return result === null;
+  }
+);
+
+export const updateAccount = withValidation(
+  object({
+    userId: string(),
+    dbname: string(),
+    accountId: string(),
+    name: string([minLength(1)]),
+  }),
+  async ({ userId, dbname, accountId, name }) => {
+    const updateQuery = e.params(
+      {
+        id: e.uuid,
+        name: e.str,
+      },
+      ({ id, name }) =>
+        e.update(e.EAccount, (account) => ({
+          filter_single: e.op(
+            e.op(account.id, "=", id),
+            "and",
+            account.is_owned
+          ),
+          set: { name },
+        }))
+    );
+    return updateQuery.run(
+      edgedb
+        .createClient({ database: dbname })
+        .withGlobals({ current_user_id: userId }),
+      {
+        id: accountId,
+        name: name.trim(),
+      }
+    );
   }
 );

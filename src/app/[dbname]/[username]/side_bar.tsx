@@ -747,6 +747,8 @@ function AccountLI({
 }) {
   const queryClient = useQueryClient();
 
+  const editAccountTriggerRef = useRef<HTMLButtonElement>(null);
+
   const canBeDeleted = useQuery(
     ["accountCanBeDeleted", { accountId: account.id }],
     () => {
@@ -776,6 +778,17 @@ function AccountLI({
   );
 
   const rightClickItems = [
+    ...(account.is_owned
+      ? [
+          {
+            label: "Edit",
+            onClick: (e) => {
+              e.stopPropagation();
+              editAccountTriggerRef.current?.click();
+            },
+          } as RightClickItem,
+        ]
+      : []),
     ...(canBeDeleted.data
       ? [
           {
@@ -815,87 +828,173 @@ function AccountLI({
     >
       {(partitions) => {
         return (
-          <FoldableList
-            groupedItems={{ [account.id]: partitions }}
-            openValues={accountGroup !== "others" ? [account.id] : []}
-            getHeaderLabel={() => {
-              return (
-                <WithRightClick rightClickItems={rightClickItems}>
-                  <Text
-                    style={{ cursor: "pointer" }}
-                    onClick={() => {
-                      dispatch({
-                        type: "TOGGLE_ACCOUNT",
-                        payload: account.partitions.map((p) => p.id),
-                      });
-                    }}
-                    weight="medium"
-                    color={areAllPartitionsSelected ? "cyan" : undefined}
+          <>
+            <FoldableList
+              groupedItems={{ [account.id]: partitions }}
+              openValues={accountGroup !== "others" ? [account.id] : []}
+              getHeaderLabel={() => {
+                return (
+                  <WithRightClick rightClickItems={rightClickItems}>
+                    <Text
+                      style={{ cursor: "pointer" }}
+                      onClick={() => {
+                        dispatch({
+                          type: "TOGGLE_ACCOUNT",
+                          payload: account.partitions.map((p) => p.id),
+                        });
+                      }}
+                      weight="medium"
+                      color={areAllPartitionsSelected ? "cyan" : undefined}
+                    >
+                      {account.label}
+                    </Text>
+                  </WithRightClick>
+                );
+              }}
+              getHeaderExtraContent={() => {
+                return (
+                  <GenericLoadingValue
+                    queryKey={[
+                      "accountBalance",
+                      {
+                        accountId: account.id,
+                      },
+                    ]}
+                    valueLoader={() =>
+                      rpc.post.getAccountBalance({
+                        accountId: account.id,
+                        userId: user.id,
+                        dbname: user.dbname,
+                      })
+                    }
                   >
-                    {account.label}
-                  </Text>
-                </WithRightClick>
-              );
-            }}
-            getHeaderExtraContent={() => {
-              return (
-                <GenericLoadingValue
-                  queryKey={[
-                    "accountBalance",
-                    {
-                      accountId: account.id,
-                    },
-                  ]}
-                  valueLoader={() =>
-                    rpc.post.getAccountBalance({
-                      accountId: account.id,
-                      userId: user.id,
-                      dbname: user.dbname,
-                    })
-                  }
-                >
-                  {(value) => {
-                    const parsedValue = parseFloat(value);
-                    let color: RadixColor;
-                    let weight: "medium" | "bold" = "medium";
-                    const asExpected = parsedValue >= 0;
-                    if (!asExpected) {
-                      color = "red";
-                      weight = "bold";
-                    }
-                    let result;
-                    if (isNaN(parsedValue)) {
-                      result = value;
-                    } else {
-                      result = formatValue(
-                        asExpected ? Math.abs(parsedValue) : parsedValue
+                    {(value) => {
+                      const parsedValue = parseFloat(value);
+                      let color: RadixColor;
+                      let weight: "medium" | "bold" = "medium";
+                      const asExpected = parsedValue >= 0;
+                      if (!asExpected) {
+                        color = "red";
+                        weight = "bold";
+                      }
+                      let result;
+                      if (isNaN(parsedValue)) {
+                        result = value;
+                      } else {
+                        result = formatValue(
+                          asExpected ? Math.abs(parsedValue) : parsedValue
+                        );
+                      }
+                      return (
+                        <Text color={color} weight={weight}>
+                          {result}
+                        </Text>
                       );
-                    }
-                    return (
-                      <Text color={color} weight={weight}>
-                        {result}
-                      </Text>
-                    );
-                  }}
-                </GenericLoadingValue>
-              );
-            }}
-          >
-            {(partition) => {
-              return (
-                <PartitionLI
-                  partition={partition}
-                  user={user}
-                  key={partition.id}
-                />
-              );
-            }}
-          </FoldableList>
+                    }}
+                  </GenericLoadingValue>
+                );
+              }}
+            >
+              {(partition) => {
+                return (
+                  <PartitionLI
+                    partition={partition}
+                    user={user}
+                    key={partition.id}
+                  />
+                );
+              }}
+            </FoldableList>
+            <EditAccountDialog
+              account={account}
+              user={user}
+              ref={editAccountTriggerRef}
+            />
+          </>
         );
       }}
     </QueryResult>
   );
 }
+
+const EditAccountDialog = forwardRef(function EditAccountDialog(
+  props: {
+    account: Account;
+    user: { id: string; dbname: string };
+  },
+  ref: ForwardedRef<HTMLButtonElement>
+) {
+  const { account, user } = props;
+  const formId = `edit-account-form-${account.id}`;
+
+  const queryClient = useQueryClient();
+
+  const update = useMutation(
+    async ({ name }: { name: string }) => {
+      return rpc.post.updateAccount({
+        userId: user.id,
+        dbname: user.dbname,
+        accountId: account.id,
+        name,
+      });
+    },
+    {
+      onSuccess: () => {
+        invalidateMany(queryClient, [["transactions"], ["accounts", user.id]]);
+      },
+    }
+  );
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger>
+        <button ref={ref} hidden></button>
+      </Dialog.Trigger>
+      <Dialog.Content style={{ maxWidth: 500 }}>
+        <Dialog.Title>Edit account</Dialog.Title>
+        <Separator size="4" mb="4" />
+        <Flex direction="column" gap="3" asChild>
+          <form
+            id={formId}
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const form = document.getElementById(formId);
+              const formdata = new FormData(form as HTMLFormElement);
+              const schema = object({ name: string([minLength(1)]) });
+              const fdata = Object.fromEntries(formdata.entries());
+              const parsedData = schema.parse(fdata);
+              const result = await update.mutateAsync(parsedData);
+              if (!result) {
+                throw new Error("Something went wrong");
+              }
+            }}
+          >
+            <TwoColumnInput>
+              <Text as="div" size="2" mb="1" weight="bold">
+                Name
+              </Text>
+              <TextField.Input
+                name="name"
+                placeholder="Enter account name"
+                defaultValue={account.name}
+              />
+            </TwoColumnInput>
+          </form>
+        </Flex>
+        <Separator size="4" mt="4" />
+        <Flex gap="3" mt="4" justify="start" direction="row-reverse">
+          <Dialog.Close type="submit" form={formId}>
+            <Button>Save</Button>
+          </Dialog.Close>
+          <Dialog.Close>
+            <Button variant="soft" color="gray">
+              Discard
+            </Button>
+          </Dialog.Close>
+        </Flex>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+});
 
 function Accounts({ user }: { user: { id: string; dbname: string } }) {
   const accounts = useQuery(["accounts", user.id, false], () => {

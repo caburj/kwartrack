@@ -20,9 +20,6 @@
 
 # TODO PRE 0.1
 
-* [ ] Allow editing the accounts, partitions, and categories.
-  - Always edit mode in the sidebar?
-
 * [ ] User registration.
   - 2 cases
     - user will start his own db
@@ -81,6 +78,11 @@
 
 * [ ] Migration.
   - Looks like piecewise migrations are needed when developing new features.
+
+* [ ] Allow assigning different owners if there are multiple users in the db
+  when...
+  * [ ] editing account
+  * [ ] editing category
 
 
 # IDEA / NICE TO HAVE (MAYBE)
@@ -214,6 +216,11 @@
 * [X] Allow editing amount and description.
   - Amount and description is rendered as input.
     - Update the transaction at onBlur.
+
+* [X] Allow editing the accounts, partitions, and categories.
+  * [X] Edit partition.
+  * [X] Edit category.
+  * [X] Edit account.
 
 
 # CANCELLED
