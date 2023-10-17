@@ -66,7 +66,7 @@ module default {
       "
     }
 
-    property is_owned := any(.owners = global current_user);
+    property is_owned := any(.owners = global current_user) or not exists .owners;
     property is_visible := not .is_private or global current_user.is_admin or .is_owned;
     property is_empty := not exists .<category[is ETransaction];
   }

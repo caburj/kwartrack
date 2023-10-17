@@ -704,6 +704,7 @@ export const getUserCategories = withValidation(
         name: true,
         kind: true,
         is_private: true,
+        is_owned: true,
       } as const;
       const expense = await e
         .select(e.ECategory, (category) => ({
@@ -1360,31 +1361,32 @@ export const deleteAccount = withValidation(
 export const updateCategory = withValidation(
   object({
     userId: string(),
+    dbname: string(),
     categoryId: string(),
     name: string(),
-    dbname: string(),
+    isPrivate: boolean(),
   }),
-  async ({ userId, categoryId, name, dbname }) => {
-    const updateNameQuery = e.params(
+  async ({ userId, dbname, categoryId, name, isPrivate }) => {
+    const updateQuery = e.params(
       {
         id: e.uuid,
         name: e.str,
+        isPrivate: e.bool,
       },
       ({ id, name }) =>
         e.update(e.ECategory, (category) => ({
           filter_single: e.op(category.id, "=", id),
-          set: {
-            name,
-          },
+          set: { name, is_private: isPrivate },
         }))
     );
-    return updateNameQuery.run(
+    return updateQuery.run(
       edgedb
         .createClient({ database: dbname })
         .withGlobals({ current_user_id: userId }),
       {
         id: categoryId,
-        name,
+        name: name.trim(),
+        isPrivate,
       }
     );
   }

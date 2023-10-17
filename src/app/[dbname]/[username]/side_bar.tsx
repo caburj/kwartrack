@@ -1743,7 +1743,9 @@ function CategoryLI({
 }) {
   const queryClient = useQueryClient();
   const [store, dispatch] = useContext(UserPageStoreContext);
-  const [name, setName] = useState(category.name);
+
+  const editCategoryTriggerRef = useRef<HTMLButtonElement>(null);
+
   const canBeDeleted = useQuery(
     ["categoryCanBeDeleted", { categoryId: category.id }],
     () => {
@@ -1768,17 +1770,20 @@ function CategoryLI({
       },
     }
   );
-  const updateCategory = useMutation((name: string) => {
-    return rpc.post.updateCategory({
-      categoryId: category.id,
-      dbname: user.dbname,
-      userId: user.id,
-      name,
-    });
-  });
   const isSelected = store.categoryIds.includes(category.id);
   const canBeRemoved = canBeDeleted.data;
   const rightClickItems = [
+    ...(category.is_owned
+      ? [
+          {
+            label: "Edit",
+            onClick: (e) => {
+              e.stopPropagation();
+              editCategoryTriggerRef.current?.click();
+            },
+          } as RightClickItem,
+        ]
+      : []),
     ...(canBeRemoved
       ? [
           {
@@ -1836,9 +1841,108 @@ function CategoryLI({
           />
         )}
       </GenericLoadingValue>
+      <EditCategoryDialog
+        category={category}
+        user={user}
+        ref={editCategoryTriggerRef}
+      />
     </Flex>
   );
 }
+
+// TODO: REF: This component is very similar to EditPartitionDialog.
+const EditCategoryDialog = forwardRef(function EditCategoryDialog(
+  props: {
+    category: Category;
+    user: { id: string; dbname: string };
+  },
+  ref: ForwardedRef<HTMLButtonElement>
+) {
+  const { category, user } = props;
+  const queryClient = useQueryClient();
+  const update = useMutation(
+    async (arg: { name: string; isPrivate: boolean }) => {
+      return rpc.post.updateCategory({
+        categoryId: category.id,
+        dbname: user.dbname,
+        userId: user.id,
+        name: arg.name,
+        isPrivate: arg.isPrivate,
+      });
+    },
+    {
+      onSuccess: () => {
+        invalidateMany(queryClient, [
+          ["categories", user.id],
+          ["transactions"],
+        ]);
+      },
+    }
+  );
+  const formId = `edit-category-form-${category.id}`;
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger>
+        <button ref={ref} hidden></button>
+      </Dialog.Trigger>
+      <Dialog.Content style={{ maxWidth: 500 }}>
+        <Dialog.Title>Edit category</Dialog.Title>
+        <Separator size="4" mb="4" />
+        <Flex direction="column" gap="3" asChild>
+          <form
+            id={formId}
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const form = document.getElementById(formId);
+              const formdata = new FormData(form as HTMLFormElement);
+              const schema = object({
+                name: string([minLength(1)]),
+                isPrivate: boolean(),
+              });
+              const fdata = Object.fromEntries(formdata.entries());
+              const parsedData = schema.parse({
+                name: fdata.name,
+                isPrivate: fdata.isPrivate === "on",
+              });
+              const result = await update.mutateAsync(parsedData);
+              if (!result) {
+                throw new Error("Something went wrong");
+              }
+            }}
+          >
+            <TwoColumnInput>
+              <Text as="div" size="2" mb="1" weight="bold">
+                Name
+              </Text>
+              <TextField.Input
+                name="name"
+                placeholder="Enter category name"
+                defaultValue={category.name}
+              />
+            </TwoColumnInput>
+            <TwoColumnInput>
+              <Text as="div" size="2" mb="1" weight="bold">
+                Private
+              </Text>
+              <Switch name="isPrivate" defaultChecked={category.is_private} />
+            </TwoColumnInput>
+          </form>
+        </Flex>
+        <Separator size="4" mt="4" />
+        <Flex gap="3" mt="4" justify="start" direction="row-reverse">
+          <Dialog.Close type="submit" form={formId}>
+            <Button>Save</Button>
+          </Dialog.Close>
+          <Dialog.Close>
+            <Button variant="soft" color="gray">
+              Discard
+            </Button>
+          </Dialog.Close>
+        </Flex>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+});
 
 function GenericLoadingValue(props: {
   queryKey: [string, ...any];

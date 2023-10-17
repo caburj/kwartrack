@@ -51,7 +51,7 @@ const initStore: UserPageStore = {
   partitionIds: [],
   categoryIds: [],
   loanIds: [],
-  nPerPage: 50,
+  nPerPage: 25,
   currentPage: 1,
   tssDate: getFirstDayOfMonth(new Date()),
   tseDate: getLastDayOfMonth(new Date()),
