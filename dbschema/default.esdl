@@ -75,7 +75,6 @@ module default {
   type ETransaction {
     required date: datetime {
       default := datetime_of_statement();
-      readonly := true;
     }
     required source_partition: EPartition;
     required category: ECategory;

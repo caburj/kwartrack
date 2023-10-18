@@ -437,6 +437,7 @@ const makeTransactionCreator = withValidation(
     categoryId: string(),
     description: optional(string()),
     destinationPartitionId: optional(string()),
+    date: optional(string()),
   }),
   ({
     value,
@@ -444,6 +445,7 @@ const makeTransactionCreator = withValidation(
     categoryId,
     description,
     destinationPartitionId,
+    date,
   }) => {
     if (sourcePartitionId === destinationPartitionId) {
       throw new Error("Source and destination partitions cannot be the same.");
@@ -470,6 +472,7 @@ const makeTransactionCreator = withValidation(
           counterpart: e.select(e.ETransaction, (transaction) => ({
             filter_single: e.op(transaction.id, "=", counterpartId),
           })),
+          date: date ? e.datetime(new Date(date)) : undefined,
         })
     );
 
@@ -600,6 +603,7 @@ export const createTransaction = withValidation(
     userId: string(),
     destinationPartitionId: optional(string()),
     dbname: string(),
+    date: optional(string()),
   }),
   ({
     value,
@@ -609,6 +613,7 @@ export const createTransaction = withValidation(
     userId,
     destinationPartitionId,
     dbname,
+    date,
   }) => {
     const client = edgedb
       .createClient({ database: dbname })
@@ -620,6 +625,7 @@ export const createTransaction = withValidation(
         categoryId,
         description,
         destinationPartitionId,
+        date,
       })
     );
   }
@@ -1544,6 +1550,26 @@ export const updateTransactionValue = withValidation(
       }
       return true;
     });
+  }
+);
+
+export const updateTransactionDate = withValidation(
+  object({
+    userId: string(),
+    dbname: string(),
+    transactionId: string(),
+    date: string(),
+  }),
+  async ({ userId, dbname, transactionId, date }) => {
+    const client = edgedb.createClient({ database: dbname }).withGlobals({
+      current_user_id: userId,
+    });
+    return e
+      .update(e.ETransaction, (tx) => ({
+        filter_single: e.op(tx.id, "=", e.uuid(transactionId)),
+        set: { date: e.datetime(new Date(date)) },
+      }))
+      .run(client);
   }
 );
 

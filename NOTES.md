@@ -16,8 +16,6 @@
   - Not owned private -> outline
 
 
-# TODO
-
 # TODO PRE 0.1
 
 * [ ] User registration.
@@ -63,26 +61,29 @@
           simple explanations.
       * [ ] Then redirect to the main UI.
 
-* [ ] Allow editing date
-  - Clicking the date will show the date picker.
-
 * [ ] Rename repo to "kwartrack".
+
+* [ ] Write docs on...
+  * [ ] How to get started.
+  * [ ] How to deploy.
 
 
 # TODO POST 0.1
 
-* [ ] A better way to invalidate queries when making mutations.
-  - Can we find a declarative way?
+* [ ] Animated new transaction record and also animated deletion of transaction.
 
 * [ ] Allow changing the color of each partition and category.
-
-* [ ] Migration.
-  - Looks like piecewise migrations are needed when developing new features.
 
 * [ ] Allow assigning different owners if there are multiple users in the db
   when...
   * [ ] editing account
   * [ ] editing category
+
+* [ ] A better way to invalidate queries when making mutations.
+  - Can we find a declarative way?
+
+* [ ] Migration.
+  - Looks like piecewise migrations are needed when developing new features.
 
 
 # IDEA / NICE TO HAVE (MAYBE)
@@ -221,6 +222,9 @@
   * [X] Edit partition.
   * [X] Edit category.
   * [X] Edit account.
+
+* [X] Allow editing date
+  - Clicking the date will show the date picker.
 
 
 # CANCELLED

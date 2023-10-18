@@ -9,6 +9,7 @@ import { UserPageStoreContext } from "./store";
 import { rpc } from "@/app/rpc_client";
 import {
   CATEGORY_COLOR,
+  DateInput,
   PARTITION_COLOR,
   Partitions,
   QueryResult,
@@ -379,6 +380,22 @@ export function TransactionsTable({
     });
   });
 
+  const updateTransactionDate = useMutation(
+    async (arg: { transactionId: string; newDate: Date }) => {
+      return rpc.post.updateTransactionDate({
+        transactionId: arg.transactionId,
+        userId: user.id,
+        dbname: user.dbname,
+        date: arg.newDate.toISOString(),
+      });
+    },
+    {
+      onSuccess: () => {
+        invalidateMany(queryClient, [["transactions"]]);
+      },
+    }
+  );
+
   const updateTransaction = useMutation(
     async (arg: { transaction: Transaction; categoryId: string }) => {
       const { transaction, categoryId } = arg;
@@ -507,7 +524,23 @@ export function TransactionsTable({
                           },
                         })}
                       >
-                        <Table.Cell>{transaction.str_date.slice(5)}</Table.Cell>
+                        <Table.Cell>
+                          <DatePicker
+                            selected={new Date(transaction.str_date)}
+                            onChange={(date) => {
+                              if (!date) {
+                                return;
+                              }
+                              updateTransactionDate.mutate({
+                                transactionId: transaction.id,
+                                newDate: date,
+                              });
+                            }}
+                            dateFormat="yyyy-MM-dd"
+                            customInput={<DateInput />}
+                            readOnly={!isEditable(transaction)}
+                          />
+                        </Table.Cell>
                         <Table.Cell>
                           {isEditable(transaction) ? (
                             <Combobox

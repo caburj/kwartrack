@@ -3,6 +3,7 @@ import {
   CATEGORY_COLOR,
   Categories,
   Category,
+  DateInput,
   PARTITION_COLOR,
   Partitions,
   Unpacked,
@@ -34,6 +35,7 @@ import { ChevronRightIcon, PaperPlaneIcon } from "@radix-ui/react-icons";
 import { css } from "../../../../styled-system/css";
 import { UserPageStoreContext } from "./store";
 import { toast } from "sonner";
+import DatePicker from "react-datepicker";
 
 type PartitionOption = Unpacked<
   Awaited<ReturnType<typeof rpc.post.getPartitionOptions>>
@@ -161,6 +163,8 @@ function TransactionFormMain(props: {
   const [inputValue, setInputValue] = useState("");
   const [inputDescription, setInputDescription] = useState("");
 
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
   const selectedCategoryId = store.selectedCategoryId;
 
   const categories = useMemo(() => {
@@ -246,12 +250,14 @@ function TransactionFormMain(props: {
       value: number(),
       description: optional(string()),
       userId: string(),
+      date: optional(string()),
     });
     const parsedData = dataSchema.parse({
       description: inputDescription,
       categoryId: selectedCategoryId,
       sourcePartitionId: selectedSourceId,
       destinationPartitionId: selectedDestinationId,
+      date: selectedDate?.toISOString(),
       userId: user.id,
       value,
     });
@@ -324,7 +330,16 @@ function TransactionFormMain(props: {
         },
       })}
     >
-      <Table.Cell></Table.Cell>
+      <Table.Cell>
+        <DatePicker
+          selected={selectedDate}
+          onChange={(date) => {
+            setSelectedDate(date);
+          }}
+          dateFormat="yyyy-MM-dd"
+          customInput={<DateInput />}
+        />
+      </Table.Cell>
       <Table.Cell>
         <CategoryComboBox
           ref={categoryButtonRef}

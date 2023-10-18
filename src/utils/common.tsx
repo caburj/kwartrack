@@ -1,7 +1,7 @@
 import { rpc } from "@/app/rpc_client";
-import { Flex, Grid, textPropDefs } from "@radix-ui/themes";
+import { Badge, Flex, Grid, textPropDefs } from "@radix-ui/themes";
 import { UseQueryResult, QueryClient, QueryKey } from "@tanstack/react-query";
-import { ReactHTML, useMemo } from "react";
+import { ForwardedRef, ReactHTML, forwardRef, useMemo } from "react";
 
 export type Unpacked<T> = T extends (infer U)[] ? U : T;
 
@@ -230,3 +230,14 @@ export function debounce<C extends (...args: any[]) => any>(
     }, delay);
   };
 }
+
+export const DateInput = forwardRef(function DateInput(
+  { value, onClick }: any,
+  ref: ForwardedRef<HTMLButtonElement>
+) {
+  return (
+    <Badge ref={ref} onClick={onClick}>
+      {value || "Today"}
+    </Badge>
+  );
+});
