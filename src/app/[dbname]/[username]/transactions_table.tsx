@@ -537,7 +537,9 @@ export function TransactionsTable({
                               });
                             }}
                             dateFormat="yyyy-MM-dd"
-                            customInput={<DateInput />}
+                            customInput={
+                              <DateInput isPointer={isEditable(transaction)} />
+                            }
                             readOnly={!isEditable(transaction)}
                           />
                         </Table.Cell>

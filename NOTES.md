@@ -227,6 +227,8 @@
 
 * [X] Fix: When setting a date different from today, the time is not considered.
 
+* [X] Fix: When hovering to the date input, it should be cursor pointer.
+
 
 # CANCELLED
 

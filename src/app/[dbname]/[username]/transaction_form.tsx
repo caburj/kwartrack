@@ -347,7 +347,7 @@ function TransactionFormMain(props: {
             setSelectedDate(date);
           }}
           dateFormat="yyyy-MM-dd"
-          customInput={<DateInput />}
+          customInput={<DateInput isPointer={true} />}
         />
       </Table.Cell>
       <Table.Cell>

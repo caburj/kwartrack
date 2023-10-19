@@ -232,11 +232,16 @@ export function debounce<C extends (...args: any[]) => any>(
 }
 
 export const DateInput = forwardRef(function DateInput(
-  { value, onClick }: any,
+  props: any,
   ref: ForwardedRef<HTMLButtonElement>
 ) {
+  const { value, onClick, isPointer } = props;
   return (
-    <Badge ref={ref} onClick={onClick}>
+    <Badge
+      ref={ref}
+      onClick={onClick}
+      style={{ cursor: isPointer ? "pointer" : "auto" }}
+    >
       {value || "Today"}
     </Badge>
   );
