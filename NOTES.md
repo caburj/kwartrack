@@ -67,7 +67,6 @@
   * [ ] How to get started.
   * [ ] How to deploy.
 
-
 # TODO POST 0.1
 
 * [ ] Animated new transaction record and also animated deletion of transaction.
@@ -225,6 +224,8 @@
 
 * [X] Allow editing date
   - Clicking the date will show the date picker.
+
+* [X] Fix: When setting a date different from today, the time is not considered.
 
 
 # CANCELLED

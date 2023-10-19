@@ -252,6 +252,16 @@ function TransactionFormMain(props: {
       userId: string(),
       date: optional(string()),
     });
+
+    if (selectedDate) {
+      // Set the time of the selected date to the current time.
+      const now = new Date();
+      selectedDate.setUTCHours(now.getUTCHours());
+      selectedDate.setUTCMinutes(now.getUTCMinutes());
+      selectedDate.setUTCSeconds(now.getUTCSeconds());
+      selectedDate.setUTCMilliseconds(now.getUTCMilliseconds());
+    }
+
     const parsedData = dataSchema.parse({
       description: inputDescription,
       categoryId: selectedCategoryId,
