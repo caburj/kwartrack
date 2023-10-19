@@ -19,53 +19,20 @@
 # TODO PRE 0.1
 
 * [ ] User registration.
-  - 2 cases
-    - user will start his own db
-    - user will register to an existing db
-  * [ ] Case 1: User will start his own db
-    * [ ] After registration, show the user a wizard to:
-      * [ ] Create accounts and partitions
-        - Should contain minimal explanations to introduce the concept of
-          accounts and partitions.
-        * [ ] This new user is required to create 1 account and 1 partition.
-      * [ ] Show list of categories to create.
-        - Provide default set of options that can be selected/deselected.
-          - Potential options list:
-            - Income
-              - Initial balance
-              - Salary
-              - Reimbursements
-            - Expense
-              - Groceries
-              - Restaurant
-              - Transportation
-              - Entertainment
-              - Shopping
-              - Health
-            - Transfer
-              - Transfer
-        - Should contain minimal explanations to introduce the concept of
-          "Transfer".
-      * [ ] Afterwards, the user is redirected to the main UI.
-
-  * [ ] Case 2: User will join an existing db.
-    - The owner will invite the new user.
-    * [ ] From the main UI, the owner will have a form to invite the new user.
-    * [ ] The new user will be shown a page to accept the invitation.
-      * [ ] After accepting, the new user will be shown a wizard:
-        * [ ] Show the common (or existing visible) accounts and provide minimal
-          explanation.
-        * [ ] No need to offer creation of new accounts/partitions.
-          - He'll have the chance of creating new records in the main UI.
-        * [ ] Same with categories, show the existing categories and provide
-          simple explanations.
-      * [ ] Then redirect to the main UI.
+  * The first user to register has admin access.
+  * Existing user can invite other users.
+    * An admin can invite another admin or a basic user.
+    * Invited admin will be given an option to start his own db or join the
+      inviter's db.
+  * A newly create db will automatically have one Account with two Partitions,
+    and a set of categories.
 
 * [ ] Rename repo to "kwartrack".
 
 * [ ] Write docs on...
   * [ ] How to get started.
   * [ ] How to deploy.
+
 
 # TODO POST 0.1
 
@@ -77,6 +44,8 @@
   when...
   * [ ] editing account
   * [ ] editing category
+
+* [ ] Fix: The skeleton component is very bright in dark mode.
 
 * [ ] A better way to invalidate queries when making mutations.
   - Can we find a declarative way?
@@ -239,3 +208,47 @@
       initialized with the latest schema.
   - Just use `edgedb database drop <dbname>` and sign-up a new user to create a
     new db.
+
+* [ ] User registration.
+  - NOTE: This is cancelled in favor of a simpler specs.
+  - 2 cases
+    - user will start his own db
+    - user will register to an existing db
+  * [ ] Case 1: User will start his own db
+    * [ ] After registration, show the user a wizard to:
+      * [ ] Create accounts and partitions
+        - Should contain minimal explanations to introduce the concept of
+          accounts and partitions.
+        * [ ] This new user is required to create 1 account and 1 partition.
+      * [ ] Show list of categories to create.
+        - Provide default set of options that can be selected/deselected.
+          - Potential options list:
+            - Income
+              - Initial balance
+              - Salary
+              - Reimbursements
+            - Expense
+              - Groceries
+              - Restaurant
+              - Transportation
+              - Entertainment
+              - Shopping
+              - Health
+            - Transfer
+              - Transfer
+        - Should contain minimal explanations to introduce the concept of
+          "Transfer".
+      * [ ] Afterwards, the user is redirected to the main UI.
+
+  * [ ] Case 2: User will join an existing db.
+    - The owner will invite the new user.
+    * [ ] From the main UI, the owner will have a form to invite the new user.
+    * [ ] The new user will be shown a page to accept the invitation.
+      * [ ] After accepting, the new user will be shown a wizard:
+        * [ ] Show the common (or existing visible) accounts and provide minimal
+          explanation.
+        * [ ] No need to offer creation of new accounts/partitions.
+          - He'll have the chance of creating new records in the main UI.
+        * [ ] Same with categories, show the existing categories and provide
+          simple explanations.
+      * [ ] Then redirect to the main UI.
