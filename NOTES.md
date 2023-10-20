@@ -18,15 +18,6 @@
 
 # TODO PRE 0.1
 
-* [ ] User registration.
-  * The first user to register has admin access.
-  * Existing user can invite other users.
-    * An admin can invite another admin or a basic user.
-    * Invited admin will be given an option to start his own db or join the
-      inviter's db.
-  * A newly create db will automatically have one Account with two Partitions,
-    and a set of categories.
-
 * [ ] Rename repo to "kwartrack".
 
 * [ ] Write docs on...
@@ -197,6 +188,22 @@
 * [X] Fix: When setting a date different from today, the time is not considered.
 
 * [X] Fix: When hovering to the date input, it should be cursor pointer.
+
+* [X] User registration.
+  * The first user to register has admin access.
+  * Existing user can invite other users.
+    * An admin can invite another admin or a basic user.
+    * Invited admin will be given an option to start his own db or join the
+      inviter's db.
+  * [X] A newly create db will automatically have one Account with one Partition,
+    and a set of categories.
+  * [X] Protect `/<dbname>/<username>`. Only the username of the authenticated
+    user is allowed to be accessed.
+  * [X] When no user in the `edgedb` db, redirect to onboarding of first user.
+  * [X] Onboarding page should not be accessible when there are already users.
+    * Test this.
+
+* [X] change `/<dbname>/<username>` to `/<username>`
 
 
 # CANCELLED

@@ -101,15 +101,15 @@ export function getPartitionType(
   p: PartitionOption,
   userId: string
 ): "owned" | "common" | "others" {
-  if (p.account.owners.length === 1 && p.account.owners[0].id === userId) {
-    return "owned";
-  } else if (
-    p.account.owners.length > 1 &&
-    p.account.owners.map((o) => o.id).includes(userId)
-  ) {
-    return "common";
+  if (p.account.is_owned) {
+    if (p.account.owners.length === 1) {
+      return "owned";
+    } else {
+      return "common";
+    }
+  } else {
+    return "others";
   }
-  return "others";
 }
 
 export const CATEGORY_COLOR = {

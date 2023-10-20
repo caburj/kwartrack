@@ -1,7 +1,7 @@
 "use client";
 
-import { rpc } from "../../rpc_client";
-import { css } from "../../../../styled-system/css";
+import { rpc } from "../rpc_client";
+import { css } from "../../../styled-system/css";
 import {
   MouseEventHandler,
   useContext,
@@ -1040,15 +1040,15 @@ export function getPartitionType2(
   p: Partition,
   userId: string
 ): "owned" | "common" | "others" {
-  if (p.owners.length === 1 && p.owners[0].id === userId) {
-    return "owned";
-  } else if (
-    p.owners.length > 1 &&
-    p.owners.map((o) => o.id).includes(userId)
-  ) {
-    return "common";
+  if (p.is_owned) {
+    if (p.owners.length === 1) {
+      return "owned";
+    } else {
+      return "common";
+    }
+  } else {
+    return "others";
   }
-  return "others";
 }
 
 function PartitionLI({
@@ -2062,13 +2062,12 @@ function getAccountGroup(
   account: Account,
   userId: string
 ): "owned" | "common" | "others" {
-  if (account.owners.length === 1 && account.owners[0].id === userId) {
-    return "owned";
-  } else if (
-    account.owners.length > 1 &&
-    account.owners.map((o) => o.id).includes(userId)
-  ) {
-    return "common";
+  if (account.is_owned) {
+    if (account.owners.length === 1) {
+      return "owned";
+    } else {
+      return "common";
+    }
   } else {
     return "others";
   }

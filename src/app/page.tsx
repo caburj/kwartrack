@@ -1,6 +1,9 @@
-import { findUserByEmail } from "@/procedures/server_functions";
+import {
+  findUserByEmail,
+  areThereAnyUsers,
+} from "@/procedures/server_functions";
 import { currentUser } from "@clerk/nextjs";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 export default async function Home() {
   const user = await currentUser();
@@ -16,9 +19,15 @@ export default async function Home() {
     throw new Error("Primary email not found");
   }
 
+  const hasUser = await areThereAnyUsers();
+
+  if (!hasUser) {
+    return redirect("/welcome-first-user");
+  }
+
   const eUser = await findUserByEmail({ email: primaryEmail });
   if (eUser === undefined) {
-    return redirect("/onboarding");
+    return notFound();
   }
-  return redirect(`/${eUser.dbname}/${eUser.username}`);
+  return redirect(`/${eUser.username}`);
 }

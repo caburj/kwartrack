@@ -14,15 +14,36 @@ import {
 } from "valibot";
 import { Transaction } from "edgedb/dist/transaction";
 
-function withValidation<S extends BaseSchema, R extends any>(
+function withValidation<S extends BaseSchema, R extends any, O extends any[]>(
   paramSchema: S,
-  fn: (param: Input<S>) => R
+  fn: (param: Input<S>, ...otherParams: O) => R
 ) {
-  return (param: Input<S>) => {
+  return (param: Input<S>, ...otherParams: O) => {
     const result = paramSchema.parse(param);
-    return fn(result);
+    return fn(result, ...otherParams);
   };
 }
+
+export const findUserDb = withValidation(
+  object({ username: string(), email: string() }),
+  async ({ username, email }) => {
+    const masterdbClient = edgedb.createClient({ database: "edgedb" });
+
+    const query = e.select(e.masterdb.EUser, (user) => ({
+      id: true,
+      username: true,
+      dbname: user.db.name,
+      filter_single: e.op(
+        e.op(user.username, "=", username),
+        "and",
+        e.op(user.email, "=", email)
+      ),
+    }));
+
+    const result = await query.run(masterdbClient);
+    return result?.dbname || null;
+  }
+);
 
 export const findUser = withValidation(
   object({ username: string(), dbname: string() }),
@@ -57,20 +78,18 @@ export const findUser = withValidation(
 export const findUserByEmail = withValidation(
   object({ email: string() }),
   async ({ email }) => {
-    const masterdbClient = edgedb.createClient({ database: "masterdb" });
+    const masterdbClient = edgedb.createClient({ database: "edgedb" });
 
     const query = e.select(e.masterdb.EUser, (user) => ({
       id: true,
       username: true,
-      dbnames: user["<users[is masterdb::EDatabase]"].name,
+      dbname: user.db.name,
       filter: e.op(user.email, "=", email),
     }));
 
     const result = await query.run(masterdbClient);
     if (result.length !== 0) {
-      const { id, username, dbnames } = result[0];
-      const dbname = dbnames[0];
-      return { id, username, dbname };
+      return result[0];
     }
   }
 );
@@ -959,8 +978,8 @@ export const getCategoryKindBalance = withValidation(
   }
 );
 
-export const createNewUser = withValidation(
-  object({ username: string(), email: string(), name: string() }),
+export const createNewDB = withValidation(
+  object({ username: string([minLength(1)]), email: string(), name: string() }),
   async ({ username, email, name }) => {
     const isUsernameOkay = await checkUsername({ username });
 
@@ -969,7 +988,7 @@ export const createNewUser = withValidation(
     }
 
     const masterdbClient = edgedb.createClient({
-      database: "masterdb",
+      database: "edgedb",
     });
 
     const result = await e
@@ -988,7 +1007,7 @@ export const createNewUser = withValidation(
         name,
       });
 
-    const createNewDB = async () => {
+    const _createNewDB = async () => {
       while (true) {
         try {
           const random6digitHex = Math.floor(Math.random() * 16777215).toString(
@@ -1001,7 +1020,7 @@ export const createNewUser = withValidation(
       }
     };
 
-    const dbname = await createNewDB();
+    const dbname = await _createNewDB();
 
     await e
       .params(
@@ -1067,31 +1086,102 @@ export const createNewUser = withValidation(
     const dbClient = edgedb.createClient({ database: dbname });
     await dbClient.execute(migrationScripts.join("\n"));
 
-    const { id: userId } = await e
-      .params(
-        { username: e.str, email: e.str, name: e.str },
-        ({ username, email, name }) =>
-          e.insert(e.EUser, {
-            username,
-            email,
-            name,
-          })
-      )
-      .run(dbClient, {
-        username,
-        email,
-        name,
-      });
+    return dbClient.transaction(async (tx) => {
+      const { id: userId } = await e
+        .params(
+          { username: e.str, email: e.str, name: e.str },
+          ({ username, email, name }) =>
+            e.insert(e.EUser, {
+              username,
+              email,
+              name,
+            })
+        )
+        .run(tx, {
+          username,
+          email,
+          name,
+        });
 
-    return {
-      dbname,
-      user: {
-        id: userId,
-        username,
-      },
-    };
+      await createDefaultCategories(tx, userId);
+      // Create one partition for onboarding.
+      await _createPartition(
+        {
+          forNewAccount: true,
+          isPrivate: false,
+          name: "Main",
+          userId: userId,
+          newAccountName: "Bank Account",
+          isSharedAccount: false,
+          // TODO: Seems to be unused. Remove?
+          accountId: "for-new-account",
+        },
+        tx
+      );
+
+      return {
+        dbname,
+        user: {
+          id: userId,
+          username,
+        },
+      };
+    });
   }
 );
+
+const makeCreateCategoryQuery = (args: {
+  isPrivate: boolean;
+  userId: string;
+}) => {
+  const { isPrivate, userId } = args;
+  return e.params(
+    {
+      name: e.str,
+      kind: e.ECategoryKind,
+    },
+    ({ name, kind }) =>
+      e.insert(e.ECategory, {
+        name,
+        kind,
+        is_private: isPrivate,
+        owners: e.select(e.EUser, (user) => ({
+          filter: e.op(user.id, "=", e.uuid(userId)),
+        })),
+      })
+  );
+};
+
+const createDefaultCategories = async (tx: Transaction, userId: string) => {
+  const incomeCategories = ["Initial Balance", "Salary", "Other Income"];
+  const expenseCategories = [
+    "Grocery",
+    "Rent",
+    "Bills",
+    "Misc",
+    "Restaurants",
+    "Transportation",
+    "Travel",
+    "Health",
+    "Shopping",
+  ];
+  const transferCategories = ["Transfer"];
+
+  const createCategory = makeCreateCategoryQuery({
+    userId,
+    isPrivate: false,
+  });
+
+  for (const category of incomeCategories) {
+    await createCategory.run(tx, { name: category, kind: "Income" });
+  }
+  for (const category of expenseCategories) {
+    await createCategory.run(tx, { name: category, kind: "Expense" });
+  }
+  for (const category of transferCategories) {
+    await createCategory.run(tx, { name: category, kind: "Transfer" });
+  }
+};
 
 export const createCategory = withValidation(
   object({
@@ -1102,52 +1192,37 @@ export const createCategory = withValidation(
     isPrivate: boolean(),
   }),
   async ({ userId, name, dbname, kind, isPrivate }) => {
-    const query = e.params(
-      {
-        name: e.str,
-        kind: e.ECategoryKind,
-      },
-      ({ name, kind }) =>
-        e.insert(e.ECategory, {
-          name,
-          kind,
-          is_private: isPrivate,
-          owners: e.select(e.EUser, (user) => ({
-            filter: e.op(user.id, "=", e.uuid(userId)),
-          })),
-        })
-    );
+    const query = makeCreateCategoryQuery({ userId, isPrivate });
     const result = await query.run(edgedb.createClient({ database: dbname }), {
       name,
-      kind: kind as any,
+      kind: kind as Readonly<"Income" | "Expense" | "Transfer">,
     });
     return result;
   }
 );
 
-export const createPartition = withValidation(
+const _createPartition = withValidation(
   object({
     userId: string(),
     name: string(),
-    dbname: string(),
     isPrivate: boolean(),
     forNewAccount: boolean(),
     accountId: string(),
     isSharedAccount: boolean(),
     newAccountName: optional(string()),
   }),
-  async ({
-    userId,
-    name,
-    dbname,
-    isPrivate,
-    accountId: inputAccountId,
-    forNewAccount,
-    isSharedAccount,
-    newAccountName,
-  }) => {
-    const client = edgedb.createClient({ database: dbname });
-
+  async (
+    {
+      userId,
+      name,
+      isPrivate,
+      accountId: inputAccountId,
+      forNewAccount,
+      isSharedAccount,
+      newAccountName,
+    },
+    tx: Transaction
+  ) => {
     const newPartitionQuery = e.params(
       {
         name: e.str,
@@ -1172,42 +1247,48 @@ export const createPartition = withValidation(
       ({ name, userId }) =>
         e.insert(e.EAccount, {
           name,
-          owners: isSharedAccount
-            ? e.select(e.EUser)
-            : e.select(e.EUser, (user) => ({
+          owners: !isSharedAccount
+            ? e.select(e.EUser, (user) => ({
                 filter: e.op(user.id, "=", userId),
-              })),
+              }))
+            : undefined,
         })
     );
 
-    await client
-      .withGlobals({
-        current_user_id: userId,
-      })
-      .transaction(async (tx) => {
-        let accountId: string;
-        if (forNewAccount) {
-          if (!newAccountName) {
-            throw new Error("New account name is required.");
-          }
-          const { id } = await newAccountQuery.run(tx, {
-            name: newAccountName,
-            userId,
-          });
-          accountId = id;
-        } else {
-          accountId = inputAccountId;
-        }
-        const { id } = await newPartitionQuery.run(tx, {
-          name,
-          isPrivate,
-          accountId,
-        });
+    let accountId: string;
+    if (forNewAccount) {
+      if (!newAccountName) {
+        throw new Error("New account name is required.");
+      }
+      const { id } = await newAccountQuery.run(tx, {
+        name: newAccountName,
+        userId,
       });
+      accountId = id;
+    } else {
+      accountId = inputAccountId;
+    }
+    await newPartitionQuery.run(tx, {
+      name,
+      isPrivate,
+      accountId,
+    });
 
     return true;
   }
 );
+
+export const createPartition = async (
+  args: Parameters<typeof _createPartition>[0] & { dbname: string }
+) => {
+  const dbname = string().parse(args.dbname);
+  const client = edgedb.createClient({ database: dbname }).withGlobals({
+    current_user_id: args.userId,
+  });
+  return client.transaction(async (tx) => {
+    return _createPartition(args, tx);
+  });
+};
 
 export const deletePartition = withValidation(
   object({
@@ -1902,10 +1983,10 @@ export const makeAPayment = withValidation(
 export const checkUsername = withValidation(
   object({ username: string() }),
   async ({ username }) => {
-    if (username.length < 2) {
+    if (username.length < 1) {
       return false;
     }
-    const client = edgedb.createClient({ database: "masterdb" });
+    const client = edgedb.createClient({ database: "edgedb" });
     const result = await e
       .select(e.masterdb.EUser, (user) => ({
         filter_single: e.op(user.username, "=", username),
@@ -1949,3 +2030,263 @@ export const updateAccount = withValidation(
     );
   }
 );
+
+export const createInvitation = withValidation(
+  object({
+    inviterEmail: string(),
+    email: string(),
+    code: string(),
+    isAdmin: boolean(),
+  }),
+  async ({ inviterEmail, email, code, isAdmin }) => {
+    const client = edgedb.createClient({ database: "edgedb" });
+    const inviterQuery = e.select(e.masterdb.EUser, (user) => ({
+      filter_single: e.op(user.email, "=", inviterEmail),
+    }));
+    const existingUserQuery = e.select(e.masterdb.EUser, (user) => ({
+      filter_single: e.op(user.email, "=", email),
+    }));
+    const existingInvitationQuery = e.select(e.masterdb.EInvitation, (i) => ({
+      filter_single: e.op(i.email, "=", email),
+      is_accepted: true,
+    }));
+    const createInvitationQuery = e.params(
+      {
+        email: e.str,
+        code: e.str,
+        isAdmin: e.bool,
+      },
+      ({ email, code, isAdmin }) =>
+        e.insert(e.masterdb.EInvitation, {
+          email,
+          code,
+          allow_new_db: isAdmin,
+          inviter: e.select(e.masterdb.EUser, (user) => ({
+            filter_single: e.op(user.email, "=", inviterEmail),
+          })),
+        })
+    );
+    return client.transaction(async (tx) => {
+      const inviter = await inviterQuery.run(tx);
+      if (!inviter) {
+        return { error: "Inviter is unknown" };
+      }
+      const existingUser = await existingUserQuery.run(tx);
+      if (existingUser) {
+        return { error: "User with given email already exists" };
+      }
+      const existingInvitation = await existingInvitationQuery.run(tx);
+      if (existingInvitation && !existingInvitation.is_accepted) {
+        return { error: "Invitation exists and is not yet accepted" };
+      }
+      const { id: invitationId } = await createInvitationQuery.run(tx, {
+        email,
+        code,
+        isAdmin,
+      });
+      return e
+        .select(e.masterdb.EInvitation, (i) => ({
+          filter_single: e.op(i.id, "=", e.uuid(invitationId)),
+          id: true,
+          code: true,
+          allow_new_db: true,
+          email: true,
+          inviter: {
+            id: true,
+            name: true,
+            username: true,
+          },
+        }))
+        .run(tx);
+    });
+  }
+);
+
+export const getActiveInvitations = withValidation(
+  object({ inviterEmail: string() }),
+  async ({ inviterEmail }) => {
+    const client = edgedb.createClient({ database: "edgedb" });
+    const query = e.select(e.masterdb.EInvitation, (i) => ({
+      filter: e.op(
+        e.op(i.inviter.email, "=", inviterEmail),
+        "and",
+        e.op("not", i.is_accepted)
+      ),
+      id: true,
+      code: true,
+      email: true,
+    }));
+    const result = await query.run(client);
+    return result.map((i) => ({
+      ...i,
+      url: `/accept-invitation?code=${i.code}`,
+    }));
+  }
+);
+
+export const getMyInvitation = withValidation(
+  object({ email: string(), code: optional(string()) }),
+  async ({ email, code }) => {
+    const client = edgedb.createClient({ database: "edgedb" });
+    const query = e.select(e.masterdb.EInvitation, (i) => ({
+      filter_single: e.op(
+        e.op(i.email, "=", email),
+        "and",
+        e.op("not", i.is_accepted)
+      ),
+      inviterEmail: i.inviter.email,
+      id: true,
+      code: true,
+      allow_new_db: true,
+      email: true,
+    }));
+    const result = await query.run(client);
+    return (
+      result && {
+        ...result,
+        correctCode: result.code === code,
+      }
+    );
+  }
+);
+
+export const acceptInvitation = withValidation(
+  object({
+    invitationId: string(),
+    startNewDb: boolean(),
+    username: string(),
+    fullName: string(),
+    code: string(),
+  }),
+  async ({ invitationId, startNewDb, username, fullName, code }) => {
+    const deleteInvitationQuery = e.delete(e.masterdb.EInvitation, (i) => ({
+      filter_single: e.op(i.id, "=", e.uuid(invitationId)),
+    }));
+
+    const masterDbClient = edgedb.createClient({ database: "edgedb" });
+    const joinInviterDb:
+      | { kind: "new"; invitationEmail: string }
+      | {
+          kind: "existing";
+          invitationEmail: string;
+          dbname: string;
+        } = await masterDbClient.transaction(async (tx) => {
+      const invitation = await e
+        .select(e.masterdb.EInvitation, (i) => ({
+          filter_single: e.op(i.id, "=", e.uuid(invitationId)),
+          id: true,
+          code: true,
+          is_accepted: true,
+          email: true,
+          inviter: {
+            id: true,
+            name: true,
+            username: true,
+          },
+        }))
+        .run(tx);
+      if (!invitation) {
+        throw new Error("Invitation not found.");
+      }
+      if (invitation.is_accepted) {
+        throw new Error("Invitation already accepted.");
+      }
+      if (invitation.code !== code) {
+        throw new Error("Invalid code.");
+      }
+      if (startNewDb) {
+        await deleteInvitationQuery.run(tx);
+        return { kind: "new", invitationEmail: invitation.email };
+      } else {
+        const inviter = await e
+          .select(e.masterdb.EUser, (user) => ({
+            filter_single: e.op(
+              user.username,
+              "=",
+              invitation.inviter.username
+            ),
+            id: true,
+            db: {
+              id: true,
+              name: true,
+            },
+          }))
+          .run(tx);
+
+        if (!inviter) {
+          throw new Error("Inviter not found.");
+        }
+
+        if (!inviter.db) {
+          throw new Error("Inviter's db not found.");
+        }
+
+        const inviterDb = inviter.db;
+
+        const newUserInMasterDb = await e
+          .insert(e.masterdb.EUser, {
+            email: invitation.email,
+            username,
+            name: fullName,
+          })
+          .run(tx);
+
+        await e
+          .update(e.masterdb.EDatabase, (db) => ({
+            filter_single: e.op(db.id, "=", e.uuid(inviterDb.id)),
+            set: {
+              users: {
+                "+=": e.select(e.masterdb.EUser, (user) => ({
+                  filter: e.op(user.id, "=", e.uuid(newUserInMasterDb.id)),
+                })),
+              },
+            },
+          }))
+          .run(tx);
+
+        await deleteInvitationQuery.run(tx);
+
+        return {
+          kind: "existing",
+          invitationEmail: invitation.email,
+          dbname: inviterDb.name,
+        };
+      }
+    });
+
+    if (joinInviterDb.kind === "existing") {
+      const { invitationEmail, dbname } = joinInviterDb;
+      const inviterDbClient = edgedb.createClient({ database: dbname });
+      await e
+        .params(
+          { username: e.str, email: e.str, name: e.str },
+          ({ username, email, name }) =>
+            e.insert(e.EUser, {
+              username,
+              email,
+              name,
+            })
+        )
+        .run(inviterDbClient, {
+          email: invitationEmail,
+          name: fullName,
+          username,
+        });
+      return { dbname, username };
+    } else {
+      const newDb = await createNewDB({
+        email: joinInviterDb.invitationEmail,
+        name: fullName,
+        username,
+      });
+      return { dbname: newDb.dbname, username };
+    }
+  }
+);
+
+export const areThereAnyUsers = async () => {
+  const client = edgedb.createClient({ database: "edgedb" });
+  const query = e.count(e.masterdb.EUser);
+  const result = await query.run(client);
+  return result > 0;
+};

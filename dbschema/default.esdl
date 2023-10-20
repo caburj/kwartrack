@@ -25,7 +25,7 @@ module default {
     multi owners: EUser;
 
     multi link partitions := .<account[is EPartition];
-    property is_owned := any(.owners = global current_user);
+    property is_owned := any(.owners = global current_user) or not exists .owners;
     property is_empty := all(.partitions.is_empty);
   }
 
@@ -125,12 +125,39 @@ module masterdb {
       constraint exclusive;
     }
     required name: str;
+    link db := .<users[is EDatabase];
   }
 
   type EDatabase {
     required name: str {
       constraint exclusive;
     }
-    multi users: EUser;
+    multi users: EUser {
+      # one-to-many relationship
+      constraint exclusive;
+      on target delete allow;
+    }
+  }
+
+  type EInvitation {
+    required email: str {
+      constraint exclusive;
+    }
+    required code: str {
+      constraint exclusive;
+      annotation description := "The code that the user must enter to accept the invitation.";
+    }
+    required allow_new_db: bool {
+      annotation description := "
+        True to allow invited user to start his own database.
+        False can only join the inviter's database.
+      ";
+    }
+    required inviter: EUser;
+    # Delete the record if the invitation is rejected.
+    required is_accepted: bool {
+      default := false;
+      annotation description := "True if the invitation has been accepted. False if pending.";
+    }
   }
 }

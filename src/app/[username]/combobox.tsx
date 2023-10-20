@@ -10,7 +10,7 @@ import {
 } from "@radix-ui/themes";
 import { Command } from "cmdk";
 import { forwardRef, useState } from "react";
-import { css } from "../../../../styled-system/css";
+import { css } from "../../../styled-system/css";
 import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { RadixColor } from "@/utils/common";
 

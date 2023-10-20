@@ -32,7 +32,7 @@ import { number, object, optional, string } from "valibot";
 import { Flex, Table, IconButton } from "@radix-ui/themes";
 import { Combobox, ComboboxTrigger } from "./combobox";
 import { ChevronRightIcon, PaperPlaneIcon } from "@radix-ui/react-icons";
-import { css } from "../../../../styled-system/css";
+import { css } from "../../../styled-system/css";
 import { UserPageStoreContext } from "./store";
 import { toast } from "sonner";
 import DatePicker from "react-datepicker";

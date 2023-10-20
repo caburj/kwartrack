@@ -1,6 +1,6 @@
 "use server";
 
-import { createNewUser } from "@/procedures/server_functions";
+import { createNewDB } from "@/procedures/server_functions";
 import { minLength, object, string } from "valibot";
 import { redirect } from "next/navigation";
 import { currentUser } from "@clerk/nextjs";
@@ -19,7 +19,7 @@ export async function signup(data: FormData) {
   const name = data.get("name");
 
   const dataSchema = object({
-    username: string([minLength(2)]),
+    username: string([minLength(1)]),
     name: string(),
   });
 
@@ -28,6 +28,6 @@ export async function signup(data: FormData) {
     name,
   });
 
-  const result = await createNewUser({ ...parsedData, email });
-  redirect(`/${result.dbname}/${result.user.username}`);
+  const result = await createNewDB({ ...parsedData, email });
+  redirect(`/${result.user.username}`);
 }
