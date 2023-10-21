@@ -38,7 +38,7 @@ const acceptInvitationAction = async (data: FormData) => {
     invitationId: parsedData.invitationId,
     startNewDb: parsedData.startNewDb,
   });
-  redirect(`/${result.username}`);
+  redirect(`/${result.username}/expense-tracker`);
 };
 
 export default async function AcceptInvitationPage({

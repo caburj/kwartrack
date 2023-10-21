@@ -29,5 +29,5 @@ export async function signup(data: FormData) {
   });
 
   const result = await createNewDB({ ...parsedData, email });
-  redirect(`/${result.user.username}`);
+  redirect(`/${result.user.username}/expense-tracker`);
 }

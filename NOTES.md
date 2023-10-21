@@ -18,8 +18,6 @@
 
 # TODO PRE 0.1
 
-* [ ] Rename repo to "kwartrack".
-
 * [ ] Write docs on...
   * [ ] How to get started.
   * [ ] How to deploy.
@@ -203,7 +201,9 @@
   * [X] Onboarding page should not be accessible when there are already users.
     * Test this.
 
-* [X] change `/<dbname>/<username>` to `/<username>`
+* [X] change `/<dbname>/<username>` to `/<username>/expense-tracker`
+
+* [X] Rename repo to "kwartrack".
 
 
 # CANCELLED

@@ -1,7 +1,7 @@
 "use client";
 
-import { rpc } from "../rpc_client";
-import { css } from "../../../styled-system/css";
+import { rpc } from "../../rpc_client";
+import { css } from "../../../../styled-system/css";
 import {
   MouseEventHandler,
   useContext,

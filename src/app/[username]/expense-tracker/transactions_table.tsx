@@ -40,7 +40,7 @@ import {
   TriangleRightIcon,
 } from "@radix-ui/react-icons";
 import { Combobox } from "./combobox";
-import { css } from "../../../styled-system/css";
+import { css } from "../../../../styled-system/css";
 import { TransactionForm } from "./transaction_form";
 import { GiPayMoney } from "react-icons/gi";
 import { BiMoneyWithdraw } from "react-icons/bi";

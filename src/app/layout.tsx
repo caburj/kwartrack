@@ -12,8 +12,8 @@ import { Positioned } from "@/utils/common";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "expensif",
-  description: "But it's free!",
+  title: "Kwartrack",
+  description: "Yet another expense tracker",
 };
 
 export default function RootLayout(props: { children: React.ReactNode }) {

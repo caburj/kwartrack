@@ -29,5 +29,5 @@ export default async function Home() {
   if (eUser === undefined) {
     return notFound();
   }
-  return redirect(`/${eUser.username}`);
+  return redirect(`/${eUser.username}/expense-tracker`);
 }

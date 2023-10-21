@@ -1,6 +1,6 @@
 "use client";
 
-import { rpc } from "../rpc_client";
+import { rpc } from "../../rpc_client";
 import { useQuery } from "@tanstack/react-query";
 import { UserPageStoreProvider } from "./store";
 import { QueryResult } from "@/utils/common";
@@ -8,7 +8,7 @@ import { Box, Flex } from "@radix-ui/themes";
 import { TransactionsTable } from "./transactions_table";
 import { SideBar } from "./side_bar";
 import { useEffect, useState } from "react";
-import { css } from "../../../styled-system/css";
+import { css } from "../../../../styled-system/css";
 import "react-datepicker/dist/react-datepicker.css";
 import "react-loading-skeleton/dist/skeleton.css";
 
