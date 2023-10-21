@@ -5,6 +5,7 @@
   "scripts": {
     "prepare": "panda codegen",
     "dev": "next dev",
+    "prebuild": "npx @edgedb/generate edgeql-js",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
