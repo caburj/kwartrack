@@ -1,18 +1,11 @@
 import { Centered, TwoColumnInput } from "@/utils/common";
-import {
-  Button,
-  Card,
-  Flex,
-  Switch,
-  Text,
-  TextFieldInput,
-} from "@radix-ui/themes";
-import { css } from "../../../styled-system/css";
-import { boolean, minLength, object, string } from "valibot";
+import { Card, Flex, Text, TextFieldInput } from "@radix-ui/themes";
+import { css } from "../../../../styled-system/css";
+import { minLength, object, string } from "valibot";
 import { currentUser } from "@clerk/nextjs/server";
 import { createInvitation } from "@/procedures/server_functions";
 import { redirect } from "next/navigation";
-import { SubmitButton } from "../welcome-first-user/submit_button";
+import { SubmitButton } from "../submit_button";
 
 const createInvitationAction = async (data: FormData) => {
   "use server";
@@ -32,17 +25,14 @@ const createInvitationAction = async (data: FormData) => {
   const schema = object({
     email: string([minLength(3)]),
     code: string([minLength(3)]),
-    isAdmin: boolean(),
   });
   const parsedData = schema.parse({
     ...formData,
-    isAdmin: formData.isAdmin === "on",
   });
 
   const result = await createInvitation({
     email: parsedData.email,
     code: parsedData.code,
-    isAdmin: parsedData.isAdmin,
     inviterEmail: primaryEmailAddress.emailAddress,
   });
 
@@ -52,7 +42,7 @@ const createInvitationAction = async (data: FormData) => {
   if ("error" in result) {
     throw new Error(result.error);
   }
-  return redirect("/invitations");
+  return redirect("/invitation/list");
 };
 
 export default function CreateInvitationPage() {
@@ -83,12 +73,6 @@ export default function CreateInvitationPage() {
                 placeholder="Enter code"
                 type="text"
               />
-            </TwoColumnInput>
-            <TwoColumnInput>
-              <Text as="div" size="2" mb="1" weight="bold">
-                Allow new DB?
-              </Text>
-              <Switch name="isAdmin" />
             </TwoColumnInput>
             <SubmitButton disabled={false}>Create Invitation</SubmitButton>
           </form>

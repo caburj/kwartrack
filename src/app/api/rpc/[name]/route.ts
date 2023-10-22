@@ -4,5 +4,3 @@ import { procedures } from "@/procedures";
 const { GET, POST } = createRPCHandler(procedures);
 
 export { GET, POST };
-
-export const maxDuration = 300;

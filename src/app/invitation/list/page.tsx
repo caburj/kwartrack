@@ -2,7 +2,7 @@ import { getActiveInvitations } from "@/procedures/server_functions";
 import { Centered } from "@/utils/common";
 import { currentUser } from "@clerk/nextjs";
 import { Card, Flex, Table, Text } from "@radix-ui/themes";
-import { css } from "../../../styled-system/css";
+import { css } from "../../../../styled-system/css";
 import { CopyClipboardButton } from "./copy_clipboard_button";
 
 export default async function InvitationsPage() {

@@ -147,17 +147,16 @@ module masterdb {
       constraint exclusive;
       annotation description := "The code that the user must enter to accept the invitation.";
     }
-    required allow_new_db: bool {
-      annotation description := "
-        True to allow invited user to start his own database.
-        False can only join the inviter's database.
-      ";
-    }
     required inviter: EUser;
     # Delete the record if the invitation is rejected.
     required is_accepted: bool {
       default := false;
       annotation description := "True if the invitation has been accepted. False if pending.";
+    }
+    db: EDatabase {
+      constraint exclusive;
+      on target delete delete source;
+      annotation description := "This database is already created exlusively for this new user."
     }
   }
 }

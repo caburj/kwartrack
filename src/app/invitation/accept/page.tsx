@@ -7,15 +7,14 @@ import { currentUser } from "@clerk/nextjs";
 import {
   Card,
   Flex,
-  Switch,
   Text,
   TextFieldInput,
 } from "@radix-ui/themes";
 import Link from "next/link";
-import { css } from "../../../styled-system/css";
-import { boolean, minLength, object, string } from "valibot";
+import { css } from "../../../../styled-system/css";
+import { minLength, object, string } from "valibot";
 import { redirect } from "next/navigation";
-import { SubmitButton } from "../welcome-first-user/submit_button";
+import { SubmitButton } from "../submit_button";
 
 const acceptInvitationAction = async (data: FormData) => {
   "use server";
@@ -25,18 +24,13 @@ const acceptInvitationAction = async (data: FormData) => {
     username: string([minLength(3)]),
     fullName: string([minLength(3)]),
     invitationId: string([minLength(3)]),
-    startNewDb: boolean(),
   });
-  const parsedData = schema.parse({
-    ...formData,
-    startNewDb: formData.startNewDb === "on",
-  });
+  const parsedData = schema.parse(formData);
   const result = await acceptInvitation({
     code: parsedData.code,
     username: parsedData.username,
     fullName: parsedData.fullName,
     invitationId: parsedData.invitationId,
-    startNewDb: parsedData.startNewDb,
   });
   redirect(`/${result.username}/expense-tracker`);
 };
@@ -97,17 +91,9 @@ export default async function AcceptInvitationPage({
                 name="code"
                 placeholder="Code"
                 defaultValue={myInvitation.code}
-                readOnly={myInvitation.correctCode}
+                readOnly={myInvitation.isCorrectCode}
               />
             </TwoColumnInput>
-            {myInvitation.allow_new_db && (
-              <TwoColumnInput>
-                <Text as="div" size="2" mb="1" weight="bold">
-                  Start New DB?
-                </Text>
-                <Switch name="startNewDb" />
-              </TwoColumnInput>
-            )}
             <TwoColumnInput>
               <Text as="div" size="2" mb="1" weight="bold">
                 Username

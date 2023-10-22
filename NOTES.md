@@ -18,6 +18,8 @@
 
 # TODO PRE 0.1
 
+* [ ] Fix: Only existing users can invite.
+
 * [ ] Write docs on...
   * [ ] How to get started.
   * [ ] How to deploy.
