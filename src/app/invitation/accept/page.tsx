@@ -4,16 +4,10 @@ import {
 } from "@/procedures/server_functions";
 import { Centered, TwoColumnInput } from "@/utils/common";
 import { currentUser } from "@clerk/nextjs";
-import {
-  Card,
-  Flex,
-  Text,
-  TextFieldInput,
-} from "@radix-ui/themes";
-import Link from "next/link";
+import { Card, Flex, Text, TextFieldInput } from "@radix-ui/themes";
 import { css } from "../../../../styled-system/css";
 import { minLength, object, string } from "valibot";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { SubmitButton } from "../submit_button";
 
 const acceptInvitationAction = async (data: FormData) => {
@@ -56,13 +50,11 @@ export default async function AcceptInvitationPage({
     code,
   });
   if (!myInvitation) {
-    return (
-      <div>
-        <p>You are not invited</p>
-        <Link href="/">Go home</Link>
-      </div>
-    );
+    return notFound();
   }
+
+  const submitButtonText = myInvitation.startOwnDb ? "Start New DB" : "Join";
+
   return (
     <Centered>
       <Card>
@@ -90,7 +82,9 @@ export default async function AcceptInvitationPage({
               <TextFieldInput
                 name="code"
                 placeholder="Code"
-                defaultValue={myInvitation.code}
+                defaultValue={
+                  myInvitation.isCorrectCode ? myInvitation.code : ""
+                }
                 readOnly={myInvitation.isCorrectCode}
               />
             </TwoColumnInput>
@@ -111,9 +105,14 @@ export default async function AcceptInvitationPage({
               />
             </TwoColumnInput>
             <span hidden>
-              <input type="text" name="invitationId" value={myInvitation.id} readOnly />
+              <input
+                type="text"
+                name="invitationId"
+                value={myInvitation.id}
+                readOnly
+              />
             </span>
-            <SubmitButton disabled={false}>Accept Invitation</SubmitButton>
+            <SubmitButton>{submitButtonText}</SubmitButton>
           </form>
         </Flex>
       </Card>

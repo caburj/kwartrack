@@ -1,6 +1,6 @@
 import {
+  checkPendingInvitation,
   findUserByEmail,
-  areThereAnyUsers,
 } from "@/procedures/server_functions";
 import { currentUser } from "@clerk/nextjs";
 import { notFound, redirect } from "next/navigation";
@@ -19,15 +19,16 @@ export default async function Home() {
     throw new Error("Primary email not found");
   }
 
-  const hasUser = await areThereAnyUsers();
-
-  if (!hasUser) {
-    return redirect("/welcome-first-user");
-  }
-
   const eUser = await findUserByEmail({ email: primaryEmail });
   if (eUser === undefined) {
-    return notFound();
+    const hasPendingInvitation = await checkPendingInvitation({
+      email: primaryEmail,
+    });
+    if (!hasPendingInvitation) {
+      return notFound();
+    } else {
+      return redirect("/invitation/accept");
+    }
   }
   return redirect(`/${eUser.username}/expense-tracker`);
 }

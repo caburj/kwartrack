@@ -74,7 +74,7 @@ export default function CreateInvitationPage() {
                 type="text"
               />
             </TwoColumnInput>
-            <SubmitButton disabled={false}>Create Invitation</SubmitButton>
+            <SubmitButton>Create Invitation</SubmitButton>
           </form>
         </Flex>
       </Card>

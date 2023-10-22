@@ -1918,6 +1918,7 @@ export const getMyInvitation = withValidation(
       id: true,
       code: true,
       email: true,
+      startOwnDb: e.op("exists", i.db),
     }));
     const result = await query.run(client);
     return (
@@ -2062,9 +2063,19 @@ export const acceptInvitation = withValidation(
   }
 );
 
-export const areThereAnyUsers = async () => {
-  const client = edgedb.createClient({ database: "edgedb" });
-  const query = e.count(e.masterdb.EUser);
-  const result = await query.run(client);
-  return result > 0;
-};
+export const checkPendingInvitation = withValidation(
+  object({ email: string() }),
+  async ({ email }) => {
+    const client = edgedb.createClient({ database: "edgedb" });
+    const query = e.select(e.masterdb.EInvitation, (i) => ({
+      filter_single: e.op(
+        e.op(i.email, "=", email),
+        "and",
+        e.op("not", i.is_accepted)
+      ),
+      id: true,
+    }));
+    const result = await query.run(client);
+    return Boolean(result);
+  }
+);
