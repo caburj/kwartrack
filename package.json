@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "prepare": "panda codegen",
+    "prepare": "panda codegen && npx @edgedb/generate edgeql-js",
     "dev": "next dev",
-    "build": "npx @edgedb/generate edgeql-js && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "migrate-all": "tsc -p tsconfig.scripts.json && node compiled/scripts/migrate-all.js",
