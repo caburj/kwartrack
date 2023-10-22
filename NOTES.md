@@ -27,6 +27,8 @@
   * [ ] editing account
   * [ ] editing category
 
+* [ ] Transactions page loading screen.
+
 * [ ] Fix: The skeleton component is very bright in dark mode.
 
 * [ ] A better way to invalidate queries when making mutations.
