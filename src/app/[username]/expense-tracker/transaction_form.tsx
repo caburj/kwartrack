@@ -342,6 +342,10 @@ function TransactionFormMain(props: {
     >
       <Table.Cell>
         <DatePicker
+          popperProps={{
+            // to make sure the datepicker is always visible and don't hide behind the table
+            'strategy': 'fixed'
+          }}
           selected={selectedDate}
           onChange={(date) => {
             setSelectedDate(date);

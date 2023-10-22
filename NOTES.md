@@ -16,14 +16,7 @@
   - Not owned private -> outline
 
 
-# TODO PRE 0.1
-
-* [ ] Write docs on...
-  * [ ] How to get started.
-  * [ ] How to deploy.
-
-
-# TODO POST 0.1
+# TODO
 
 * [ ] Animated new transaction record and also animated deletion of transaction.
 
@@ -204,6 +197,10 @@
 * [X] change `/<dbname>/<username>` to `/<username>/expense-tracker`
 
 * [X] Rename repo to "kwartrack".
+
+* [X] Write docs on...
+  * [X] How to get started.
+  * [X] How to deploy.
 
 
 # CANCELLED

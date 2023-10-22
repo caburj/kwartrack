@@ -500,9 +500,9 @@ export function TransactionsTable({
                 </Table.Row>
               ))}
             >
-              {([transactions]) => (
-                <>
-                  {transactions.map((transaction) => {
+              {([transactions]) => {
+                if (transactions.length > 0) {
+                  return transactions.map((transaction) => {
                     const allowedCategories =
                       categories.data?.[transaction.category.kind] ?? [];
                     const variant = transaction.category.is_private
@@ -660,9 +660,17 @@ export function TransactionsTable({
                         </Table.Cell>
                       </Table.Row>
                     );
-                  })}
-                </>
-              )}
+                  });
+                } else {
+                  return (
+                    <Table.Row>
+                      <Table.Cell colSpan={6} align="center">
+                        <Text>No transactions found</Text>
+                      </Table.Cell>
+                    </Table.Row>
+                  );
+                }
+              }}
             </QueryResult>
           </Table.Body>
         </Table.Root>
