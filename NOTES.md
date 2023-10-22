@@ -18,8 +18,6 @@
 
 # TODO PRE 0.1
 
-* [ ] Fix: Only existing users can invite.
-
 * [ ] Write docs on...
   * [ ] How to get started.
   * [ ] How to deploy.
@@ -261,3 +259,6 @@
         * [ ] Same with categories, show the existing categories and provide
           simple explanations.
       * [ ] Then redirect to the main UI.
+
+* [ ] Fix: Only existing users can invite.
+  - Already the case.
