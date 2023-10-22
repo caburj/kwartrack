@@ -1,7 +1,7 @@
 import * as edgedb from "edgedb";
 import e from "../dbschema/edgeql-js";
 import { _createInvitation } from "../src/procedures/common";
-import { edgedbComm, execAsync, logResult, migrateDb } from "./common";
+import { createNewDb, edgedbComm, execAsync, logResult } from "./common";
 import arg from "arg";
 import { object, string } from "valibot";
 
@@ -69,17 +69,6 @@ async function main() {
     );
     process.exit(0);
   }
-}
-
-async function createNewDb() {
-  const random6digitHex = Math.floor(Math.random() * 16777215).toString(16);
-  const dbname = `db_${random6digitHex}`;
-  const createResult = await execAsync(
-    `${edgedbComm} database create ${dbname}`
-  );
-  logResult(createResult);
-  await migrateDb(dbname);
-  return dbname;
 }
 
 main().catch(console.error);

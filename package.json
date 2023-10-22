@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "migrate-all": "tsc -p tsconfig.scripts.json && node compiled/scripts/migrate-all.js",
-    "invite-user": "tsc -p tsconfig.scripts.json && node compiled/scripts/invite-user.js"
+    "invite-user": "tsc -p tsconfig.scripts.json && node compiled/scripts/invite-user.js",
+    "create-first-user": "tsc -p tsconfig.scripts.json && node compiled/scripts/create-first-user.js"
   },
   "dependencies": {
     "@clerk/nextjs": "^4.25.4",

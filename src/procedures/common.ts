@@ -1,5 +1,12 @@
 import e from "../../dbschema/edgeql-js";
-import { type Input, type BaseSchema, object, string, optional } from "valibot";
+import {
+  type Input,
+  type BaseSchema,
+  object,
+  string,
+  optional,
+  boolean,
+} from "valibot";
 import { Transaction } from "edgedb/dist/transaction";
 
 export function withValidation<
@@ -94,5 +101,180 @@ export const _createInvitation = withValidation(
         },
       }))
       .run(tx);
+  }
+);
+
+export const makeCreateCategoryQuery = (args: {
+  isPrivate: boolean;
+  userId: string;
+}) => {
+  const { isPrivate, userId } = args;
+  return e.params(
+    {
+      name: e.str,
+      kind: e.ECategoryKind,
+    },
+    ({ name, kind }) =>
+      e.insert(e.ECategory, {
+        name,
+        kind,
+        is_private: isPrivate,
+        owners: e.select(e.EUser, (user) => ({
+          filter: e.op(user.id, "=", e.uuid(userId)),
+        })),
+      })
+  );
+};
+
+export const createDefaultCategories = async (
+  tx: Transaction,
+  userId: string
+) => {
+  const incomeCategories = ["Initial Balance", "Salary", "Other Income"];
+  const expenseCategories = [
+    "Grocery",
+    "Rent",
+    "Bills",
+    "Misc",
+    "Restaurants",
+    "Transportation",
+    "Travel",
+    "Health",
+    "Shopping",
+  ];
+  const transferCategories = ["Transfer"];
+
+  const createCategory = makeCreateCategoryQuery({
+    userId,
+    isPrivate: false,
+  });
+
+  for (const category of incomeCategories) {
+    await createCategory.run(tx, { name: category, kind: "Income" });
+  }
+  for (const category of expenseCategories) {
+    await createCategory.run(tx, { name: category, kind: "Expense" });
+  }
+  for (const category of transferCategories) {
+    await createCategory.run(tx, { name: category, kind: "Transfer" });
+  }
+};
+
+export const _createPartition = withValidation(
+  object({
+    userId: string(),
+    name: string(),
+    isPrivate: boolean(),
+    forNewAccount: boolean(),
+    accountId: string(),
+    isSharedAccount: boolean(),
+    newAccountName: optional(string()),
+  }),
+  async (
+    {
+      userId,
+      name,
+      isPrivate,
+      accountId: inputAccountId,
+      forNewAccount,
+      isSharedAccount,
+      newAccountName,
+    },
+    tx: Transaction
+  ) => {
+    const newPartitionQuery = e.params(
+      {
+        name: e.str,
+        isPrivate: e.bool,
+        accountId: e.optional(e.uuid),
+      },
+      ({ name, isPrivate, accountId }) =>
+        e.insert(e.EPartition, {
+          name,
+          is_private: isPrivate,
+          account: e.select(e.EAccount, (account) => ({
+            filter_single: e.op(account.id, "=", accountId),
+          })),
+        })
+    );
+
+    const newAccountQuery = e.params(
+      {
+        name: e.str,
+        userId: e.uuid,
+      },
+      ({ name, userId }) =>
+        e.insert(e.EAccount, {
+          name,
+          owners: !isSharedAccount
+            ? e.select(e.EUser, (user) => ({
+                filter: e.op(user.id, "=", userId),
+              }))
+            : undefined,
+        })
+    );
+
+    let accountId: string;
+    if (forNewAccount) {
+      if (!newAccountName) {
+        throw new Error("New account name is required.");
+      }
+      const { id } = await newAccountQuery.run(tx, {
+        name: newAccountName,
+        userId,
+      });
+      accountId = id;
+    } else {
+      accountId = inputAccountId;
+    }
+    await newPartitionQuery.run(tx, {
+      name,
+      isPrivate,
+      accountId,
+    });
+
+    return true;
+  }
+);
+
+// create user, default categories and partition
+export const _createInitialData = withValidation(
+  object({
+    username: string(),
+    email: string(),
+    name: string(),
+    asFirstUser: boolean(),
+  }),
+  async ({ username, email, name, asFirstUser }, tx: Transaction) => {
+    const { id: userId } = await e
+      .params({ email: e.str, name: e.str }, ({ email, name }) =>
+        e.insert(e.EUser, {
+          username,
+          email,
+          name,
+        })
+      )
+      .run(tx, {
+        email,
+        name,
+      });
+
+    if (asFirstUser) {
+      await createDefaultCategories(tx, userId);
+      // Create one partition for onboarding.
+      await _createPartition(
+        {
+          forNewAccount: true,
+          isPrivate: false,
+          name: "Main",
+          userId: userId,
+          newAccountName: "Bank Account",
+          isSharedAccount: false,
+          // TODO: Seems to be unused. Remove?
+          accountId: "for-new-account",
+        },
+        tx
+      );
+    }
   }
 );

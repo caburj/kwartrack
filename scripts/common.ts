@@ -37,3 +37,14 @@ export const migrateDb = async (dbName: string) => {
   );
   logResult({ stdout, stderr });
 };
+
+export async function createNewDb() {
+  const random6digitHex = Math.floor(Math.random() * 16777215).toString(16);
+  const dbname = `db_${random6digitHex}`;
+  const createResult = await execAsync(
+    `${edgedbComm} database create ${dbname}`
+  );
+  logResult(createResult);
+  await migrateDb(dbname);
+  return dbname;
+}
