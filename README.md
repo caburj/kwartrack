@@ -2,6 +2,9 @@
 
 Use this app to track your expenses based on partitions and categories.
 
+<img width="1503" alt="Screenshot 2023-10-23 at 19 17 12" src="https://github.com/caburj/kwartrack/assets/3245568/09f8e25b-edd9-4a6e-bb3c-d24e0683d112">
+<img width="1503" alt="Screenshot 2023-10-23 at 19 17 53" src="https://github.com/caburj/kwartrack/assets/3245568/eaa734b6-e9ba-4662-a504-6a0df99005c6">
+
 ## Categories
 
 - Categories has 3 types - `Income`, `Expense` and `Transfer`.
