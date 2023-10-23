@@ -468,8 +468,8 @@ export function TransactionsTable({
               <Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell>Category</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell>Partition</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell justify="end">
-                Value
+              <Table.ColumnHeaderCell justify="end" style={{ minWidth: "11ch" }}>
+                Amount
               </Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell></Table.ColumnHeaderCell>

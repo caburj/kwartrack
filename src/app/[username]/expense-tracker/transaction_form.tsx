@@ -394,7 +394,7 @@ function TransactionFormMain(props: {
       </Table.Cell>
       <Table.Cell>
         <input
-          placeholder="Enter amount"
+          placeholder="E.g 10.00"
           name="value"
           type="numeric"
           value={inputValue}
