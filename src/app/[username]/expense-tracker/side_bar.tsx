@@ -165,7 +165,7 @@ export function SideBar({
         <ScrollArea scrollbars="vertical">
           <Accordion.Root
             type="multiple"
-            defaultValue={["Accounts", "Categories"]}
+            defaultValue={["Accounts"]}
           >
             <SideBarFoldable
               value="Accounts"
@@ -752,7 +752,7 @@ function AccountLI({
   const canBeDeleted = useQuery(
     ["accountCanBeDeleted", { accountId: account.id }],
     () => {
-      return rpc.post.accountCanBeDeleted({
+      return rpc.get.accountCanBeDeleted({
         accountId: account.id,
         dbname: user.dbname,
         userId: user.id,
@@ -1848,7 +1848,7 @@ function CategoryLI({
   const canBeDeleted = useQuery(
     ["categoryCanBeDeleted", { categoryId: category.id }],
     () => {
-      return rpc.post.categoryCanBeDeleted({
+      return rpc.get.categoryCanBeDeleted({
         categoryId: category.id,
         dbname: user.dbname,
         userId: user.id,
