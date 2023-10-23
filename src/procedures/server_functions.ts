@@ -19,6 +19,7 @@ import {
   makeCreateCategoryQuery,
   withValidation,
 } from "./common";
+import { groupedTransactions } from "../../dbschema/queries/grouped-transactions.query";
 
 export const getUserIdAndDbname = withValidation(
   object({ username: string(), email: string() }),
@@ -283,29 +284,32 @@ export const findTransactions = withValidation(
                 )
               );
             }
+            const cids = e.array_unpack(cIds);
             const cFilter = e.op(
-              transaction.category.id,
-              "in",
-              e.array_unpack(cIds)
+              e.op(transaction.category.id, "in", cids),
+              "if",
+              e.op("exists", cids),
+              "else",
+              true
             );
+
+            const pids = e.array_unpack(pIds);
             const pFilter = e.op(
               e.op(
-                transaction.source_partition.id,
-                "union",
-                transaction.counterpart.source_partition.id
+                e.op(
+                  transaction.source_partition.id,
+                  "union",
+                  transaction.counterpart.source_partition.id
+                ),
+                "in",
+                pids
               ),
-              "in",
-              e.array_unpack(pIds)
+              "if",
+              e.op("exists", pids),
+              "else",
+              true
             );
-            if (partitionIds.length !== 0 && categoryIds.length !== 0) {
-              filter = e.op(baseFilter, "and", e.op(cFilter, "and", pFilter));
-            } else if (partitionIds.length !== 0) {
-              filter = e.op(baseFilter, "and", pFilter);
-            } else if (categoryIds.length !== 0) {
-              filter = e.op(baseFilter, "and", cFilter);
-            } else {
-              filter = baseFilter;
-            }
+            filter = e.op(baseFilter, "and", e.op(cFilter, "and", pFilter));
           } else {
             // I want to get all transaction that are linked to the loan
             filter = e.op(
@@ -429,6 +433,43 @@ export const findTransactions = withValidation(
         .slice(0, nPerPage),
       hasNextPage,
     ] as const;
+  }
+);
+
+export const getGroupedTransactions = withValidation(
+  object({
+    partitionIds: array(string()),
+    categoryIds: array(string()),
+    loanIds: array(string()),
+    tssDate: optional(string()),
+    tseDate: optional(string()),
+    ownerId: string(),
+    dbname: string(),
+  }),
+  async ({
+    partitionIds,
+    categoryIds,
+    loanIds,
+    tssDate,
+    tseDate,
+    ownerId,
+    dbname,
+  }) => {
+    if (tseDate) {
+      tseDate = new Date(new Date(tseDate).getTime() + 86400000).toISOString();
+    }
+
+    const client = edgedb.createClient({ database: dbname }).withGlobals({
+      current_user_id: ownerId,
+    });
+
+    return await groupedTransactions(client, {
+      pIds: partitionIds,
+      cIds: categoryIds,
+      lIds: loanIds,
+      tssDate: tssDate ? new Date(tssDate) : null,
+      tseDate: tseDate ? new Date(tseDate) : null,
+    });
   }
 );
 

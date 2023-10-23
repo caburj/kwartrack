@@ -37,6 +37,19 @@
 * [ ] Migration.
   - Looks like piecewise migrations are needed when developing new features.
 
+* [ ] Divine recommendations
+  * [ ] Link categories to partitions.
+    * Idea: We should allow default partitions when selecting certain
+      categories. E.g. Travel Expense should by default be an expense from
+      Travel Partition.
+  * [ ] Allow restricting a partition to make manual transaction like expenses.
+    The idea is that when you create a "Savings" partition, you normally don't
+    want to touch it. It should be moved to a different partition first, in
+    order to use.
+    * We should allow loan from it.
+
+* [ ] Make the invitation of users accessible.
+
 
 # IDEA / NICE TO HAVE (MAYBE)
 

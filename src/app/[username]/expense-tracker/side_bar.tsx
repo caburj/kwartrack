@@ -62,6 +62,7 @@ import { Combobox, ComboboxTrigger } from "./combobox";
 import { TwoColumnInput } from "@/utils/common";
 import Skeleton from "react-loading-skeleton";
 import { toast } from "sonner";
+import { AnimatedAccordionContent } from "./accordion";
 
 type UserIDAndDBName = NonNullable<
   Unpacked<Awaited<ReturnType<typeof rpc.post.getUserIdAndDbname>>>
@@ -1770,25 +1771,6 @@ function FoldableList<X extends { name: string }>(props: {
         ))}
       </Flex>
     </Accordion.Root>
-  );
-}
-
-function AnimatedAccordionContent(props: { children: ReactNode }) {
-  return (
-    <Accordion.Content
-      className={css({
-        "&[data-state=open]": {
-          animation: "slideDown 200ms ease",
-        },
-        "&[data-state=closed]": {
-          animation: "slideUp 200ms ease",
-        },
-        // needed to prevent the content from being visible during the animation
-        overflow: "hidden",
-      })}
-    >
-      {props.children}
-    </Accordion.Content>
   );
 }
 
