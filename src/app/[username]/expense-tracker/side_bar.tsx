@@ -63,8 +63,8 @@ import { TwoColumnInput } from "@/utils/common";
 import Skeleton from "react-loading-skeleton";
 import { toast } from "sonner";
 
-type FindUserResult = NonNullable<
-  Unpacked<Awaited<ReturnType<typeof rpc.post.findUser>>>
+type UserIDAndDBName = NonNullable<
+  Unpacked<Awaited<ReturnType<typeof rpc.post.getUserIdAndDbname>>>
 >;
 
 type Account = Unpacked<
@@ -135,7 +135,7 @@ export function SideBar({
   user,
   width,
 }: {
-  user: FindUserResult;
+  user: UserIDAndDBName;
   width: number;
 }) {
   const queryClient = useQueryClient();

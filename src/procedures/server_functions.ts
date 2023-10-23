@@ -20,7 +20,7 @@ import {
   withValidation,
 } from "./common";
 
-export const findUserDb = withValidation(
+export const getUserIdAndDbname = withValidation(
   object({ username: string(), email: string() }),
   async ({ username, email }) => {
     const masterdbClient = edgedb.createClient({ database: "edgedb" });
@@ -37,37 +37,28 @@ export const findUserDb = withValidation(
     }));
 
     const result = await query.run(masterdbClient);
-    return result?.dbname || null;
-  }
-);
 
-export const findUser = withValidation(
-  object({ username: string(), dbname: string() }),
-  async ({ username, dbname }) => {
-    const client = edgedb.createClient({ database: dbname });
-    const query = e.select(e.EUser, (user) => ({
-      id: true,
-      email: true,
-      username: true,
-      accounts: {
-        id: true,
-        name: true,
-        owners: {
-          id: true,
-          username: true,
-        },
-        partitions: {
-          id: true,
-          name: true,
-        },
-      },
-      filter: e.op(user.username, "=", username),
-    }));
-
-    const result = await query.run(client);
-    if (result.length !== 0) {
-      return { ...result[0], dbname };
+    if (!result) {
+      return null;
     }
+
+    if (!result.dbname) {
+      return null;
+    }
+
+    const dbClient = edgedb.createClient({ database: result.dbname });
+
+    const user = await e
+      .select(e.EUser, (user) => ({
+        filter_single: e.op(user.username, "=", username),
+        id: true,
+      }))
+      .run(dbClient);
+
+    if (!user) {
+      return null;
+    }
+    return { id: user.id, dbname: result.dbname };
   }
 );
 

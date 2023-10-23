@@ -1,6 +1,6 @@
-import { findUserDb } from "@/procedures/server_functions";
+import { getUserIdAndDbname } from "@/procedures/server_functions";
 import { currentUser } from "@clerk/nextjs";
-import { UserPageMain } from "./user_page";
+import { UserPage } from "./user_page";
 import { notFound } from "next/navigation";
 
 export default async function Page({
@@ -18,12 +18,12 @@ export default async function Page({
   if (!primaryEmail) {
     return notFound();
   }
-  const dbname = await findUserDb({
+  const result = await getUserIdAndDbname({
     username,
     email: primaryEmail.emailAddress,
   });
-  if (!dbname) {
+  if (!result) {
     return notFound();
   }
-  return <UserPageMain params={{ dbname, username }} />;
+  return <UserPage {...result} />;
 }
