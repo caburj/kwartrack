@@ -4,7 +4,7 @@ import { UserPageStoreContext, UserPageStoreProvider } from "./store";
 import { Box, Flex, ScrollArea, Text } from "@radix-ui/themes";
 import { TransactionsTable } from "./transactions_table";
 import { SideBar } from "./side_bar";
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { css } from "../../../../styled-system/css";
 import * as Accordion from "@radix-ui/react-accordion";
 import { AnimatedAccordionContent } from "./accordion";
@@ -13,13 +13,15 @@ import "react-loading-skeleton/dist/skeleton.css";
 import { ChevronUpIcon } from "@radix-ui/react-icons";
 
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
-import { Doughnut, Pie } from "react-chartjs-2";
+import { Doughnut } from "react-chartjs-2";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { rpc } from "@/app/rpc_client";
 import { QueryResult } from "@/utils/common";
 import { GroupedTransactionsReturns } from "../../../../dbschema/queries/grouped-transactions.query";
 import { Colors } from "chart.js";
-import autocolors from 'chartjs-plugin-autocolors';
+import autocolors from "chartjs-plugin-autocolors";
+
+import { useClickAway } from "@uidotdev/usehooks";
 
 ChartJS.register(ArcElement, Tooltip, Legend, Colors, autocolors);
 
@@ -98,13 +100,24 @@ export function UserPage(props: { id: string; dbname: string }) {
  * This box should take the bottom and has a control to hide or show it. Also, height should be half of height of the page.
  */
 function ChartContainer(props: { user: { id: string; dbname: string } }) {
+  const triggerRef = useRef<HTMLDivElement>(null);
+
+  const closeChart = useCallback(() => {
+    if (triggerRef.current && triggerRef.current.dataset.state === "open") {
+      triggerRef.current.click();
+    }
+  }, [triggerRef]);
+
+  const ref = useClickAway<HTMLDivElement>(closeChart);
+
   return (
-    <Flex direction="column">
+    <Flex direction="column" ref={ref}>
       <Accordion.Root type="multiple">
         <Accordion.Item value="only-item">
           <Accordion.Header asChild>
             <Accordion.Trigger asChild>
               <Flex
+                ref={triggerRef}
                 justify="center"
                 align="center"
                 className={css({
@@ -139,8 +152,7 @@ function ChartContainer(props: { user: { id: string; dbname: string } }) {
 }
 
 function ChartBox(props: { user: { id: string; dbname: string } }) {
-  const queryClient = useQueryClient();
-  const [store, dispatch] = useContext(UserPageStoreContext);
+  const [store] = useContext(UserPageStoreContext);
 
   const groupedTransactions = useQuery(
     [
@@ -189,9 +201,9 @@ function ChartBox(props: { user: { id: string; dbname: string } }) {
                     options={{
                       plugins: {
                         autocolors: {
-                          mode: 'data',
+                          mode: "data",
                           offset: 15,
-                        }
+                        },
                       },
                     }}
                   />
@@ -205,29 +217,29 @@ function ChartBox(props: { user: { id: string; dbname: string } }) {
                     options={{
                       plugins: {
                         autocolors: {
-                          mode: 'data',
-                        }
-                      },
-                    }}
-                  />
-                </Flex>
-              )}
-              {summary.labels.length > 0 && (
-                <Flex direction="column" p="3">
-                  <Text align="center">Summary</Text>
-                  <Pie
-                    data={summary}
-                    options={{
-                      plugins: {
-                        autocolors: {
-                          mode: 'data',
-                          offset: 20,
+                          mode: "data",
                         },
                       },
                     }}
                   />
                 </Flex>
               )}
+              {expenses.labels.length > 0 && incomes.labels.length > 0 ? (
+                <Flex direction="column" p="3">
+                  <Text align="center">Summary</Text>
+                  <Doughnut
+                    data={summary}
+                    options={{
+                      plugins: {
+                        autocolors: {
+                          mode: "data",
+                          offset: 20,
+                        },
+                      },
+                    }}
+                  />
+                </Flex>
+              ) : null}
             </Flex>
           </ScrollArea>
         );

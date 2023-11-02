@@ -23,6 +23,7 @@
     "@types/node": "20.4.6",
     "@types/react": "18.2.18",
     "@types/react-dom": "18.2.7",
+    "@uidotdev/usehooks": "^2.4.1",
     "arg": "^5.0.2",
     "chart.js": "^4.4.0",
     "chartjs-plugin-autocolors": "^0.2.2",
