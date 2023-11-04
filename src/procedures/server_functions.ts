@@ -885,16 +885,44 @@ export const getCategoryBalance = withValidation(
     categoryId: string(),
     userId: string(),
     dbname: string(),
+    isOverall: boolean(),
+    tssDate: optional(string()),
+    tseDate: optional(string()),
   }),
-  async ({ categoryId, userId, dbname }) => {
+  async ({ categoryId, userId, dbname, isOverall, tssDate, tseDate }) => {
+    if (!isOverall && !tssDate && !tseDate) {
+      throw new Error("Start and/or end date must be provided.");
+    }
+
     const query = e.params({ id: e.uuid }, ({ id }) => {
-      const transactions = e.select(e.ETransaction, (transaction) => ({
-        filter: e.op(
+      const transactions = e.select(e.ETransaction, (transaction) => {
+        let filter = e.op(
           transaction.is_visible,
           "and",
           e.op(transaction.category.id, "=", id)
-        ),
-      }));
+        );
+        if (!isOverall) {
+          if (tssDate) {
+            filter = e.op(
+              filter,
+              "and",
+              e.op(transaction.date, ">=", new Date(tssDate))
+            );
+          }
+          if (tseDate) {
+            filter = e.op(
+              filter,
+              "and",
+              e.op(
+                transaction.date,
+                "<",
+                new Date(new Date(tseDate).getTime() + 86400000)
+              )
+            );
+          }
+        }
+        return { filter };
+      });
       return e.sum(transactions.value);
     });
 
@@ -938,16 +966,46 @@ export const getPartitionBalance = withValidation(
     partitionId: string(),
     userId: string(),
     dbname: string(),
+    isOverall: boolean(),
+    tssDate: optional(string()),
+    tseDate: optional(string()),
   }),
-  async ({ partitionId, userId, dbname }) => {
+  async ({ partitionId, userId, dbname, isOverall, tssDate, tseDate }) => {
+    if (!isOverall && !tssDate && !tseDate) {
+      throw new Error("Start and/or end date must be provided.");
+    }
+
     const balanceQuery = e.params({ id: e.uuid }, ({ id }) => {
-      const transactions = e.select(e.ETransaction, (transaction) => ({
-        filter: e.op(
+      const transactions = e.select(e.ETransaction, (transaction) => {
+        let filter = e.op(
           transaction.is_visible,
           "and",
           e.op(transaction.source_partition.id, "=", id)
-        ),
-      }));
+        );
+
+        // TODO: Duplicate code around `isOverall`. Refactor when inferring types from overloaded functions is supported.
+        if (!isOverall) {
+          if (tssDate) {
+            filter = e.op(
+              filter,
+              "and",
+              e.op(transaction.date, ">=", new Date(tssDate))
+            );
+          }
+          if (tseDate) {
+            filter = e.op(
+              filter,
+              "and",
+              e.op(
+                transaction.date,
+                "<",
+                new Date(new Date(tseDate).getTime() + 86400000)
+              )
+            );
+          }
+        }
+        return { filter };
+      });
       return e.sum(transactions.value);
     });
 
@@ -963,16 +1021,44 @@ export const getAccountBalance = withValidation(
     accountId: string(),
     userId: string(),
     dbname: string(),
+    isOverall: boolean(),
+    tssDate: optional(string()),
+    tseDate: optional(string()),
   }),
-  async ({ accountId, userId, dbname }) => {
+  async ({ accountId, userId, dbname, isOverall, tssDate, tseDate }) => {
+    if (!isOverall && !tssDate && !tseDate) {
+      throw new Error("Start and/or end date must be provided.");
+    }
+
     const query = e.params({ id: e.uuid }, ({ id }) => {
-      const tx = e.select(e.ETransaction, (transaction) => ({
-        filter: e.op(
+      const tx = e.select(e.ETransaction, (transaction) => {
+        let filter = e.op(
           transaction.is_visible,
           "and",
           e.op(transaction.source_partition.account.id, "=", id)
-        ),
-      }));
+        );
+        if (!isOverall) {
+          if (tssDate) {
+            filter = e.op(
+              filter,
+              "and",
+              e.op(transaction.date, ">=", new Date(tssDate))
+            );
+          }
+          if (tseDate) {
+            filter = e.op(
+              filter,
+              "and",
+              e.op(
+                transaction.date,
+                "<",
+                new Date(new Date(tseDate).getTime() + 86400000)
+              )
+            );
+          }
+        }
+        return { filter };
+      });
       return e.sum(tx.value);
     });
     const client = edgedb.createClient({ database: dbname }).withGlobals({
@@ -987,16 +1073,43 @@ export const getCategoryKindBalance = withValidation(
     userId: string(),
     kind: string(),
     dbname: string(),
+    isOverall: boolean(),
+    tssDate: optional(string()),
+    tseDate: optional(string()),
   }),
-  async ({ userId, kind, dbname }) => {
+  async ({ userId, kind, dbname, isOverall, tssDate, tseDate }) => {
+    if (!isOverall && !tssDate && !tseDate) {
+      throw new Error("Start and/or end date must be provided.");
+    }
     const query = e.params({ kind: e.ECategoryKind }, ({ kind }) => {
-      const tx = e.select(e.ETransaction, (transaction) => ({
-        filter: e.op(
+      const tx = e.select(e.ETransaction, (transaction) => {
+        let filter = e.op(
           transaction.is_visible,
           "and",
           e.op(transaction.category.kind, "=", kind)
-        ),
-      }));
+        );
+        if (!isOverall) {
+          if (tssDate) {
+            filter = e.op(
+              filter,
+              "and",
+              e.op(transaction.date, ">=", new Date(tssDate))
+            );
+          }
+          if (tseDate) {
+            filter = e.op(
+              filter,
+              "and",
+              e.op(
+                transaction.date,
+                "<",
+                new Date(new Date(tseDate).getTime() + 86400000)
+              )
+            );
+          }
+        }
+        return { filter };
+      });
       return e.sum(tx.value);
     });
     const client = edgedb.createClient({ database: dbname }).withGlobals({

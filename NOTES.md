@@ -50,6 +50,11 @@
 
 * [ ] Make the invitation of users accessible.
 
+* [ ] Switch to edgedb auth?
+
+* [ ] Native mobile app for recording. Or just an endpoint that shows a mobile
+  view?
+
 
 # IDEA / NICE TO HAVE (MAYBE)
 

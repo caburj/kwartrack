@@ -11,6 +11,7 @@ type UserPageStore = {
   selectedCategoryId: string;
   selectedSourceId: string;
   selectedDestinationId: string;
+  showOverallBalance: boolean;
 };
 
 type UserPageAction =
@@ -29,6 +30,7 @@ type UserPageAction =
   | { type: "SET_SELECTED_DESTINATION_ID"; payload: string }
   | { type: "TOGGLE_LOAN_IDS"; payload: string[] }
   | { type: "REMOVE_LOAN_IDS"; payload: string[] }
+  | { type: "TOGGLE_BALANCE_TO_DISPLAY" }
   | { type: "SET_CURRENT_PAGE"; payload: number };
 
 type UserPageDispatch = (action: UserPageAction) => void;
@@ -58,6 +60,7 @@ const initStore: UserPageStore = {
   selectedCategoryId: "",
   selectedSourceId: "",
   selectedDestinationId: "",
+  showOverallBalance: false,
 };
 
 const userPageStoreReducer = (
@@ -200,6 +203,9 @@ const userPageStoreReducer = (
         loanIds: state.loanIds.filter((id) => !action.payload.includes(id)),
         currentPage: 1,
       };
+    }
+    case "TOGGLE_BALANCE_TO_DISPLAY": {
+      return { ...state, showOverallBalance: !state.showOverallBalance };
     }
     case "SET_CURRENT_PAGE": {
       return { ...state, currentPage: action.payload };

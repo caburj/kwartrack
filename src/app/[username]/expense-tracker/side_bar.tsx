@@ -164,10 +164,7 @@ export function SideBar({
     >
       <Flex direction="column" height="100%">
         <ScrollArea scrollbars="vertical">
-          <Accordion.Root
-            type="multiple"
-            defaultValue={["Accounts"]}
-          >
+          <Accordion.Root type="multiple" defaultValue={["Accounts"]}>
             <SideBarFoldable
               value="Accounts"
               headerButton={
@@ -859,6 +856,9 @@ function AccountLI({
                       "accountBalance",
                       {
                         accountId: account.id,
+                        isOverall: store.showOverallBalance,
+                        tssDate: store.tssDate,
+                        tseDate: store.tseDate,
                       },
                     ]}
                     valueLoader={() =>
@@ -866,6 +866,9 @@ function AccountLI({
                         accountId: account.id,
                         userId: user.id,
                         dbname: user.dbname,
+                        isOverall: store.showOverallBalance,
+                        tssDate: store.tssDate?.toISOString(),
+                        tseDate: store.tseDate?.toISOString(),
                       })
                     }
                   >
@@ -1288,6 +1291,9 @@ function PartitionLI({
             "partitionBalance",
             {
               partitionId: partition.id,
+              showOverallBalance: store.showOverallBalance,
+              tssDate: store.tssDate,
+              tseDate: store.tseDate,
             },
           ],
           () =>
@@ -1295,6 +1301,9 @@ function PartitionLI({
               partitionId: partition.id,
               userId: user.id,
               dbname: user.dbname,
+              isOverall: store.showOverallBalance,
+              tssDate: store.tssDate?.toISOString(),
+              tseDate: store.tseDate?.toISOString(),
             })
         )}
         onLoading={<Skeleton style={{ minWidth: "50px" }} />}
@@ -1675,12 +1684,23 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
             openValues={["Income", "Expense", "Transfer"]}
             getHeaderExtraContent={(kind) => (
               <GenericLoadingValue
-                queryKey={["categoryKindBalance", kind]}
+                queryKey={[
+                  "categoryKindBalance",
+                  {
+                    kind,
+                    isOverall: store.showOverallBalance,
+                    tssDate: store.tssDate,
+                    tseDate: store.tseDate,
+                  },
+                ]}
                 valueLoader={() =>
                   rpc.post.getCategoryKindBalance({
                     kind,
                     userId: user.id,
                     dbname: user.dbname,
+                    isOverall: store.showOverallBalance,
+                    tssDate: store.tssDate?.toISOString(),
+                    tseDate: store.tseDate?.toISOString(),
                   })
                 }
               >
@@ -1904,6 +1924,9 @@ function CategoryLI({
           "categoryBalance",
           {
             categoryId: category.id,
+            isOverall: store.showOverallBalance,
+            tssDate: store.tssDate,
+            tseDate: store.tseDate,
           },
         ]}
         valueLoader={() =>
@@ -1911,6 +1934,9 @@ function CategoryLI({
             userId: user.id,
             categoryId: category.id,
             dbname: user.dbname,
+            isOverall: store.showOverallBalance,
+            tssDate: store.tssDate?.toISOString(),
+            tseDate: store.tseDate?.toISOString(),
           })
         }
       >

@@ -29,9 +29,9 @@ import {
   Popover,
   Text,
   Table,
-  TextField,
   ScrollArea,
   Link,
+  Switch,
 } from "@radix-ui/themes";
 import {
   Cross1Icon,
@@ -226,6 +226,8 @@ const TableControls = (props: {
   isTableLoading: boolean;
   hasNextPage: boolean;
 }) => {
+  const queryClient = useQueryClient();
+
   const [store, dispatch] = useContext(UserPageStoreContext);
 
   const currentPage = store.currentPage;
@@ -237,6 +239,8 @@ const TableControls = (props: {
   const decrementPage = () => {
     dispatch({ type: "SET_CURRENT_PAGE", payload: currentPage - 1 });
   };
+
+  const balanceLabel = store.showOverallBalance ? "Overall" : "Selected Date";
 
   return (
     <Flex justify="between">
@@ -259,6 +263,9 @@ const TableControls = (props: {
               type: "SET_TSS_DATE",
               payload: date,
             });
+            if (!store.showOverallBalance) {
+              invalidateMany(queryClient, [["partitionBalance"]]);
+            }
           }}
           customInput={<CustomDatePickerButton />}
         />
@@ -296,21 +303,18 @@ const TableControls = (props: {
         </Link>
       </Flex>
       <Flex my="2" mt="0" gap="3" align="center">
-        <Text weight="medium">Items per page</Text>
-        <TextField.Root>
-          <TextField.Input
-            placeholder="Search the docs…"
-            type="number"
-            min="1"
-            max="100"
-            value={store.nPerPage}
-            onChange={(event) => {
-              const value = parseInt(event.target.value);
-              if (isNaN(value)) return;
-              dispatch({ type: "SET_N_PER_PAGE", payload: value });
-            }}
-          />
-        </TextField.Root>
+        <Text weight="medium">
+          <Flex gap="2" align="center">
+            Show <strong>{balanceLabel}</strong> balance
+            <Switch
+              checked={store.showOverallBalance}
+              onClick={() => {
+                dispatch({ type: "TOGGLE_BALANCE_TO_DISPLAY" });
+              }}
+            />
+          </Flex>
+        </Text>
+
         <Flex gap="3" align="center">
           <IconButton
             onClick={decrementPage}
@@ -468,7 +472,10 @@ export function TransactionsTable({
               <Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell>Category</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell>Partition</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell justify="end" style={{ minWidth: "11ch" }}>
+              <Table.ColumnHeaderCell
+                justify="end"
+                style={{ minWidth: "11ch" }}
+              >
                 Amount
               </Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
