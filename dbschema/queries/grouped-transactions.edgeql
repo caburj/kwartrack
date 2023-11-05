@@ -2,6 +2,7 @@ WITH
   __param__pIds := <array<std::uuid>>$pIds,
   __param__cIds := <array<std::uuid>>$cIds,
   __param__lIds := <array<std::uuid>>$lIds,
+  __param__isOverall := <std::bool>$isOverall,
   __param__tssDate := <OPTIONAL std::datetime>$tssDate,
   __param__tseDate := <OPTIONAL std::datetime>$tseDate
 SELECT (WITH
@@ -20,9 +21,14 @@ SELECT (WITH
         ((.<transaction[is ELoan].id union .<transaction[is EPayment].loan.id) in __lid_set)
         IF (exists __lid_set)
         ELSE (
-          ((.date >= __param__tssDate) IF (exists __param__tssDate) ELSE true)
-          and
-          ((.date < __param__tseDate) IF (exists __param__tseDate) ELSE true)
+          (
+            __param__isOverall
+            or (
+              ((.date >= __param__tssDate) IF (exists __param__tssDate) ELSE true)
+              and
+              ((.date < __param__tseDate) IF (exists __param__tseDate) ELSE true)
+            )
+          )
           and
           ((.category.id in __cid_set) IF (exists __cid_set) ELSE true)
           and

@@ -172,6 +172,7 @@ function ChartBox(props: { user: { id: string; dbname: string } }) {
         tseDate: store.tseDate?.toISOString(),
         ownerId: props.user.id,
         dbname: props.user.dbname,
+        isOverall: store.showOverallBalance,
       });
     }
   );

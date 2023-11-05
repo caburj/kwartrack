@@ -445,6 +445,7 @@ export const getGroupedTransactions = withValidation(
     tseDate: optional(string()),
     ownerId: string(),
     dbname: string(),
+    isOverall: boolean(),
   }),
   async ({
     partitionIds,
@@ -454,6 +455,7 @@ export const getGroupedTransactions = withValidation(
     tseDate,
     ownerId,
     dbname,
+    isOverall,
   }) => {
     if (tseDate) {
       tseDate = new Date(new Date(tseDate).getTime() + 86400000).toISOString();
@@ -467,6 +469,7 @@ export const getGroupedTransactions = withValidation(
       pIds: partitionIds,
       cIds: categoryIds,
       lIds: loanIds,
+      isOverall,
       tssDate: tssDate ? new Date(tssDate) : null,
       tseDate: tseDate ? new Date(tseDate) : null,
     });
