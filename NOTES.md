@@ -50,10 +50,23 @@
 
 * [ ] Make the invitation of users accessible.
 
-* [ ] Switch to edgedb auth?
+* [ ] Upgrade edgedb to 4.
+
+* [ ] Switch to edgedb auth after switching to edgedb 4.
+
+* [ ] Switch to nextjs 14.
 
 * [ ] Native mobile app for recording. Or just an endpoint that shows a mobile
   view?
+  * `ua-parser` might help.
+
+* [ ] The "show-overall" option should also affect the charts.
+
+* [ ] When nothing to display in the charts container, show "No charts the
+  display".
+
+* [ ] Negative values are red, positive are black. Font weight should just be
+  the same.
 
 
 # IDEA / NICE TO HAVE (MAYBE)

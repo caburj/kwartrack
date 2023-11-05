@@ -12,6 +12,7 @@ import {
   invalidateMany,
   parseValue,
   useGroupedPartitions,
+  usePartitions,
 } from "@/utils/common";
 import {
   QueryKey,
@@ -80,6 +81,12 @@ const CategoryComboBox = forwardRef(function CategoryComboBox(
       getItemDisplay={(c) => getCategoryOptionName(c)}
       onSelectItem={(c) => {
         dispatch({ type: "SET_SELECTED_CATEGORY_ID", payload: c.id });
+        if (c.default_partition) {
+          dispatch({
+            type: "SET_SELECTED_SOURCE_ID",
+            payload: c.default_partition.id,
+          });
+        }
       }}
     >
       <ComboboxTrigger ref={ref} color={color} variant={variant}>
@@ -442,23 +449,18 @@ export function TransactionForm(props: {
   user: { id: string; dbname: string };
 }) {
   const { user } = props;
-  const partitions = useQuery(["partitions", user.id], () => {
-    return rpc.post.getPartitionOptions({
-      userId: user.id,
-      dbname: user.dbname,
-    });
-  });
+  const partitions = usePartitions(user);
   const categories = useQuery(["categories", user.id], () => {
     return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
   });
 
-  if (!partitions.data || !categories.data) {
+  if (partitions.length == 0 || !categories.data) {
     return null;
   }
 
   return (
     <TransactionFormMain
-      partitions={partitions.data}
+      partitions={partitions}
       groupedCategories={categories.data}
       user={user}
     />

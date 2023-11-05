@@ -20,6 +20,7 @@ import {
   invalidateMany,
   parseValue,
   useGroupedPartitions,
+  usePartitions,
 } from "@/utils/common";
 import {
   Button,
@@ -377,12 +378,7 @@ export function TransactionsTable({
     return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
   });
 
-  const partitions = useQuery(["partitions", user.id], () => {
-    return rpc.post.getPartitionOptions({
-      userId: user.id,
-      dbname: user.dbname,
-    });
-  });
+  const partitions = usePartitions(user);
 
   const updateTransactionDate = useMutation(
     async (arg: { transactionId: string; newDate: Date }) => {
@@ -418,7 +414,7 @@ export function TransactionsTable({
       return (
         <Flex>
           <PartitionBadge
-            partitions={partitions.data ?? []}
+            partitions={partitions}
             transaction={transaction}
             partition={transaction.source_partition}
             user={user}
@@ -428,7 +424,7 @@ export function TransactionsTable({
             <ChevronRightIcon />
           </Flex>
           <PartitionBadge
-            partitions={partitions.data ?? []}
+            partitions={partitions}
             transaction={transaction}
             partition={transaction.counterpart?.source_partition || null}
             user={user}
@@ -439,7 +435,7 @@ export function TransactionsTable({
     } else {
       return (
         <PartitionBadge
-          partitions={partitions.data ?? []}
+          partitions={partitions}
           transaction={transaction}
           partition={transaction.source_partition}
           user={user}

@@ -104,23 +104,35 @@ export const _createInvitation = withValidation(
   }
 );
 
-export const makeCreateCategoryQuery = (args: {
-  isPrivate: boolean;
-  userId: string;
-}) => {
-  const { isPrivate, userId } = args;
+export const makeCreateCategoryQuery = () => {
   return e.params(
     {
       name: e.str,
       kind: e.ECategoryKind,
+      is_private: e.bool,
+      default_partition_id: e.optional(e.uuid),
+      user_id: e.uuid,
     },
-    ({ name, kind }) =>
+    ({ name, kind, is_private, default_partition_id, user_id }) =>
       e.insert(e.ECategory, {
         name,
         kind,
-        is_private: isPrivate,
+        is_private,
         owners: e.select(e.EUser, (user) => ({
-          filter: e.op(user.id, "=", e.uuid(userId)),
+          filter: e.op(user.id, "=", user_id),
+        })),
+        default_partition: e.select(e.EPartition, (partition) => ({
+          filter_single: e.op(
+            e.op(partition.id, "=", default_partition_id),
+            "and",
+            e.op(
+              e.op(partition.is_owned, "and", partition.is_private),
+              "if",
+              is_private,
+              "else",
+              true
+            )
+          ),
         })),
       })
   );
@@ -144,19 +156,31 @@ export const createDefaultCategories = async (
   ];
   const transferCategories = ["Transfer"];
 
-  const createCategory = makeCreateCategoryQuery({
-    userId,
-    isPrivate: false,
-  });
+  const createCategory = makeCreateCategoryQuery();
 
   for (const category of incomeCategories) {
-    await createCategory.run(tx, { name: category, kind: "Income" });
+    await createCategory.run(tx, {
+      name: category,
+      kind: "Income",
+      user_id: userId,
+      is_private: false,
+    });
   }
   for (const category of expenseCategories) {
-    await createCategory.run(tx, { name: category, kind: "Expense" });
+    await createCategory.run(tx, {
+      name: category,
+      kind: "Expense",
+      user_id: userId,
+      is_private: false,
+    });
   }
   for (const category of transferCategories) {
-    await createCategory.run(tx, { name: category, kind: "Transfer" });
+    await createCategory.run(tx, {
+      name: category,
+      kind: "Transfer",
+      user_id: userId,
+      is_private: false,
+    });
   }
 };
 

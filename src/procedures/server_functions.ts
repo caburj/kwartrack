@@ -759,6 +759,7 @@ export const getUserCategories = withValidation(
         kind: true,
         is_private: true,
         is_owned: true,
+        default_partition: { id: true },
       } as const;
       const expense = await e
         .select(e.ECategory, (category) => ({
@@ -1126,12 +1127,16 @@ export const createCategory = withValidation(
     dbname: string(),
     kind: string(),
     isPrivate: boolean(),
+    defaultPartitionId: optional(string()),
   }),
-  async ({ userId, name, dbname, kind, isPrivate }) => {
-    const query = makeCreateCategoryQuery({ userId, isPrivate });
+  async ({ userId, name, dbname, kind, isPrivate, defaultPartitionId }) => {
+    const query = makeCreateCategoryQuery();
     const result = await query.run(edgedb.createClient({ database: dbname }), {
       name,
       kind: kind as Readonly<"Income" | "Expense" | "Transfer">,
+      is_private: isPrivate,
+      user_id: userId,
+      default_partition_id: defaultPartitionId,
     });
     return result;
   }
@@ -1312,18 +1317,43 @@ export const updateCategory = withValidation(
     categoryId: string(),
     name: string(),
     isPrivate: boolean(),
+    defaultPartitionId: optional(string()),
   }),
-  async ({ userId, dbname, categoryId, name, isPrivate }) => {
+  async ({
+    userId,
+    dbname,
+    categoryId,
+    name,
+    isPrivate,
+    defaultPartitionId,
+  }) => {
     const updateQuery = e.params(
       {
         id: e.uuid,
         name: e.str,
-        isPrivate: e.bool,
+        is_private: e.bool,
+        default_partition_id: e.optional(e.uuid),
       },
-      ({ id, name }) =>
+      ({ id, name, is_private, default_partition_id }) =>
         e.update(e.ECategory, (category) => ({
           filter_single: e.op(category.id, "=", id),
-          set: { name, is_private: isPrivate },
+          set: {
+            name,
+            is_private: is_private,
+            default_partition: e.select(e.EPartition, (partition) => ({
+              filter_single: e.op(
+                e.op(partition.id, "=", default_partition_id),
+                "and",
+                e.op(
+                  e.op(partition.is_owned, "and", partition.is_private),
+                  "if",
+                  is_private,
+                  "else",
+                  true
+                )
+              ),
+            })),
+          },
         }))
     );
     return updateQuery.run(
@@ -1333,7 +1363,8 @@ export const updateCategory = withValidation(
       {
         id: categoryId,
         name: name.trim(),
-        isPrivate,
+        is_private: isPrivate,
+        default_partition_id: defaultPartitionId,
       }
     );
   }

@@ -120,3 +120,8 @@ and is backed with EdgeDB. We also use Clerk for authentication.
       - `$ pnpm create-first-user --email=... --name=... --username=...`
       - When you visit the page and authenticate using the email you specified
         in the above command, you'll be redirected to the main app.
+
+# Authors
+
+- Joseph Caburnay (caburnay.joseph@gmail.com or joseph@caburnay.dev)
+- Jonathan Caburnay (jonathan@caburnay.dev)

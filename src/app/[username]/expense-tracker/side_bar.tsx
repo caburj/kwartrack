@@ -40,6 +40,7 @@ import {
   groupBy,
   invalidateMany,
   useGroupedPartitions,
+  usePartitions,
 } from "@/utils/common";
 import {
   Box,
@@ -56,7 +57,7 @@ import {
   ContextMenu,
   Badge,
 } from "@radix-ui/themes";
-import { ChevronRightIcon, PlusIcon } from "@radix-ui/react-icons";
+import { ChevronRightIcon, Cross2Icon, PlusIcon } from "@radix-ui/react-icons";
 import * as Accordion from "@radix-ui/react-accordion";
 import { Combobox, ComboboxTrigger } from "./combobox";
 import { TwoColumnInput } from "@/utils/common";
@@ -92,6 +93,7 @@ const newCategorySchema = object({
   name: string([minLength(1)]),
   kind: string(),
   isPrivate: boolean(),
+  defaultPartitionId: optional(string()),
 });
 
 export const SideBarFoldable = (props: {
@@ -132,6 +134,8 @@ export const SideBarFoldable = (props: {
   );
 };
 
+type CategoryKind = "Income" | "Expense" | "Transfer";
+
 export function SideBar({
   user,
   width,
@@ -149,7 +153,18 @@ export function SideBar({
       owned: true,
     });
   });
+
   const [accountId, setAccountId] = useState("for-new-account");
+
+  const [categoryKind, setCategoryKind] = useState<CategoryKind>("Income");
+
+  const [categoryIsPrivate, setCategoryIsPrivate] = useState(false);
+
+  const { selectedDefaultPartition, inputEl } = useDefaultPartitionInput({
+    user,
+    categoryIsPrivate,
+  });
+
   return (
     <Box
       position="fixed"
@@ -340,14 +355,17 @@ export function SideBar({
                           const parsedData = newCategorySchema.parse({
                             ...Object.fromEntries(formdata.entries()),
                             isPrivate: formdata.get("isPrivate") === "on",
+                            defaultPartitionId: selectedDefaultPartition?.id,
                           });
-                          const { name, kind, isPrivate } = parsedData;
+                          const { name, kind, isPrivate, defaultPartitionId } =
+                            parsedData;
                           await rpc.post.createCategory({
                             userId: user.id,
                             dbname: user.dbname,
                             name,
                             kind,
                             isPrivate,
+                            defaultPartitionId,
                           });
                           queryClient.invalidateQueries({
                             queryKey: ["categories", user.id],
@@ -355,7 +373,7 @@ export function SideBar({
                         }}
                       >
                         <TwoColumnInput>
-                          <Text as="div" size="2" mb="1" weight="bold">
+                          <Text as="div" size="2" weight="bold">
                             Name
                           </Text>
                           <TextField.Input
@@ -364,10 +382,16 @@ export function SideBar({
                           />
                         </TwoColumnInput>
                         <TwoColumnInput>
-                          <Text as="div" size="2" mb="1" weight="bold">
+                          <Text as="div" size="2" weight="bold">
                             Kind
                           </Text>
-                          <Select.Root defaultValue="Income" name="kind">
+                          <Select.Root
+                            value={categoryKind}
+                            name="kind"
+                            onValueChange={(val: CategoryKind) => {
+                              setCategoryKind(val);
+                            }}
+                          >
                             <Select.Trigger variant="surface" />
                             <Select.Content>
                               <Select.Item value="Income">Income</Select.Item>
@@ -379,11 +403,18 @@ export function SideBar({
                           </Select.Root>
                         </TwoColumnInput>
                         <TwoColumnInput>
-                          <Text as="div" size="2" mb="1" weight="bold">
+                          <Text as="div" size="2" weight="bold">
                             Private
                           </Text>
-                          <Switch name="isPrivate" />
+                          <Switch
+                            name="isPrivate"
+                            checked={categoryIsPrivate}
+                            onClick={() => {
+                              setCategoryIsPrivate(!categoryIsPrivate);
+                            }}
+                          />
                         </TwoColumnInput>
+                        {inputEl}
                       </form>
                     </Flex>
                     <Separator size="4" mt="4" />
@@ -1071,12 +1102,7 @@ function PartitionLI({
   const [selectedDestinationId, setSelectedDestinationId] = useState("");
   const [loanCategoryId, setLoanCategoryId] = useState("");
 
-  const partitions = useQuery(["partitions", user.id], () => {
-    return rpc.post.getPartitionOptions({
-      userId: user.id,
-      dbname: user.dbname,
-    });
-  });
+  const partitions = usePartitions(user);
 
   const categories = useQuery(["categories", user.id], () => {
     return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
@@ -1164,13 +1190,13 @@ function PartitionLI({
 
   const loanFormId = `make-a-loan-form-${partition.id}`;
   const groupedPartitions = useGroupedPartitions(
-    partitions.data || [],
+    partitions,
     user.id
   );
 
   const selectedDestination = useMemo(() => {
-    return (partitions.data || []).find((p) => p.id === selectedDestinationId);
-  }, [selectedDestinationId, partitions.data]);
+    return (partitions).find((p) => p.id === selectedDestinationId);
+  }, [selectedDestinationId, partitions]);
 
   const destinationName = selectedDestination?.name || "Select destination";
 
@@ -1967,14 +1993,30 @@ const EditCategoryDialog = forwardRef(function EditCategoryDialog(
 ) {
   const { category, user } = props;
   const queryClient = useQueryClient();
+
+  const [categoryIsPrivate, setCategoryIsPrivate] = useState(
+    category.is_private
+  );
+
+  const { selectedDefaultPartition, inputEl } = useDefaultPartitionInput({
+    user,
+    categoryIsPrivate,
+    defaultPartitionId: category.default_partition?.id,
+  });
+
   const update = useMutation(
-    async (arg: { name: string; isPrivate: boolean }) => {
+    async (arg: {
+      name: string;
+      isPrivate: boolean;
+      defaultCategoryId?: string;
+    }) => {
       return rpc.post.updateCategory({
         categoryId: category.id,
         dbname: user.dbname,
         userId: user.id,
         name: arg.name,
         isPrivate: arg.isPrivate,
+        defaultPartitionId: arg.defaultCategoryId,
       });
     },
     {
@@ -2005,11 +2047,13 @@ const EditCategoryDialog = forwardRef(function EditCategoryDialog(
               const schema = object({
                 name: string([minLength(1)]),
                 isPrivate: boolean(),
+                defaultCategoryId: optional(string([minLength(1)])),
               });
               const fdata = Object.fromEntries(formdata.entries());
               const parsedData = schema.parse({
                 name: fdata.name,
                 isPrivate: fdata.isPrivate === "on",
+                defaultCategoryId: selectedDefaultPartition?.id,
               });
               const result = await update.mutateAsync(parsedData);
               if (!result) {
@@ -2018,7 +2062,7 @@ const EditCategoryDialog = forwardRef(function EditCategoryDialog(
             }}
           >
             <TwoColumnInput>
-              <Text as="div" size="2" mb="1" weight="bold">
+              <Text as="div" size="2" weight="bold">
                 Name
               </Text>
               <TextField.Input
@@ -2028,11 +2072,18 @@ const EditCategoryDialog = forwardRef(function EditCategoryDialog(
               />
             </TwoColumnInput>
             <TwoColumnInput>
-              <Text as="div" size="2" mb="1" weight="bold">
+              <Text as="div" size="2" weight="bold">
                 Private
               </Text>
-              <Switch name="isPrivate" defaultChecked={category.is_private} />
+              <Switch
+                name="isPrivate"
+                checked={categoryIsPrivate}
+                onChange={() => {
+                  setCategoryIsPrivate(!categoryIsPrivate);
+                }}
+              />
             </TwoColumnInput>
+            {inputEl}
           </form>
         </Flex>
         <Separator size="4" mt="4" />
@@ -2111,3 +2162,87 @@ function FoldableListSkeleton({ nItems = 3 }: { nItems?: number }) {
     </Flex>
   );
 }
+
+type UsePartitionItem = ReturnType<typeof usePartitions>[number];
+
+const useDefaultPartitionInput = ({
+  user,
+  categoryIsPrivate,
+  defaultPartitionId,
+}: {
+  user: { id: string; dbname: string };
+  categoryIsPrivate: boolean;
+  defaultPartitionId?: string;
+}) => {
+  const partitions = usePartitions(user);
+
+  const groupedPartitions = useGroupedPartitions(partitions, user.id);
+
+  const initialDefaultPartition = partitions.find(
+    (p) => p.id === defaultPartitionId
+  );
+
+  const [selectedDefaultPartition, setSelectedDefaultPartition] = useState<
+    UsePartitionItem | undefined
+  >(initialDefaultPartition);
+
+  const defaultPartitionVariant = selectedDefaultPartition?.is_private
+    ? "outline"
+    : "soft";
+
+  const type = selectedDefaultPartition
+    ? getPartitionType(selectedDefaultPartition, user.id)
+    : "others";
+
+  const defaultPartitionColor = PARTITION_COLOR[type];
+
+  const defaultPartitionLabel = selectedDefaultPartition
+    ? `${selectedDefaultPartition.account.label} - ${selectedDefaultPartition.name}`
+    : "None";
+
+  const inputEl = (
+    <TwoColumnInput>
+      <Text as="div" size="2" weight="bold">
+        Default Partition
+      </Text>
+      <Combobox
+        groupedItems={groupedPartitions}
+        getGroupHeading={(_key, items) => items[0].account.label}
+        getItemColor={(item) => {
+          const type = getPartitionType(item, user.id);
+          return PARTITION_COLOR[type];
+        }}
+        isItemIncluded={(p) => (categoryIsPrivate ? p.is_private : true)}
+        getItemValue={(p) =>
+          `${getPartitionType(p, user.id)} ${p.account.label} ${p.name}`
+        }
+        getItemDisplay={(p) => p.name}
+        onSelectItem={(p) => {
+          setSelectedDefaultPartition(p);
+        }}
+      >
+        <Flex align="center" gap="1">
+          <ComboboxTrigger
+            color={defaultPartitionColor}
+            variant={defaultPartitionVariant}
+          >
+            {defaultPartitionLabel}
+          </ComboboxTrigger>
+          <Box
+            onClick={(e) => {
+              setSelectedDefaultPartition(undefined);
+              e.preventDefault();
+            }}
+            className={css({ cursor: "pointer" })}
+          >
+            <Text color="gray">
+              <Cross2Icon width="18" height="18" />
+            </Text>
+          </Box>
+        </Flex>
+      </Combobox>
+    </TwoColumnInput>
+  );
+
+  return { inputEl, selectedDefaultPartition };
+};

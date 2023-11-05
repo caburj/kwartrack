@@ -1,6 +1,6 @@
 import { rpc } from "@/app/rpc_client";
 import { Badge, Flex, Grid, textPropDefs } from "@radix-ui/themes";
-import { UseQueryResult, QueryClient, QueryKey } from "@tanstack/react-query";
+import { UseQueryResult, QueryClient, QueryKey, useQuery } from "@tanstack/react-query";
 import { ForwardedRef, ReactHTML, forwardRef, useMemo } from "react";
 
 export type Unpacked<T> = T extends (infer U)[] ? U : T;
@@ -165,9 +165,19 @@ export function useGroupedPartitions(
   return groupedPartitions;
 }
 
+export function usePartitions(user: { id: string; dbname: string }){
+  const partitions = useQuery(["partitions", user.id], () => {
+    return rpc.post.getPartitionOptions({
+      userId: user.id,
+      dbname: user.dbname,
+    });
+  });
+  return partitions.data || [];
+}
+
 export function TwoColumnInput(props: { children: React.ReactNode }) {
   return (
-    <Grid asChild columns="125px 1fr" align="center">
+    <Grid asChild columns="150px 1fr" align="center">
       <label>{props.children}</label>
     </Grid>
   );

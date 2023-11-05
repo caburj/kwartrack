@@ -65,6 +65,9 @@ module default {
         with public partition can be linked to this category.
       "
     }
+    default_partition: EPartition {
+      annotation description := "This partition is automatically selected when creating a new transaction with this category.";
+    }
 
     property is_owned := any(.owners = global current_user) or not exists .owners;
     property is_visible := not .is_private or global current_user.is_admin or .is_owned;
