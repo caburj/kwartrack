@@ -101,6 +101,7 @@ export const SideBarFoldable = (props: {
   children: ReactNode;
   headerButton?: ReactNode;
 }) => {
+  const headerTextRef = useRef<HTMLDivElement>(null);
   return (
     <Accordion.Item
       value={props.value}
@@ -119,14 +120,23 @@ export const SideBarFoldable = (props: {
           className={css({
             borderBottom: "1px solid var(--gray-a5)",
             backgroundColor: "var(--gray-a3)",
+            cursor: "pointer",
           })}
+          onClick={() => {
+            headerTextRef.current?.click();
+          }}
         >
           <Accordion.Trigger>
-            <Text size="3" weight="bold" className={css({ cursor: "pointer" })}>
+            <Text
+              size="3"
+              weight="bold"
+              className={css({ cursor: "pointer" })}
+              ref={headerTextRef}
+            >
               {props.value}
             </Text>
           </Accordion.Trigger>
-          {props.headerButton}
+          <Flex onClick={(e) => e.stopPropagation()}>{props.headerButton}</Flex>
         </Flex>
       </Accordion.Header>
       <AnimatedAccordionContent>{props.children}</AnimatedAccordionContent>

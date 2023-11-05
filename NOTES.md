@@ -60,14 +60,6 @@
   view?
   * `ua-parser` might help.
 
-* [ ] The "show-overall" option should also affect the charts.
-
-* [X] When nothing to display in the charts container, show "No charts the
-  display".
-
-* [X] Negative values are red, positive are black. Font weight should just be
-  the same.
-
 
 # IDEA / NICE TO HAVE (MAYBE)
 
@@ -234,6 +226,14 @@
 * [X] Write docs on...
   * [X] How to get started.
   * [X] How to deploy.
+
+* [X] The "show-overall" option should also affect the charts.
+
+* [X] When nothing to display in the charts container, show "No charts the
+  display".
+
+* [X] Negative values are red, positive are black. Font weight should just be
+  the same.
 
 
 # CANCELLED
