@@ -905,24 +905,12 @@ function AccountLI({
                   >
                     {(value) => {
                       const parsedValue = parseFloat(value);
-                      let color: RadixColor;
-                      let weight: "medium" | "bold" = "medium";
-                      const asExpected = parsedValue >= 0;
-                      if (!asExpected) {
-                        color = "red";
-                        weight = "bold";
-                      }
-                      let result;
-                      if (isNaN(parsedValue)) {
-                        result = value;
-                      } else {
-                        result = formatValue(
-                          asExpected ? Math.abs(parsedValue) : parsedValue
-                        );
-                      }
+                      const color = parsedValue >= 0 ? undefined : "red";
                       return (
-                        <Text color={color} weight={weight}>
-                          {result}
+                        <Text color={color} weight="medium">
+                          {isNaN(parsedValue)
+                            ? value
+                            : formatValue(Math.abs(parsedValue))}
                         </Text>
                       );
                     }}
@@ -1189,13 +1177,10 @@ function PartitionLI({
   const color = isSelected ? "cyan" : PARTITION_COLOR[_type];
 
   const loanFormId = `make-a-loan-form-${partition.id}`;
-  const groupedPartitions = useGroupedPartitions(
-    partitions,
-    user.id
-  );
+  const groupedPartitions = useGroupedPartitions(partitions, user.id);
 
   const selectedDestination = useMemo(() => {
-    return (partitions).find((p) => p.id === selectedDestinationId);
+    return partitions.find((p) => p.id === selectedDestinationId);
   }, [selectedDestinationId, partitions]);
 
   const destinationName = selectedDestination?.name || "Select destination";
@@ -1336,24 +1321,10 @@ function PartitionLI({
       >
         {(value) => {
           const parsedValue = parseFloat(value);
-          let color: RadixColor;
-          let weight: "regular" | "bold" = "regular";
-          const asExpected = parsedValue >= 0;
-          if (!asExpected) {
-            color = "red";
-            weight = "bold";
-          }
-          let result;
-          if (isNaN(parsedValue)) {
-            result = value;
-          } else {
-            result = formatValue(
-              asExpected ? Math.abs(parsedValue) : parsedValue
-            );
-          }
+          const color = parsedValue >= 0 ? undefined : "red";
           return (
-            <Text color={color} weight={weight}>
-              {result}
+            <Text color={color}>
+              {isNaN(parsedValue) ? value : formatValue(Math.abs(parsedValue))}
             </Text>
           );
         }}
@@ -1591,52 +1562,12 @@ const EditPartitionDialog = forwardRef(function EditPartitionDialog(
   );
 });
 
-function categoryValueProps({
-  value,
-  kind,
-  defaultWeight,
-}: {
-  value: string;
-  kind: string;
-  defaultWeight: "medium" | "regular";
-}) {
-  const parsedValue = parseFloat(value);
-  let color: RadixColor;
-  let weight: "medium" | "bold" | "regular" = defaultWeight;
-  let asExpected = false;
-  if (kind === "Income") {
-    asExpected = parsedValue >= 0;
-  } else if (kind === "Expense") {
-    asExpected = parsedValue <= 0;
-  } else {
-    asExpected = parsedValue === 0;
-  }
-  if (!asExpected) {
-    color = "red";
-    weight = "bold";
-  }
-  let result;
-  if (isNaN(parsedValue)) {
-    result = value;
-  } else {
-    result = formatValue(asExpected ? Math.abs(parsedValue) : parsedValue);
-  }
-  return {
-    color,
-    weight,
-    formatted: result,
-  };
-}
-
-function CategoryValue(props: {
-  value: string;
-  kind: string;
-  defaultWeight: "medium" | "regular";
-}) {
-  const { color, weight, formatted } = categoryValueProps(props);
+function CategoryValue(props: { value: string; weight: "medium" | "regular" }) {
+  const parsedValue = parseFloat(props.value);
+  const color: RadixColor = parsedValue >= 0 ? undefined : "red";
   return (
-    <Text color={color} weight={weight}>
-      {formatted}
+    <Text color={color} weight={props.weight}>
+      {isNaN(parsedValue) ? props.value : formatValue(Math.abs(parsedValue))}
     </Text>
   );
 }
@@ -1730,13 +1661,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
                   })
                 }
               >
-                {(value) => (
-                  <CategoryValue
-                    value={value}
-                    kind={kind}
-                    defaultWeight="medium"
-                  />
-                )}
+                {(value) => <CategoryValue value={value} weight="medium" />}
               </GenericLoadingValue>
             )}
             getHeaderLabel={(kind) => (
@@ -1966,13 +1891,7 @@ function CategoryLI({
           })
         }
       >
-        {(value) => (
-          <CategoryValue
-            value={value}
-            kind={category.kind}
-            defaultWeight="regular"
-          />
-        )}
+        {(value) => <CategoryValue value={value} weight="regular" />}
       </GenericLoadingValue>
       <EditCategoryDialog
         category={category}
