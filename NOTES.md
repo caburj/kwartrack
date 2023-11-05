@@ -62,10 +62,10 @@
 
 * [ ] The "show-overall" option should also affect the charts.
 
-* [ ] When nothing to display in the charts container, show "No charts the
+* [X] When nothing to display in the charts container, show "No charts the
   display".
 
-* [ ] Negative values are red, positive are black. Font weight should just be
+* [X] Negative values are red, positive are black. Font weight should just be
   the same.
 
 

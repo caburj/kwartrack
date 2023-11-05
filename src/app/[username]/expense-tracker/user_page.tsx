@@ -180,6 +180,26 @@ function ChartBox(props: { user: { id: string; dbname: string } }) {
     <QueryResult query={groupedTransactions}>
       {(result) => {
         const { incomes, expenses, summary } = getPieChartData(result);
+
+        if (incomes.labels.length === 0 && expenses.labels.length === 0) {
+          return (
+            <Flex
+              align="center"
+              justify="center"
+              className={css({
+                width: "100%",
+                minHeight: "300px",
+                maxHeight: "400px",
+                borderBottomLeftRadius: "5px",
+                borderBottomRightRadius: "5px",
+                border: "1px solid var(--gray-5)",
+              })}
+            >
+              <Text align="center">No charts to show</Text>
+            </Flex>
+          );
+        }
+
         return (
           <ScrollArea>
             <Flex
@@ -192,7 +212,7 @@ function ChartBox(props: { user: { id: string; dbname: string } }) {
                 border: "1px solid var(--gray-5)",
               })}
             >
-              {incomes.labels.length > 0 && (
+              {incomes.labels.length > 0 ? (
                 <Flex direction="column" p="3">
                   <Text align="center">Incomes</Text>
                   <Doughnut
@@ -208,8 +228,8 @@ function ChartBox(props: { user: { id: string; dbname: string } }) {
                     }}
                   />
                 </Flex>
-              )}
-              {expenses.labels.length > 0 && (
+              ) : null}
+              {expenses.labels.length > 0 ? (
                 <Flex direction="column" p="3">
                   <Text align="center">Expenses</Text>
                   <Doughnut
@@ -223,7 +243,7 @@ function ChartBox(props: { user: { id: string; dbname: string } }) {
                     }}
                   />
                 </Flex>
-              )}
+              ) : null}
               {expenses.labels.length > 0 && incomes.labels.length > 0 ? (
                 <Flex direction="column" p="3">
                   <Text align="center">Summary</Text>
