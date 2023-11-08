@@ -38,10 +38,6 @@
   - Looks like piecewise migrations are needed when developing new features.
 
 * [ ] Divine recommendations
-  * [ ] Link categories to partitions.
-    * Idea: We should allow default partitions when selecting certain
-      categories. E.g. Travel Expense should by default be an expense from
-      Travel Partition.
   * [ ] Allow restricting a partition to make manual transaction like expenses.
     The idea is that when you create a "Savings" partition, you normally don't
     want to touch it. It should be moved to a different partition first, in
@@ -51,6 +47,8 @@
 * [ ] Make the invitation of users accessible.
 
 * [ ] Upgrade edgedb to 4.
+  * [ ] Only switch when edgedb cloud already have a free-tier instance which
+    will be used for staging.
 
 * [ ] Switch to edgedb auth after switching to edgedb 4.
 
@@ -234,6 +232,11 @@
 
 * [X] Negative values are red, positive are black. Font weight should just be
   the same.
+
+* [X] Link categories to partitions.
+  * Idea: We should allow default partitions when selecting certain
+    categories. E.g. Travel Expense should by default be an expense from
+    Travel Partition.
 
 
 # CANCELLED

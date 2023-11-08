@@ -60,7 +60,7 @@ const initStore: UserPageStore = {
   selectedCategoryId: "",
   selectedSourceId: "",
   selectedDestinationId: "",
-  showOverallBalance: false,
+  showOverallBalance: true,
 };
 
 const userPageStoreReducer = (
