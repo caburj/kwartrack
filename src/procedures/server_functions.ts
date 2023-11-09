@@ -230,6 +230,7 @@ export const findTransactions = withValidation(
     loanIds: array(string()),
     ownerId: string(),
     dbname: string(),
+    showOverall: boolean(),
     tssDate: optional(string()),
     tseDate: optional(string()),
   }),
@@ -241,6 +242,7 @@ export const findTransactions = withValidation(
     loanIds,
     ownerId,
     dbname,
+    showOverall,
     tssDate,
     tseDate,
   }) => {
@@ -265,24 +267,26 @@ export const findTransactions = withValidation(
           let filter;
 
           if (loanIds.length === 0) {
-            if (tssDate) {
-              baseFilter = e.op(
-                baseFilter,
-                "and",
-                e.op(transaction.date, ">=", new Date(tssDate))
-              );
-            }
-            if (tseDate) {
-              baseFilter = e.op(
-                baseFilter,
-                "and",
-                e.op(
-                  transaction.date,
-                  "<",
-                  // add one day to the end date to include it in the range
-                  new Date(new Date(tseDate).getTime() + 86400000)
-                )
-              );
+            if (!showOverall) {
+              if (tssDate) {
+                baseFilter = e.op(
+                  baseFilter,
+                  "and",
+                  e.op(transaction.date, ">=", new Date(tssDate))
+                );
+              }
+              if (tseDate) {
+                baseFilter = e.op(
+                  baseFilter,
+                  "and",
+                  e.op(
+                    transaction.date,
+                    "<",
+                    // add one day to the end date to include it in the range
+                    new Date(new Date(tseDate).getTime() + 86400000)
+                  )
+                );
+              }
             }
             const cids = e.array_unpack(cIds);
             const cFilter = e.op(

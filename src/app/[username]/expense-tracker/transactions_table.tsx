@@ -245,64 +245,68 @@ const TableControls = (props: {
 
   return (
     <Flex justify="between">
-      <Flex my="2" mt="0" align="center">
-        <IconButton
-          mr="2"
-          variant="surface"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            dispatch({ type: "SET_PREV_MONTH" });
-          }}
-        >
-          <ChevronLeftIcon />
-        </IconButton>
-        <DatePicker
-          selected={store.tssDate}
-          onChange={(date) => {
-            dispatch({
-              type: "SET_TSS_DATE",
-              payload: date,
-            });
-            if (!store.showOverallBalance) {
-              invalidateMany(queryClient, [["partitionBalance"]]);
-            }
-          }}
-          customInput={<CustomDatePickerButton />}
-        />
-        <TriangleRightIcon />
-        <DatePicker
-          selected={store.tseDate}
-          onChange={(date) => {
-            dispatch({
-              type: "SET_TSE_DATE",
-              payload: date,
-            });
-          }}
-          customInput={<CustomDatePickerButton />}
-        />
-        <IconButton
-          ml="2"
-          variant="surface"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            dispatch({ type: "SET_NEXT_MONTH" });
-          }}
-        >
-          <ChevronRightIcon />
-        </IconButton>
-        <Link
-          ml="2"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            dispatch({ type: "SET_THIS_MONTH" });
-          }}
-        >
-          This Month
-        </Link>
-      </Flex>
+      {store.showOverallBalance ? (
+        <span>{/* empty span */}</span>
+      ) : (
+        <Flex my="2" mt="0" align="center">
+          <IconButton
+            mr="2"
+            variant="surface"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              dispatch({ type: "SET_PREV_MONTH" });
+            }}
+          >
+            <ChevronLeftIcon />
+          </IconButton>
+          <DatePicker
+            selected={store.tssDate}
+            onChange={(date) => {
+              dispatch({
+                type: "SET_TSS_DATE",
+                payload: date,
+              });
+              if (!store.showOverallBalance) {
+                invalidateMany(queryClient, [["partitionBalance"]]);
+              }
+            }}
+            customInput={<CustomDatePickerButton />}
+          />
+          <TriangleRightIcon />
+          <DatePicker
+            selected={store.tseDate}
+            onChange={(date) => {
+              dispatch({
+                type: "SET_TSE_DATE",
+                payload: date,
+              });
+            }}
+            customInput={<CustomDatePickerButton />}
+          />
+          <IconButton
+            ml="2"
+            variant="surface"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              dispatch({ type: "SET_NEXT_MONTH" });
+            }}
+          >
+            <ChevronRightIcon />
+          </IconButton>
+          <Link
+            ml="2"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              dispatch({ type: "SET_THIS_MONTH" });
+            }}
+          >
+            This Month
+          </Link>
+        </Flex>
+      )}
       <Flex my="2" mt="0" gap="3" align="center">
         <Text weight="medium">
           <Flex gap="2" align="center">
@@ -368,6 +372,7 @@ export function TransactionsTable({
         loanIds: store.loanIds,
         ownerId: user.id,
         dbname: user.dbname,
+        showOverall: store.showOverallBalance,
         tssDate: store.tssDate?.toISOString(),
         tseDate: store.tseDate?.toISOString(),
       });
