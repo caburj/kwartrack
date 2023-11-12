@@ -324,6 +324,9 @@ function getPieChartData(groupedTransactions: GroupedTransactionsReturns) {
   const incomeVals = groupedTransactions.filter((x) => x.key.is_positive);
   const expenseVals = groupedTransactions.filter((x) => !x.key.is_positive);
 
+  incomeVals.sort((a, b) => parseFloat(b.total) - parseFloat(a.total));
+  expenseVals.sort((a, b) => parseFloat(a.total) - parseFloat(b.total));
+
   const positiveTotal = incomeVals.reduce(
     (acc, cur) => acc + parseFloat(cur.total),
     0
