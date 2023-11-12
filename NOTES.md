@@ -238,6 +238,8 @@
     categories. E.g. Travel Expense should by default be an expense from
     Travel Partition.
 
+* [X] Total balance of the selected categories/partitions.
+
 
 # CANCELLED
 

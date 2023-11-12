@@ -1,7 +1,16 @@
 "use client";
 
 import { UserPageStoreContext, UserPageStoreProvider } from "./store";
-import { Box, Flex, ScrollArea, Text } from "@radix-ui/themes";
+import {
+  Box,
+  Flex,
+  ScrollArea,
+  Table,
+  TableBody,
+  TableHeader,
+  TableRowHeaderCell,
+  Text,
+} from "@radix-ui/themes";
 import { TransactionsTable } from "./transactions_table";
 import { SideBar } from "./side_bar";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
@@ -14,9 +23,9 @@ import { ChevronUpIcon } from "@radix-ui/react-icons";
 
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { rpc } from "@/app/rpc_client";
-import { QueryResult } from "@/utils/common";
+import { QueryResult, formatValue } from "@/utils/common";
 import { GroupedTransactionsReturns } from "../../../../dbschema/queries/grouped-transactions.query";
 import { Colors } from "chart.js";
 import autocolors from "chartjs-plugin-autocolors";
@@ -201,6 +210,16 @@ function ChartBox(props: { user: { id: string; dbname: string } }) {
           );
         }
 
+        const negativeTotal = result
+          .filter((x) => !x.key.is_positive)
+          .reduce((t, gt) => t + parseFloat(gt.total), 0);
+
+        const positiveTotal = result
+          .filter((x) => x.key.is_positive)
+          .reduce((t, gt) => t + parseFloat(gt.total), 0);
+
+        const total = positiveTotal + negativeTotal;
+
         return (
           <ScrollArea>
             <Flex
@@ -213,6 +232,38 @@ function ChartBox(props: { user: { id: string; dbname: string } }) {
                 border: "1px solid var(--gray-5)",
               })}
             >
+              <Flex direction="column" p="3">
+                <Table.Root>
+                  <TableHeader>
+                    <TableRowHeaderCell>
+                      <Text weight="bold">Summary</Text>
+                    </TableRowHeaderCell>
+                    <TableRowHeaderCell align="right">
+                      <Text weight="bold">Amount</Text>
+                    </TableRowHeaderCell>
+                  </TableHeader>
+                  <TableBody>
+                    <Table.Row>
+                      <Table.Cell>Income</Table.Cell>
+                      <Table.Cell align="right">
+                        {formatValue(positiveTotal)}
+                      </Table.Cell>
+                    </Table.Row>
+                    <Table.Row>
+                      <Table.Cell>Expenses</Table.Cell>
+                      <Table.Cell align="right">
+                        {formatValue(negativeTotal)}
+                      </Table.Cell>
+                    </Table.Row>
+                    <Table.Row>
+                      <Table.Cell>Balance</Table.Cell>
+                      <Table.Cell align="right">
+                        {formatValue(total)}
+                      </Table.Cell>
+                    </Table.Row>
+                  </TableBody>
+                </Table.Root>
+              </Flex>
               {incomes.labels.length > 0 ? (
                 <Flex direction="column" p="3">
                   <Text align="center">Incomes</Text>
