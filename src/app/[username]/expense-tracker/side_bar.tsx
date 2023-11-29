@@ -591,7 +591,7 @@ const LoanItem = ({
         "accountBalance",
         { accountId: transaction.source_partition.account.id },
       ],
-      ["categoryKindBalance", transaction.category.kind],
+      ["categoryKindBalance", { kind: transaction.category.kind }],
       ["unpaidLoans", user.id, lender.id],
       ["partitionsWithLoans", user.id]
     );
@@ -881,6 +881,10 @@ function AccountLI({
                           type: "TOGGLE_ACCOUNT",
                           payload: account.partitions.map((p) => p.id),
                         });
+                        invalidateMany(queryClient, [
+                          ["categoryBalance"],
+                          ["categoryKindBalance"],
+                        ]);
                       }}
                       weight="medium"
                       color={areAllPartitionsSelected ? "cyan" : undefined}
@@ -1265,7 +1269,7 @@ function PartitionLI({
         "accountBalance",
         { accountId: transaction.source_partition.account.id },
       ],
-      ["categoryKindBalance", transaction.category.kind],
+      ["categoryKindBalance", { kind: transaction.category.kind }],
       ["partitionsWithLoans", user.id]
     );
     if (counterpart) {
@@ -1301,6 +1305,10 @@ function PartitionLI({
           onClick={(e) => {
             e.stopPropagation();
             dispatch({ type: "TOGGLE_PARTITIONS", payload: [partition.id] });
+            invalidateMany(queryClient, [
+              ["categoryBalance"],
+              ["categoryKindBalance"],
+            ]);
           }}
         >
           {partition.name}
@@ -1656,6 +1664,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
                   {
                     kind,
                     isOverall: store.showOverallBalance,
+                    partitionIds: store.partitionIds,
                     tssDate: store.tssDate,
                     tseDate: store.tseDate,
                   },
@@ -1665,6 +1674,7 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
                     kind,
                     userId: user.id,
                     dbname: user.dbname,
+                    partitionIds: store.partitionIds,
                     isOverall: store.showOverallBalance,
                     tssDate: store.tssDate?.toISOString(),
                     tseDate: store.tseDate?.toISOString(),
@@ -1885,6 +1895,7 @@ function CategoryLI({
           "categoryBalance",
           {
             categoryId: category.id,
+            partitionIds: store.partitionIds,
             isOverall: store.showOverallBalance,
             tssDate: store.tssDate,
             tseDate: store.tseDate,
@@ -1894,6 +1905,7 @@ function CategoryLI({
           rpc.post.getCategoryBalance({
             userId: user.id,
             categoryId: category.id,
+            partitionIds: store.partitionIds,
             dbname: user.dbname,
             isOverall: store.showOverallBalance,
             tssDate: store.tssDate?.toISOString(),

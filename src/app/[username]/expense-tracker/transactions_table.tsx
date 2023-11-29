@@ -268,7 +268,11 @@ const TableControls = (props: {
                 payload: date,
               });
               if (!store.showOverallBalance) {
-                invalidateMany(queryClient, [["partitionBalance"]]);
+                invalidateMany(queryClient, [
+                  ["partitionBalance"],
+                  ["categoryBalance"],
+                  ["categoryKindBalance"],
+                ]);
               }
             }}
             customInput={<CustomDatePickerButton />}
@@ -281,6 +285,13 @@ const TableControls = (props: {
                 type: "SET_TSE_DATE",
                 payload: date,
               });
+              if (!store.showOverallBalance) {
+                invalidateMany(queryClient, [
+                  ["partitionBalance"],
+                  ["categoryBalance"],
+                  ["categoryKindBalance"],
+                ]);
+              }
             }}
             customInput={<CustomDatePickerButton />}
           />
@@ -315,6 +326,11 @@ const TableControls = (props: {
               checked={store.showOverallBalance}
               onClick={() => {
                 dispatch({ type: "TOGGLE_BALANCE_TO_DISPLAY" });
+                invalidateMany(queryClient, [
+                  ["partitionBalance"],
+                  ["categoryBalance"],
+                  ["categoryKindBalance"],
+                ]);
               }}
             />
           </Flex>
@@ -813,7 +829,7 @@ const getQueryKeysToInvalidate = (
         categoryId: transaction.category.id,
       },
     ],
-    ["categoryKindBalance", transaction.category.kind],
+    ["categoryKindBalance", { kind: transaction.category.kind }],
   ];
   if (transaction.source_partition) {
     queryKeys.push(

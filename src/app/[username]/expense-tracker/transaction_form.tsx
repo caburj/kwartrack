@@ -303,7 +303,7 @@ function TransactionFormMain(props: {
             "accountBalance",
             { accountId: transaction.source_partition.account.id },
           ],
-          ["categoryKindBalance", transaction.category.kind],
+          ["categoryKindBalance", { kind: transaction.category.kind }],
           ["unpaidLoans", user.id, transaction.source_partition.id]
         );
       }

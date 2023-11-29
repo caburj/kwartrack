@@ -891,54 +891,78 @@ export const deleteCategory = withValidation(
 export const getCategoryBalance = withValidation(
   object({
     categoryId: string(),
+    partitionIds: array(string()),
     userId: string(),
     dbname: string(),
     isOverall: boolean(),
     tssDate: optional(string()),
     tseDate: optional(string()),
   }),
-  async ({ categoryId, userId, dbname, isOverall, tssDate, tseDate }) => {
+  async ({
+    categoryId,
+    partitionIds,
+    userId,
+    dbname,
+    isOverall,
+    tssDate,
+    tseDate,
+  }) => {
     if (!isOverall && !tssDate && !tseDate) {
       throw new Error("Start and/or end date must be provided.");
     }
 
-    const query = e.params({ id: e.uuid }, ({ id }) => {
-      const transactions = e.select(e.ETransaction, (transaction) => {
-        let filter = e.op(
-          transaction.is_visible,
-          "and",
-          e.op(transaction.category.id, "=", id)
-        );
-        if (!isOverall) {
-          if (tssDate) {
-            filter = e.op(
-              filter,
+    const query = e.params(
+      { id: e.uuid, pIds: e.array(e.uuid) },
+      ({ id, pIds }) => {
+        const transactions = e.select(e.ETransaction, (transaction) => {
+          const pids = e.array_unpack(pIds);
+          const pFilter = e.op(
+            e.op(transaction.source_partition.id, "in", pids),
+            "if",
+            e.op("exists", pids),
+            "else",
+            true
+          );
+          let filter = e.op(
+            e.op(
+              transaction.is_visible,
               "and",
-              e.op(transaction.date, ">=", new Date(tssDate))
-            );
+              e.op(transaction.category.id, "=", id)
+            ),
+            "and",
+            pFilter
+          );
+          if (!isOverall) {
+            if (tssDate) {
+              filter = e.op(
+                filter,
+                "and",
+                e.op(transaction.date, ">=", new Date(tssDate))
+              );
+            }
+            if (tseDate) {
+              filter = e.op(
+                filter,
+                "and",
+                e.op(
+                  transaction.date,
+                  "<",
+                  new Date(new Date(tseDate).getTime() + 86400000)
+                )
+              );
+            }
           }
-          if (tseDate) {
-            filter = e.op(
-              filter,
-              "and",
-              e.op(
-                transaction.date,
-                "<",
-                new Date(new Date(tseDate).getTime() + 86400000)
-              )
-            );
-          }
-        }
-        return { filter };
-      });
-      return e.sum(transactions.value);
-    });
+          return { filter };
+        });
+        return e.sum(transactions.value);
+      }
+    );
 
     const client = edgedb.createClient({ database: dbname }).withGlobals({
       current_user_id: userId,
     });
 
-    return await query.run(client, { id: categoryId });
+    return await query.run(client, { id: categoryId, pIds: partitionIds });
   }
 );
 
@@ -1080,50 +1104,75 @@ export const getCategoryKindBalance = withValidation(
   object({
     userId: string(),
     kind: string(),
+    partitionIds: array(string()),
     dbname: string(),
     isOverall: boolean(),
     tssDate: optional(string()),
     tseDate: optional(string()),
   }),
-  async ({ userId, kind, dbname, isOverall, tssDate, tseDate }) => {
+  async ({
+    userId,
+    kind,
+    partitionIds,
+    dbname,
+    isOverall,
+    tssDate,
+    tseDate,
+  }) => {
     if (!isOverall && !tssDate && !tseDate) {
       throw new Error("Start and/or end date must be provided.");
     }
-    const query = e.params({ kind: e.ECategoryKind }, ({ kind }) => {
-      const tx = e.select(e.ETransaction, (transaction) => {
-        let filter = e.op(
-          transaction.is_visible,
-          "and",
-          e.op(transaction.category.kind, "=", kind)
-        );
-        if (!isOverall) {
-          if (tssDate) {
-            filter = e.op(
-              filter,
+    const query = e.params(
+      { kind: e.ECategoryKind, pIds: e.array(e.uuid) },
+      ({ kind, pIds }) => {
+        const tx = e.select(e.ETransaction, (transaction) => {
+          // TODO: REF: Duplicate code around isOverall and partitions filter. Check getCategoryBalance.
+          const pids = e.array_unpack(pIds);
+          const pFilter = e.op(
+            e.op(transaction.source_partition.id, "in", pids),
+            "if",
+            e.op("exists", pids),
+            "else",
+            true
+          );
+          let filter = e.op(
+            e.op(
+              transaction.is_visible,
               "and",
-              e.op(transaction.date, ">=", new Date(tssDate))
-            );
+              e.op(transaction.category.kind, "=", kind)
+            ),
+            "and",
+            pFilter
+          );
+          if (!isOverall) {
+            if (tssDate) {
+              filter = e.op(
+                filter,
+                "and",
+                e.op(transaction.date, ">=", new Date(tssDate))
+              );
+            }
+            if (tseDate) {
+              filter = e.op(
+                filter,
+                "and",
+                e.op(
+                  transaction.date,
+                  "<",
+                  new Date(new Date(tseDate).getTime() + 86400000)
+                )
+              );
+            }
           }
-          if (tseDate) {
-            filter = e.op(
-              filter,
-              "and",
-              e.op(
-                transaction.date,
-                "<",
-                new Date(new Date(tseDate).getTime() + 86400000)
-              )
-            );
-          }
-        }
-        return { filter };
-      });
-      return e.sum(tx.value);
-    });
+          return { filter };
+        });
+        return e.sum(tx.value);
+      }
+    );
     const client = edgedb.createClient({ database: dbname }).withGlobals({
       current_user_id: userId,
     });
-    return await query.run(client, { kind: kind as any });
+    return await query.run(client, { kind: kind as any, pIds: partitionIds });
   }
 );
 
