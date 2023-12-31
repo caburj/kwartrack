@@ -31,7 +31,10 @@ type UserPageAction =
   | { type: "TOGGLE_LOAN_IDS"; payload: string[] }
   | { type: "REMOVE_LOAN_IDS"; payload: string[] }
   | { type: "TOGGLE_BALANCE_TO_DISPLAY" }
-  | { type: "SET_CURRENT_PAGE"; payload: number };
+  | { type: "SET_CURRENT_PAGE"; payload: number }
+  | { type: "CLEAR_ACCOUNT_SELECTION" }
+  | { type: "CLEAR_CATEGORY_SELECTION" }
+  | { type: "CLEAR_LOAN_SELECTION" };
 
 type UserPageDispatch = (action: UserPageAction) => void;
 
@@ -209,6 +212,15 @@ const userPageStoreReducer = (
     }
     case "SET_CURRENT_PAGE": {
       return { ...state, currentPage: action.payload };
+    }
+    case "CLEAR_ACCOUNT_SELECTION": {
+      return { ...state, partitionIds: [], currentPage: 1 };
+    }
+    case "CLEAR_CATEGORY_SELECTION": {
+      return { ...state, categoryIds: [], currentPage: 1 };
+    }
+    case "CLEAR_LOAN_SELECTION": {
+      return { ...state, loanIds: [], currentPage: 1 };
     }
   }
 };
