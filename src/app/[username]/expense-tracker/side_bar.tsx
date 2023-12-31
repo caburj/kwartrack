@@ -26,6 +26,7 @@ import {
   optional,
   string,
   transform,
+  parse,
 } from "valibot";
 import { UserPageStoreContext } from "./store";
 import {
@@ -237,7 +238,7 @@ export function SideBar({
                             e.target as HTMLFormElement
                           );
 
-                          const parsedData = newPartitionSchema.parse({
+                          const parsedData = parse(newPartitionSchema, {
                             ...Object.fromEntries(formdata.entries()),
                             isPrivate: formdata.get("isPrivate") === "on",
                             isSharedAccount:
@@ -390,7 +391,7 @@ export function SideBar({
                           const formdata = new FormData(
                             e.target as HTMLFormElement
                           );
-                          const parsedData = newCategorySchema.parse({
+                          const parsedData = parse(newCategorySchema, {
                             ...Object.fromEntries(formdata.entries()),
                             isPrivate: formdata.get("isPrivate") === "on",
                             defaultPartitionId: selectedDefaultPartition?.id,
@@ -597,7 +598,7 @@ const LoanItem = ({
     const toParse = {
       ...Object.fromEntries(formdata.entries()),
     };
-    const parsedData = schema.parse(toParse);
+    const parsedData = parse(schema, toParse);
     const result = await rpc.post.makeAPayment({
       ...parsedData,
       userId: user.id,
@@ -1034,7 +1035,7 @@ const EditAccountDialog = forwardRef(function EditAccountDialog(
               const formdata = new FormData(form as HTMLFormElement);
               const schema = object({ name: string([minLength(1)]) });
               const fdata = Object.fromEntries(formdata.entries());
-              const parsedData = schema.parse(fdata);
+              const parsedData = parse(schema, fdata);
               const result = await update.mutateAsync(parsedData);
               if (!result) {
                 throw new Error("Something went wrong");
@@ -1273,7 +1274,7 @@ function PartitionLI({
       destinationPartitionId: selectedDestinationId,
       categoryId: loanCategoryId,
     };
-    const parsedData = schema.parse(toParse);
+    const parsedData = parse(schema, toParse);
     if (isNaN(parsedData.toPay)) {
       parsedData.toPay = parsedData.amount;
     }
@@ -1572,7 +1573,7 @@ const EditPartitionDialog = forwardRef(function EditPartitionDialog(
                 isPrivate: boolean(),
               });
               const fdata = Object.fromEntries(formdata.entries());
-              const parsedData = schema.parse({
+              const parsedData = parse(schema, {
                 name: fdata.name,
                 isPrivate: fdata.isPrivate === "on",
               });
@@ -2027,7 +2028,7 @@ const EditCategoryDialog = forwardRef(function EditCategoryDialog(
                 defaultCategoryId: optional(string([minLength(1)])),
               });
               const fdata = Object.fromEntries(formdata.entries());
-              const parsedData = schema.parse({
+              const parsedData = parse(schema, {
                 name: fdata.name,
                 isPrivate: fdata.isPrivate === "on",
                 defaultCategoryId: selectedDefaultPartition?.id,

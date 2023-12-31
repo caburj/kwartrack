@@ -29,7 +29,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { number, object, optional, string } from "valibot";
+import { number, object, optional, string, parse } from "valibot";
 import { Flex, Table, IconButton } from "@radix-ui/themes";
 import { Combobox, ComboboxTrigger } from "./combobox";
 import { ChevronRightIcon, PaperPlaneIcon } from "@radix-ui/react-icons";
@@ -269,7 +269,7 @@ function TransactionFormMain(props: {
       selectedDate.setUTCMilliseconds(now.getUTCMilliseconds());
     }
 
-    const parsedData = dataSchema.parse({
+    const parsedData = parse(dataSchema, {
       description: inputDescription,
       categoryId: selectedCategoryId,
       sourcePartitionId: selectedSourceId,

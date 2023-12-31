@@ -6,7 +6,7 @@ import {
 } from "../src/procedures/common";
 import { createNewDb } from "./common";
 import arg from "arg";
-import { object, string } from "valibot";
+import { object, string, parse } from "valibot";
 
 async function main() {
   const dbname = await createNewDb();
@@ -38,7 +38,7 @@ async function main() {
     name: string(),
   });
 
-  const { email, username, name } = argsSchema.parse(cleanArgs);
+  const { email, username, name } = parse(argsSchema, cleanArgs);
 
   await masterdbClient.transaction(async (tx) => {
     const { id: dbId } = await e

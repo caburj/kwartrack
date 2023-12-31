@@ -6,7 +6,7 @@ import { Centered, TwoColumnInput } from "@/utils/common";
 import { currentUser } from "@clerk/nextjs";
 import { Card, Flex, Text, TextFieldInput } from "@radix-ui/themes";
 import { css } from "../../../../styled-system/css";
-import { minLength, object, string } from "valibot";
+import { minLength, object, string, parse } from "valibot";
 import { notFound, redirect } from "next/navigation";
 import { SubmitButton } from "../submit_button";
 
@@ -19,7 +19,7 @@ const acceptInvitationAction = async (data: FormData) => {
     fullName: string([minLength(3)]),
     invitationId: string([minLength(3)]),
   });
-  const parsedData = schema.parse(formData);
+  const parsedData = parse(schema, formData);
   const result = await acceptInvitation({
     code: parsedData.code,
     username: parsedData.username,

@@ -9,6 +9,7 @@ import {
   minValue,
   boolean,
   minLength,
+  parse,
 } from "valibot";
 import { Transaction } from "edgedb/dist/transaction";
 import {
@@ -1201,7 +1202,7 @@ export const createCategory = withValidation(
 export const createPartition = async (
   args: Parameters<typeof _createPartition>[0] & { dbname: string }
 ) => {
-  const dbname = string().parse(args.dbname);
+  const dbname = parse(string(), args.dbname);
   const client = edgedb.createClient({ database: dbname }).withGlobals({
     current_user_id: args.userId,
   });

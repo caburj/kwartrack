@@ -3,7 +3,7 @@ import e from "../dbschema/edgeql-js";
 import { _createInvitation } from "../src/procedures/common";
 import { createNewDb, edgedbComm, execAsync, logResult } from "./common";
 import arg from "arg";
-import { object, string } from "valibot";
+import { object, string, parse } from "valibot";
 
 async function main() {
   const dbname = await createNewDb();
@@ -35,7 +35,7 @@ async function main() {
       inviter: string(),
     });
 
-    const { code, email, inviter } = argsSchema.parse(cleanArgs);
+    const { code, email, inviter } = parse(argsSchema, cleanArgs);
 
     const invitation = await _createInvitation(
       {
@@ -55,11 +55,13 @@ async function main() {
     if (!result) {
       console.error("Error: No invitation created.");
     } else if ("error" in result) {
-      console.error('Error:', result.error);
+      console.error("Error:", result.error);
     }
     // Ugly, but this is to ensure that the nothing is accessing the db before it's dropped.
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    const dropdbResult = await execAsync(`echo Yes | ${edgedbComm} database drop ${dbname}`);
+    const dropdbResult = await execAsync(
+      `echo Yes | ${edgedbComm} database drop ${dbname}`
+    );
     logResult(dropdbResult);
     process.exit(1);
   } else {

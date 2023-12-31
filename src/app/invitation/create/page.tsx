@@ -1,7 +1,7 @@
 import { Centered, TwoColumnInput } from "@/utils/common";
 import { Card, Flex, Text, TextFieldInput } from "@radix-ui/themes";
 import { css } from "../../../../styled-system/css";
-import { minLength, object, string } from "valibot";
+import { minLength, object, string, parse } from "valibot";
 import { currentUser } from "@clerk/nextjs/server";
 import { createInvitation } from "@/procedures/server_functions";
 import { redirect } from "next/navigation";
@@ -26,7 +26,7 @@ const createInvitationAction = async (data: FormData) => {
     email: string([minLength(3)]),
     code: string([minLength(3)]),
   });
-  const parsedData = schema.parse({
+  const parsedData = parse(schema, {
     ...formData,
   });
 

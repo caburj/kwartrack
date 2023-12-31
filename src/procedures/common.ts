@@ -6,6 +6,7 @@ import {
   string,
   optional,
   boolean,
+  parse,
 } from "valibot";
 import { Transaction } from "edgedb/dist/transaction";
 
@@ -15,7 +16,7 @@ export function withValidation<
   O extends any[]
 >(paramSchema: S, fn: (param: Input<S>, ...otherParams: O) => R) {
   return (param: Input<S>, ...otherParams: O) => {
-    const result = paramSchema.parse(param);
+    const result = parse(paramSchema, param);
     return fn(result, ...otherParams);
   };
 }
