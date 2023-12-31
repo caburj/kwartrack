@@ -56,6 +56,7 @@ import {
   Switch,
   ContextMenu,
   Badge,
+  Tooltip,
 } from "@radix-ui/themes";
 import { ChevronRightIcon, Cross2Icon, PlusIcon } from "@radix-ui/react-icons";
 import * as Accordion from "@radix-ui/react-accordion";
@@ -99,6 +100,8 @@ const newCategorySchema = object({
 export const SideBarFoldable = (props: {
   value: string;
   children: ReactNode;
+  clearSelections: () => void;
+  showClearSelections: boolean;
   headerButton?: ReactNode;
 }) => {
   const headerTextRef = useRef<HTMLDivElement>(null);
@@ -126,15 +129,30 @@ export const SideBarFoldable = (props: {
             headerTextRef.current?.click();
           }}
         >
-          <Accordion.Trigger>
-            <Text
-              size="3"
-              weight="bold"
-              className={css({ cursor: "pointer" })}
-              ref={headerTextRef}
-            >
-              {props.value}
-            </Text>
+          <Accordion.Trigger asChild>
+            <Flex align="center" justify="between" gap="4">
+              <Text
+                size="3"
+                weight="bold"
+                className={css({ cursor: "pointer" })}
+                ref={headerTextRef}
+              >
+                {props.value}
+              </Text>
+              {props.showClearSelections && (
+                <Tooltip content="Clear selections">
+                  <Button
+                    variant="ghost"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      props.clearSelections();
+                    }}
+                  >
+                    <Cross2Icon width="15" height="15" /> clear
+                  </Button>
+                </Tooltip>
+              )}
+            </Flex>
           </Accordion.Trigger>
           <Flex onClick={(e) => e.stopPropagation()}>{props.headerButton}</Flex>
         </Flex>
@@ -175,6 +193,8 @@ export function SideBar({
     categoryIsPrivate,
   });
 
+  const [store, dispatch] = useContext(UserPageStoreContext);
+
   return (
     <Box
       position="fixed"
@@ -192,6 +212,10 @@ export function SideBar({
           <Accordion.Root type="multiple" defaultValue={["Accounts"]}>
             <SideBarFoldable
               value="Accounts"
+              showClearSelections={store.partitionIds.length > 0}
+              clearSelections={() => {
+                dispatch({ type: "CLEAR_ACCOUNT_SELECTION" });
+              }}
               headerButton={
                 <Dialog.Root>
                   <Dialog.Trigger>
@@ -343,6 +367,10 @@ export function SideBar({
             </SideBarFoldable>
             <SideBarFoldable
               value="Categories"
+              showClearSelections={store.categoryIds.length > 0}
+              clearSelections={() => {
+                dispatch({ type: "CLEAR_CATEGORY_SELECTION" });
+              }}
               headerButton={
                 <Dialog.Root>
                   <Dialog.Trigger>
@@ -468,8 +496,16 @@ const ActiveLoans = ({ user }: { user: { id: string; dbname: string } }) => {
     });
   });
 
+  const [store, dispatch] = useContext(UserPageStoreContext);
+
   return (
-    <SideBarFoldable value="Active Loans">
+    <SideBarFoldable
+      value="Active Loans"
+      showClearSelections={store.loanIds.length > 0}
+      clearSelections={() => {
+        dispatch({ type: "CLEAR_LOAN_SELECTION" });
+      }}
+    >
       <Flex direction="column" my="2">
         <QueryResult
           query={partitionsWithLoans}

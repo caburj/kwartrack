@@ -44,3 +44,5 @@ dbschema/edgeql-js
 
 dist
 compiled
+
+.vscode/settings.json
