@@ -2,7 +2,7 @@
 
 import { Button, Text } from "@radix-ui/themes";
 import { ReactNode } from "react";
-import { experimental_useFormStatus as useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
 
 export const SubmitButton = (props: { children: ReactNode }) => {
   const { pending } = useFormStatus();
