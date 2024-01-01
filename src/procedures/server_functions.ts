@@ -1592,12 +1592,31 @@ export const updateTransactionDate = withValidation(
     const client = edgedb.createClient({ database: dbname }).withGlobals({
       current_user_id: userId,
     });
-    return e
-      .update(e.ETransaction, (tx) => ({
-        filter_single: e.op(tx.id, "=", e.uuid(transactionId)),
-        set: { date: e.datetime(new Date(date)) },
-      }))
-      .run(client);
+    return client.transaction(async (tx) => {
+      const transaction = await e
+        .select(e.ETransaction, (transaction) => ({
+          filter_single: e.op(transaction.id, "=", e.uuid(transactionId)),
+          id: true,
+          counterpart: { id: true },
+        }))
+        .run(tx);
+      if (transaction) {
+        const ids = [transactionId];
+        if (transaction.counterpart) {
+          ids.push(transaction.counterpart.id);
+        }
+        const updateQuery = e.params(
+          { trIds: e.array(e.uuid) },
+          ({ trIds }) => {
+            return e.update(e.ETransaction, (transaction) => ({
+              filter: e.op(transaction.id, "in", e.array_unpack(trIds)),
+              set: { date: new Date(date) },
+            }));
+          }
+        );
+        await updateQuery.run(tx, { trIds: ids });
+      }
+    });
   }
 );
 

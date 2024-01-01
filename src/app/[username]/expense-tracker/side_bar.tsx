@@ -2327,7 +2327,7 @@ const EditCategoryDialog = forwardRef(function EditCategoryDialog(
               <Switch
                 name="isPrivate"
                 checked={categoryIsPrivate}
-                onChange={() => {
+                onClick={() => {
                   setCategoryIsPrivate(!categoryIsPrivate);
                 }}
               />
