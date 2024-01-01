@@ -2163,3 +2163,150 @@ export const checkPendingInvitation = withValidation(
     return Boolean(result);
   }
 );
+
+export const getBudgetProfiles = withValidation(
+  object({ userId: string(), dbname: string() }),
+  async ({ userId, dbname }) => {
+    const client = edgedb.createClient({ database: dbname }).withGlobals({
+      current_user_id: userId,
+    });
+    return e
+      .select(e.EBudgetProfile, (bp) => ({
+        filter: bp.is_owned,
+        id: true,
+        name: true,
+        partitions: {
+          id: true,
+        },
+      }))
+      .run(client);
+  }
+);
+
+export const createBudgetProfile = withValidation(
+  object({
+    userId: string(),
+    dbname: string(),
+    name: string(),
+    partitionIds: array(string()),
+    isForAll: boolean(),
+  }),
+  async ({ userId, dbname, name, partitionIds, isForAll }) => {
+    const query = e.params(
+      {
+        name: e.str,
+        partitionIds: e.array(e.uuid),
+        userId: e.uuid,
+      },
+      ({ userId, name, partitionIds }) =>
+        e.insert(e.EBudgetProfile, {
+          name,
+          owners: isForAll
+            ? undefined
+            : e.select(e.EUser, (user) => ({
+                filter_single: e.op(user.id, "=", userId),
+              })),
+          partitions: e.select(e.EPartition, (partition) => ({
+            filter: e.op(partition.id, "in", e.array_unpack(partitionIds)),
+          })),
+        })
+    );
+    return query.run(
+      edgedb
+        .createClient({ database: dbname })
+        .withGlobals({ current_user_id: userId }),
+      {
+        userId,
+        name,
+        partitionIds,
+      }
+    );
+  }
+);
+
+export const getBudget = withValidation(
+  object({
+    userId: string(),
+    dbname: string(),
+    profileId: string(),
+    categoryId: string(),
+  }),
+  async ({ userId, dbname, profileId, categoryId }) => {
+    const query = e.params(
+      {
+        profileId: e.uuid,
+        categoryId: e.uuid,
+      },
+      ({ profileId, categoryId }) =>
+        e.select(e.EBudget, (b) => ({
+          filter_single: e.op(
+            e.op(b.profile.id, "=", profileId),
+            "and",
+            e.op(b.category.id, "=", categoryId)
+          ),
+          id: true,
+          amount: true,
+        }))
+    );
+    return query.run(
+      edgedb
+        .createClient({ database: dbname })
+        .withGlobals({ current_user_id: userId }),
+      {
+        profileId,
+        categoryId,
+      }
+    );
+  }
+);
+
+export const updateBudget = withValidation(
+  object({
+    userId: string(),
+    dbname: string(),
+    budgetId: string(),
+    categoryId: string(),
+    profileId: string(),
+    amount: number([minValue(0)]),
+  }),
+  async ({ userId, dbname, budgetId, amount, categoryId, profileId }) => {
+    const client = edgedb
+      .createClient({ database: dbname })
+      .withGlobals({ current_user_id: userId });
+
+    if (budgetId === "") {
+      const query = e.params(
+        {
+          amount: e.decimal,
+        },
+        ({ amount }) =>
+          e.insert(e.EBudget, {
+            amount,
+            category: e.select(e.ECategory, (category) => ({
+              filter_single: e.op(category.id, "=", e.uuid(categoryId)),
+            })),
+            profile: e.select(e.EBudgetProfile, (profile) => ({
+              filter_single: e.op(profile.id, "=", e.uuid(profileId)),
+            })),
+          })
+      );
+      return query.run(client, { amount: amount.toString() });
+    } else {
+      const query = e.params(
+        {
+          id: e.uuid,
+          amount: e.decimal,
+        },
+        ({ id, amount }) =>
+          e.update(e.EBudget, (b) => ({
+            filter_single: e.op(b.id, "=", id),
+            set: { amount },
+          }))
+      );
+      return query.run(client, {
+        id: budgetId,
+        amount: amount.toString(),
+      });
+    }
+  }
+);

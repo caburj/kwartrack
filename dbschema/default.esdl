@@ -117,6 +117,28 @@ module default {
       on source delete delete target;
     }
   }
+
+  type EBudget {
+    required profile: EBudgetProfile;
+    required category: ECategory;
+    required amount: decimal;
+
+    constraint exclusive on ((.category, .profile));
+  }
+
+  type EBudgetProfile {
+    required name: str {
+      constraint exclusive;
+    }
+    multi owners: EUser {
+      annotation description := "Users that can see this budget profile. If empty, all users can see it.";
+    }
+    multi partitions: EPartition {
+      annotation description := "Partitions covered by this budget profile.";
+    }
+
+    property is_owned := any(.owners = global current_user) or not exists .owners;
+  }
 }
 
 module masterdb {

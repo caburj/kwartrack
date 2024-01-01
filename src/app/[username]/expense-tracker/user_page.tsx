@@ -35,7 +35,7 @@ import { useClickAway } from "@uidotdev/usehooks";
 ChartJS.register(ArcElement, Tooltip, Legend, Colors, autocolors);
 
 export function UserPage(props: { id: string; dbname: string }) {
-  const [width, setWidth] = useState(375);
+  const [width, setWidth] = useState(400);
   const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {

@@ -1,3 +1,8 @@
+import {
+  getFirstDayOfMonth,
+  getLastDayOfMonth,
+  plusMonths,
+} from "@/utils/common";
 import { useReducer, createContext, ReactNode } from "react";
 
 type UserPageStore = {
@@ -12,6 +17,7 @@ type UserPageStore = {
   selectedSourceId: string;
   selectedDestinationId: string;
   showOverallBalance: boolean;
+  budgetProfileId?: string;
 };
 
 type UserPageAction =
@@ -34,23 +40,11 @@ type UserPageAction =
   | { type: "SET_CURRENT_PAGE"; payload: number }
   | { type: "CLEAR_ACCOUNT_SELECTION" }
   | { type: "CLEAR_CATEGORY_SELECTION" }
-  | { type: "CLEAR_LOAN_SELECTION" };
+  | { type: "CLEAR_LOAN_SELECTION" }
+  | { type: "SET_ACTIVE_BUDGET_PROFILE_ID"; payload: string }
+  | { type: "TOGGLE_BUDGET_PROFILE"; payload: [string, string[]] };
 
 type UserPageDispatch = (action: UserPageAction) => void;
-
-const getFirstDayOfMonth = (date: Date) => {
-  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), 1));
-};
-
-const getLastDayOfMonth = (date: Date) => {
-  return new Date(Date.UTC(date.getFullYear(), date.getMonth() + 1, 0));
-};
-
-const plusMonths = (date: Date, n: number) => {
-  const d = new Date(date);
-  d.setMonth(d.getMonth() + n);
-  return new Date(d);
-};
 
 const initStore: UserPageStore = {
   partitionIds: [],
@@ -208,19 +202,56 @@ const userPageStoreReducer = (
       };
     }
     case "TOGGLE_BALANCE_TO_DISPLAY": {
-      return { ...state, showOverallBalance: !state.showOverallBalance };
+      const newShowOverallBalance = !state.showOverallBalance;
+      if (newShowOverallBalance) {
+        return {
+          ...state,
+          showOverallBalance: newShowOverallBalance,
+          partitionIds: [],
+          budgetProfileId: undefined,
+          currentPage: 1,
+        };
+      } else {
+        return { ...state, showOverallBalance: newShowOverallBalance };
+      }
     }
     case "SET_CURRENT_PAGE": {
       return { ...state, currentPage: action.payload };
     }
     case "CLEAR_ACCOUNT_SELECTION": {
-      return { ...state, partitionIds: [], currentPage: 1 };
+      return {
+        ...state,
+        partitionIds: [],
+        budgetProfileId: undefined,
+        currentPage: 1,
+      };
     }
     case "CLEAR_CATEGORY_SELECTION": {
       return { ...state, categoryIds: [], currentPage: 1 };
     }
     case "CLEAR_LOAN_SELECTION": {
       return { ...state, loanIds: [], currentPage: 1 };
+    }
+    case "SET_ACTIVE_BUDGET_PROFILE_ID": {
+      return { ...state, budgetProfileId: action.payload };
+    }
+    case "TOGGLE_BUDGET_PROFILE": {
+      const [budgetProfileId, partitionIds] = action.payload;
+      if (state.budgetProfileId === budgetProfileId) {
+        return {
+          ...state,
+          budgetProfileId: undefined,
+          partitionIds: [],
+          currentPage: 1,
+        };
+      } else {
+        return {
+          ...state,
+          budgetProfileId,
+          partitionIds,
+          currentPage: 1,
+        };
+      }
     }
   }
 };

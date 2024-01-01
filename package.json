@@ -10,7 +10,8 @@
     "lint": "next lint",
     "migrate-all": "tsc -p tsconfig.scripts.json && node compiled/scripts/migrate-all.js",
     "invite-user": "tsc -p tsconfig.scripts.json && node compiled/scripts/invite-user.js",
-    "create-first-user": "tsc -p tsconfig.scripts.json && node compiled/scripts/create-first-user.js"
+    "create-first-user": "tsc -p tsconfig.scripts.json && node compiled/scripts/create-first-user.js",
+    "migrate": "edgedb migration create && pnpm run migrate-all && npx @edgedb/generate edgeql-js && npx @edgedb/generate queries"
   },
   "dependencies": {
     "@clerk/nextjs": "^4.29.1",

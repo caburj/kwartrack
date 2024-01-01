@@ -1,6 +1,11 @@
 import { rpc } from "@/app/rpc_client";
 import { Badge, Flex, Grid, textPropDefs } from "@radix-ui/themes";
-import { UseQueryResult, QueryClient, QueryKey, useQuery } from "@tanstack/react-query";
+import {
+  UseQueryResult,
+  QueryClient,
+  QueryKey,
+  useQuery,
+} from "@tanstack/react-query";
 import { ForwardedRef, ReactHTML, forwardRef, useMemo } from "react";
 
 export type Unpacked<T> = T extends (infer U)[] ? U : T;
@@ -165,7 +170,7 @@ export function useGroupedPartitions(
   return groupedPartitions;
 }
 
-export function usePartitions(user: { id: string; dbname: string }){
+export function usePartitions(user: { id: string; dbname: string }) {
   const partitions = useQuery(["partitions", user.id], () => {
     return rpc.post.getPartitionOptions({
       userId: user.id,
@@ -256,3 +261,17 @@ export const DateInput = forwardRef(function DateInput(
     </Badge>
   );
 });
+
+export const getFirstDayOfMonth = (date: Date) => {
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), 1));
+};
+
+export const getLastDayOfMonth = (date: Date) => {
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth() + 1, 0));
+};
+
+export const plusMonths = (date: Date, n: number) => {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + n);
+  return new Date(d);
+};

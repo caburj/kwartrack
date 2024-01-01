@@ -59,7 +59,12 @@ import {
   Badge,
   Tooltip,
 } from "@radix-ui/themes";
-import { ChevronRightIcon, Cross2Icon, PlusIcon } from "@radix-ui/react-icons";
+import {
+  ChevronRightIcon,
+  Cross2Icon,
+  PlusIcon,
+  InfoCircledIcon,
+} from "@radix-ui/react-icons";
 import * as Accordion from "@radix-ui/react-accordion";
 import { Combobox, ComboboxTrigger } from "./combobox";
 import { TwoColumnInput } from "@/utils/common";
@@ -101,8 +106,8 @@ const newCategorySchema = object({
 export const SideBarFoldable = (props: {
   value: string;
   children: ReactNode;
-  clearSelections: () => void;
-  showClearSelections: boolean;
+  clearSelections?: () => void;
+  showClearSelections?: boolean;
   headerButton?: ReactNode;
 }) => {
   const headerTextRef = useRef<HTMLDivElement>(null);
@@ -146,7 +151,7 @@ export const SideBarFoldable = (props: {
                     variant="ghost"
                     onClick={(e) => {
                       e.stopPropagation();
-                      props.clearSelections();
+                      props.clearSelections?.();
                     }}
                   >
                     <Cross2Icon width="15" height="15" /> clear
@@ -478,6 +483,7 @@ export function SideBar({
             >
               <Categories user={user} />
             </SideBarFoldable>
+            {!store.showOverallBalance && <BudgetProfiles user={user} />}
             <ActiveLoans user={user} />
           </Accordion.Root>
         </ScrollArea>
@@ -544,6 +550,151 @@ const ActiveLoans = ({ user }: { user: { id: string; dbname: string } }) => {
             );
           }}
         </QueryResult>
+      </Flex>
+    </SideBarFoldable>
+  );
+};
+
+/**
+ * Shows the list of loans that are not yet fully-paid.
+ */
+const BudgetProfiles = ({ user }: { user: { id: string; dbname: string } }) => {
+  const [store, dispatch] = useContext(UserPageStoreContext);
+  const queryClient = useQueryClient();
+  const budgetProfileFormRef = useRef<HTMLFormElement>(null);
+
+  const userPartitions = usePartitions(user);
+
+  const budgetProfiles = useQuery(["budgetProfiles", user.id], () => {
+    return rpc.post.getBudgetProfiles({
+      userId: user.id,
+      dbname: user.dbname,
+    });
+  });
+
+  const selectedPartitions = useMemo(() => {
+    return userPartitions.filter((p) => store.partitionIds.includes(p.id));
+  }, [userPartitions, store.partitionIds]);
+
+  return (
+    <SideBarFoldable
+      value="Budget Profiles"
+      headerButton={
+        !store.budgetProfileId && (
+          <Dialog.Root>
+            <Dialog.Trigger>
+              <IconButton radius="full" variant="ghost">
+                <PlusIcon width="18" height="18" />
+              </IconButton>
+            </Dialog.Trigger>
+            <Dialog.Content style={{ maxWidth: 500 }}>
+              <Dialog.Title>New Budget Profile</Dialog.Title>
+              <Separator size="4" mb="4" />
+              <Flex direction="column" gap="3" asChild>
+                <form
+                  id="budget-profile-form"
+                  ref={budgetProfileFormRef}
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+
+                    const formdata = new FormData(e.target as HTMLFormElement);
+
+                    const parsedData = parse(
+                      object({ name: string(), isForAll: boolean() }),
+                      {
+                        ...Object.fromEntries(formdata.entries()),
+                        isForAll: formdata.get("isForAll") === "on",
+                      }
+                    );
+
+                    const { name, isForAll } = parsedData;
+
+                    await rpc.post.createBudgetProfile({
+                      userId: user.id,
+                      dbname: user.dbname,
+                      isForAll,
+                      name,
+                      partitionIds: selectedPartitions.map((p) => p.id),
+                    });
+                    invalidateMany(queryClient, [["budgetProfiles", user.id]]);
+                  }}
+                >
+                  <TwoColumnInput>
+                    <Text as="div" size="2" mb="1" weight="bold">
+                      Name
+                    </Text>
+                    <TextField.Input
+                      name="name"
+                      placeholder="Enter partition name"
+                    />
+                  </TwoColumnInput>
+
+                  <TwoColumnInput>
+                    <Text as="div" size="2" mb="1" weight="bold">
+                      Is for all?
+                    </Text>
+                    <Switch name="isForAll" defaultChecked={true} />
+                  </TwoColumnInput>
+
+                  <TwoColumnInput>
+                    <Flex align="center" gap="1">
+                      <Text size="2" mb="1" weight="bold">
+                        Partitions
+                      </Text>
+                      <Tooltip content="Corresponds to the selected partitions.">
+                        <InfoCircledIcon />
+                      </Tooltip>
+                    </Flex>
+                    <Flex
+                      gap="2"
+                      className={css({
+                        flexWrap: "wrap",
+                      })}
+                    >
+                      {selectedPartitions.map((p) => (
+                        <Badge
+                          key={p.id}
+                        >{`${p.account.label} - ${p.name}`}</Badge>
+                      ))}
+                    </Flex>
+                  </TwoColumnInput>
+                </form>
+              </Flex>
+              <Separator size="4" mt="4" />
+              <Flex gap="3" mt="4" justify="start" direction="row-reverse">
+                <Dialog.Close type="submit" form="budget-profile-form">
+                  <Button>Save</Button>
+                </Dialog.Close>
+                <Dialog.Close>
+                  <Button variant="soft" color="gray">
+                    Cancel
+                  </Button>
+                </Dialog.Close>
+              </Flex>
+            </Dialog.Content>
+          </Dialog.Root>
+        )
+      }
+    >
+      <Flex direction="column" my="2" mx="4">
+        <Flex gap="2" className={css({ flexWrap: "wrap" })}>
+          {budgetProfiles.data?.map((profile) => (
+            <Badge
+              key={profile.id}
+              onClick={() => {
+                dispatch({
+                  type: "TOGGLE_BUDGET_PROFILE",
+                  payload: [profile.id, profile.partitions.map((p) => p.id)],
+                });
+                invalidateMany(queryClient, [["budgetAmount"]]);
+              }}
+              variant={store.budgetProfileId === profile.id ? "solid" : "soft"}
+              style={{ cursor: "pointer" }}
+            >
+              {profile.name}
+            </Badge>
+          ))}
+        </Flex>
       </Flex>
     </SideBarFoldable>
   );
@@ -1914,19 +2065,28 @@ function CategoryLI({
     : "soft";
   return (
     <Flex justify="between" m="2">
-      <WithRightClick rightClickItems={rightClickItems}>
-        <Badge
-          color={color}
-          variant={variant}
-          style={{ cursor: "pointer" }}
-          onClick={(e) => {
-            e.stopPropagation();
-            dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
-          }}
-        >
-          {category.name}
-        </Badge>
-      </WithRightClick>
+      <Flex gap="2">
+        <WithRightClick rightClickItems={rightClickItems}>
+          <Badge
+            color={color}
+            variant={variant}
+            style={{ cursor: "pointer" }}
+            onClick={(e) => {
+              e.stopPropagation();
+              dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
+            }}
+          >
+            {category.name}
+          </Badge>
+        </WithRightClick>
+        {store.budgetProfileId && (
+          <Budget
+            category={category}
+            user={user}
+            budgetProfileId={store.budgetProfileId}
+          />
+        )}
+      </Flex>
       <GenericLoadingValue
         queryKey={[
           "categoryBalance",
@@ -1958,6 +2118,117 @@ function CategoryLI({
         ref={editCategoryTriggerRef}
       />
     </Flex>
+  );
+}
+
+function Budget({
+  category,
+  budgetProfileId,
+  user,
+}: {
+  category: Category;
+  budgetProfileId: string;
+  user: { id: string; dbname: string };
+}) {
+  const query = useQuery(
+    ["budgetAmount", [category.id, budgetProfileId]],
+    async () => {
+      return rpc.post.getBudget({
+        userId: user.id,
+        dbname: user.dbname,
+        categoryId: category.id,
+        profileId: budgetProfileId,
+      });
+    }
+  );
+  return (
+    <QueryResult
+      query={query}
+      onLoading={<Skeleton style={{ minWidth: "50px" }} />}
+      onUndefined={
+        <BudgetTextAmount
+          budgetId={""}
+          user={user}
+          initAmount={"0"}
+          categoryId={category.id}
+          profileId={budgetProfileId}
+        />
+      }
+    >
+      {(budget) => (
+        <BudgetTextAmount
+          budgetId={budget.id}
+          user={user}
+          initAmount={budget.amount.toString()}
+          categoryId={category.id}
+          profileId={budgetProfileId}
+        />
+      )}
+    </QueryResult>
+  );
+}
+
+function BudgetTextAmount({
+  budgetId,
+  categoryId,
+  profileId,
+  user,
+  initAmount,
+}: {
+  initAmount: string;
+  categoryId: string;
+  profileId: string;
+  budgetId: string;
+  user: { id: string; dbname: string };
+}) {
+  const queryClient = useQueryClient();
+  const [amount, setAmount] = useState(initAmount);
+
+  const updateBudgetAmount = useMutation(
+    async () => {
+      return rpc.post.updateBudget({
+        dbname: user.dbname,
+        userId: user.id,
+        budgetId: budgetId,
+        categoryId: categoryId,
+        profileId: profileId,
+        amount: parseFloat(amount),
+      });
+    },
+    {
+      onSuccess: () => {
+        invalidateMany(queryClient, [
+          ["budgetAmount", [categoryId, profileId]],
+        ]);
+      },
+    }
+  );
+
+  return (
+    <TextField.Root>
+      <TextField.Input
+        name="budgetAmount"
+        type="numeric"
+        size="1"
+        style={{
+          maxWidth: "75px",
+          textAlign: "right",
+          padding: "0 4px",
+        }}
+        value={amount}
+        onInput={(event) => {
+          setAmount(event.currentTarget.value);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            updateBudgetAmount.mutate();
+          }
+        }}
+        onBlur={() => {
+          updateBudgetAmount.mutate();
+        }}
+      />
+    </TextField.Root>
   );
 }
 
