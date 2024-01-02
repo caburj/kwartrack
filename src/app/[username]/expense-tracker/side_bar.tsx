@@ -686,7 +686,10 @@ const BudgetProfiles = ({ user }: { user: { id: string; dbname: string } }) => {
                   type: "TOGGLE_BUDGET_PROFILE",
                   payload: [profile.id, profile.partitions.map((p) => p.id)],
                 });
-                invalidateMany(queryClient, [["budgetAmount"]]);
+                invalidateMany(queryClient, [
+                  ["budgetAmount"],
+                  ["transactions"],
+                ]);
               }}
               variant={store.budgetProfileId === profile.id ? "solid" : "soft"}
               style={{ cursor: "pointer" }}
