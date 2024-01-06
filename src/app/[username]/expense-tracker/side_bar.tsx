@@ -1496,6 +1496,16 @@ function PartitionLI({
           onClick={(e) => {
             e.stopPropagation();
             dispatch({ type: "TOGGLE_PARTITIONS", payload: [partition.id] });
+            if (!store.showOverallBalance && store.budgetProfileId) {
+              // If the user selected a budget profile, toggling a partition will
+              // include/exclude it from the budget profile.
+              rpc.post.toggleBudgetPartitions({
+                userId: user.id,
+                dbname: user.dbname,
+                partitionIds: [partition.id],
+                profileId: store.budgetProfileId,
+              });
+            }
             invalidateMany(queryClient, [
               ["categoryBalance"],
               ["categoryKindBalance"],

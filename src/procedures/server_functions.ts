@@ -2329,3 +2329,96 @@ export const updateBudget = withValidation(
     }
   }
 );
+
+export const toggleBudgetPartitions = withValidation(
+  object({
+    userId: string(),
+    dbname: string(),
+    profileId: string(),
+    partitionIds: array(string()),
+  }),
+  async ({ userId, dbname, profileId, partitionIds }) => {
+    // if partitionIds are in the profile, remove them
+    // if partitionIds are not in the profile, add them
+    const client = edgedb
+      .createClient({ database: dbname })
+      .withGlobals({ current_user_id: userId });
+
+    return client.transaction(async (tx) => {
+      const query = e.params(
+        {
+          profileId: e.uuid,
+        },
+        ({ profileId }) =>
+          e.select(e.EBudgetProfile, (profile) => ({
+            filter_single: e.op(profile.id, "=", profileId),
+            partitions: {
+              id: true,
+            },
+          }))
+      );
+      const profile = await query.run(tx, { profileId });
+      if (!profile) {
+        throw new Error("Profile not found.");
+      }
+      const partitionIdsInProfile = profile.partitions.map((p) => p.id);
+      const partitionIdsToAdd = partitionIds.filter(
+        (id) => !partitionIdsInProfile.includes(id)
+      );
+      const partitionIdsToRemove = partitionIds.filter((id) =>
+        partitionIdsInProfile.includes(id)
+      );
+      const addQuery = e.params(
+        {
+          profileId: e.uuid,
+          partitionIds: e.array(e.uuid),
+        },
+        ({ profileId, partitionIds }) =>
+          e.update(e.EBudgetProfile, (profile) => ({
+            filter_single: e.op(profile.id, "=", profileId),
+            set: {
+              partitions: {
+                "+=": e.select(e.EPartition, (partition) => ({
+                  filter: e.op(
+                    partition.id,
+                    "in",
+                    e.array_unpack(partitionIds)
+                  ),
+                })),
+              },
+            },
+          }))
+      );
+      const removeQuery = e.params(
+        {
+          profileId: e.uuid,
+          partitionIds: e.array(e.uuid),
+        },
+        ({ profileId, partitionIds }) =>
+          e.update(e.EBudgetProfile, (profile) => ({
+            filter_single: e.op(profile.id, "=", profileId),
+            set: {
+              partitions: {
+                "-=": e.select(e.EPartition, (partition) => ({
+                  filter: e.op(
+                    partition.id,
+                    "in",
+                    e.array_unpack(partitionIds)
+                  ),
+                })),
+              },
+            },
+          }))
+      );
+      if (partitionIdsToAdd.length !== 0) {
+        await addQuery.run(tx, { profileId, partitionIds: partitionIdsToAdd });
+      }
+      if (partitionIdsToRemove.length !== 0) {
+        await removeQuery.run(tx, {
+          profileId,
+          partitionIds: partitionIdsToRemove,
+        });
+      }
+    });
+  }
+);
