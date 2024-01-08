@@ -100,7 +100,7 @@ const computeAccountLabel = (acc: Account) => {
 export const getAccounts = withValidation(
   object({ userId: string(), dbname: string(), owned: boolean() }),
   async ({ userId, dbname, owned }) => {
-    // return all accounts
+    // return all accounts that has visible partitions
     const query = e.select(e.EAccount, (account) => ({
       id: true,
       name: true,
@@ -114,7 +114,7 @@ export const getAccounts = withValidation(
         name: true,
       },
       is_owned: true,
-      filter: owned ? account.is_owned : undefined,
+      filter: owned ? account.is_owned : e.any(account.partitions.is_visible),
       order_by: {
         expression: account.name,
         direction: e.ASC,
