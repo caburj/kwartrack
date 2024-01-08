@@ -1773,17 +1773,14 @@ export const getPartitionsWithLoans = withValidation(
     const partitionsWithLoansQuery = e.select(e.EPartition, (partition) => {
       return {
         ...partitionFields,
-        filter: e.op(
-          e.any(
-            e.op(
-              "not",
-              partition["<source_partition[is ETransaction]"][
-                "<transaction[is ELoan]"
-              ].is_paid
-            )
-          ),
-          "and",
-          partition.is_owned
+        // FIXME: Partitions that the user doesn't own and are not involved in should not be returned.
+        filter: e.any(
+          e.op(
+            "not",
+            partition["<source_partition[is ETransaction]"][
+              "<transaction[is ELoan]"
+            ].is_paid
+          )
         ),
       };
     });
