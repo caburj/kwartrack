@@ -532,6 +532,11 @@ export function TransactionsTable({
                     const variant = transaction.category.is_private
                       ? "outline"
                       : "soft";
+                    const amountColor = transaction.counterpart
+                      ? "blue"
+                      : parseValue(transaction.value) < 0
+                      ? "red"
+                      : "green";
                     return (
                       <Table.Row
                         key={transaction.id}
@@ -635,11 +640,15 @@ export function TransactionsTable({
                           {getPartitionColumn(transaction)}
                         </Table.Cell>
                         <Table.Cell justify="end">
-                          {isEditable(transaction) ? (
-                            <EditableAmountField {...{ transaction, user }} />
-                          ) : (
-                            formatValue(Math.abs(parseValue(transaction.value)))
-                          )}
+                          <Text color={amountColor} weight="medium">
+                            {isEditable(transaction) ? (
+                              <EditableAmountField {...{ transaction, user }} />
+                            ) : (
+                              formatValue(
+                                Math.abs(parseValue(transaction.value))
+                              )
+                            )}
+                          </Text>
                         </Table.Cell>
                         <Table.Cell style={{ minWidth: "300px" }}>
                           {isEditable(transaction) ? (
