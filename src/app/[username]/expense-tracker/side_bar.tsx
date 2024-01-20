@@ -641,7 +641,13 @@ const BudgetProfiles = ({ user }: { user: { id: string; dbname: string } }) => {
                       <Text size="2" mb="1" weight="bold">
                         Partitions
                       </Text>
-                      <Tooltip content="Corresponds to the selected partitions.">
+                      <Tooltip
+                        content={
+                          <span>
+                            {"Corresponds to the selected partitions."}
+                          </span>
+                        }
+                      >
                         <InfoCircledIcon />
                       </Tooltip>
                     </Flex>
