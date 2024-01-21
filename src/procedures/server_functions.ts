@@ -22,6 +22,7 @@ import {
 } from "./common";
 import { groupedTransactions } from "../../dbschema/queries/grouped-transactions.query";
 import { groupedTransactionsByDate } from "../../dbschema/queries/grouped-transactions-by-date.query";
+import { totalPerDateOverall } from "../../dbschema/queries/total-per-date-overall.query";
 
 export const getUserIdAndDbname = withValidation(
   object({ username: string(), email: string() }),
@@ -488,6 +489,44 @@ export const getGroupedTransactions = withValidation(
       tseDate: tseDate ? new Date(tseDate) : null,
     });
     return [first, second] as const;
+  }
+);
+
+export const getTotalPerDate = withValidation(
+  object({
+    partitionIds: array(string()),
+    categoryIds: array(string()),
+    tssDate: optional(string()),
+    tseDate: optional(string()),
+    isOverall: boolean(),
+    ownerId: string(),
+    dbname: string(),
+  }),
+  async ({
+    partitionIds,
+    categoryIds,
+    tssDate,
+    tseDate,
+    isOverall,
+    ownerId,
+    dbname,
+  }) => {
+    if (tseDate) {
+      tseDate = new Date(new Date(tseDate).getTime() + 86400000).toISOString();
+    }
+
+    const client = edgedb.createClient({ database: dbname }).withGlobals({
+      current_user_id: ownerId,
+    });
+
+    const result = await totalPerDateOverall(client, {
+      pIds: partitionIds,
+      cIds: categoryIds,
+      isOverall,
+      tssDate: tssDate ? new Date(tssDate) : null,
+      tseDate: tseDate ? new Date(tseDate) : null,
+    });
+    return result;
   }
 );
 

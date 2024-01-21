@@ -2,7 +2,7 @@ import { center } from "../../../../styled-system/patterns";
 import { UserPageStoreContext } from "./store";
 import { Box, Flex, Grid, Text } from "@radix-ui/themes";
 import { useContext, useState } from "react";
-import { Doughnut, Bar } from "react-chartjs-2";
+import { Doughnut, Chart } from "react-chartjs-2";
 import { useQuery } from "@tanstack/react-query";
 import { rpc } from "@/app/rpc_client";
 import { QueryResult, formatValue } from "@/utils/common";
@@ -38,10 +38,22 @@ export function Dashboard(props: { user: { id: string; dbname: string } }) {
       });
     }
   );
+
+  const totalPerDate = useQuery(["totalPerDate", store], async () => {
+    return rpc.post.getTotalPerDate({
+      partitionIds: store.partitionIds,
+      categoryIds: store.categoryIds,
+      tssDate: store.tssDate?.toISOString(),
+      tseDate: store.tseDate?.toISOString(),
+      ownerId: props.user.id,
+      dbname: props.user.dbname,
+      isOverall: store.showOverallBalance,
+    });
+  });
+
   return (
     <QueryResult query={groupedTransactions}>
       {([gp, gpByDate]) => {
-        console.log(gpByDate);
         const pieChartData = getPieChartData(gp, isExpense);
 
         const negativeTotal = gp
@@ -53,6 +65,23 @@ export function Dashboard(props: { user: { id: string; dbname: string } }) {
           .reduce((t, gt) => t + parseFloat(gt.total), 0);
 
         const total = positiveTotal + negativeTotal;
+
+        const accumulatedTotal = totalPerDate.data?.reduce((acc, cur) => {
+          const {
+            key: { date_str },
+            total,
+          } = cur;
+          const last = acc[acc.length - 1];
+          if (!last) {
+            return [{ date_str, total: parseFloat(total) }];
+          } else {
+            return [
+              ...acc,
+              { date_str, total: parseFloat(total) + last.total },
+            ];
+          }
+        }, [] as { date_str: string; total: number }[]);
+
         return (
           <Flex direction="column" m="4">
             <Grid columns="3" gap="3" width="auto">
@@ -93,13 +122,14 @@ export function Dashboard(props: { user: { id: string; dbname: string } }) {
                       },
                     },
                     spacing: 1,
-                    radius: "95%",
+                    radius: "90%",
                   }}
                   data={pieChartData}
                 />
               </Box>
               <Box>
-                <Bar
+                <Chart
+                  type="bar"
                   options={{
                     scales: {
                       x: {
@@ -110,7 +140,7 @@ export function Dashboard(props: { user: { id: string; dbname: string } }) {
                       },
                     },
                   }}
-                  data={getBarChartData(gpByDate, isExpense)}
+                  data={getBarChartData(gpByDate, isExpense, accumulatedTotal)}
                 />
               </Box>
             </Grid>
@@ -209,7 +239,8 @@ function getPieChartData(
 
 function getBarChartData(
   gpByDate: GroupedTransactionsByDateReturns,
-  summary: Summary
+  summary: Summary,
+  accumulatedTotal?: { date_str: string; total: number }[]
 ) {
   const style = getComputedStyle(document.body);
   const red3 = style.getPropertyValue("--red-3");
@@ -218,6 +249,8 @@ function getBarChartData(
   const green7 = style.getPropertyValue("--green-7");
   const red9 = style.getPropertyValue("--red-9");
   const green9 = style.getPropertyValue("--green-9");
+  const blue9 = style.getPropertyValue("--blue-9");
+  const blue3 = style.getPropertyValue("--blue-3");
 
   const dates = [...new Set(gpByDate.map((x) => x.key.date_str))].sort(
     (a, b) => {
@@ -237,21 +270,48 @@ function getBarChartData(
   }
   const incomeVals = dates.map((date) => incomeMap.get(date) ?? 0);
   const expenseVals = dates.map((date) => expenseMap.get(date) ?? 0);
+
+  const balanceLine =
+    accumulatedTotal && summary == "balance"
+      ? [
+          {
+            type: "line" as const,
+            label: "Balance",
+            data: accumulatedTotal.map((x) => x.total),
+            borderColor: blue9,
+            borderWidth: 2,
+            fill: false,
+            pointRadius: 4,
+            pointBorderColor: blue9,
+            pointBackgroundColor: blue3,
+          },
+        ]
+      : [];
+
   return {
     labels: dates,
     datasets: [
+      ...balanceLine,
       {
+        type: "bar" as const,
         label: "Income",
         data: incomeVals,
-        backgroundColor: summary == "expense" ? green3 : green9,
+        backgroundColor:
+          summary == "expense"
+            ? green3
+            : summary == "balance"
+            ? green7
+            : green9,
         borderColor: summary == "expense" ? green7 : green9,
         borderWidth: 1,
       },
       {
+        type: "bar" as const,
         label: "Expense",
         data: expenseVals,
-        backgroundColor: summary == "income" ? red3 : red9,
-        borderColor: summary == 'income' ? red7 : red9,
+        backgroundColor:
+          summary == "income" ? red3 : summary == "balance" ? red7 : red9,
+        borderColor: summary == "income" ? red7 : red9,
         borderWidth: 1,
       },
     ],

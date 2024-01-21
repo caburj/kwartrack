@@ -39,10 +39,14 @@ import {
   LinearScale,
   BarElement,
   Title,
+  Colors,
+  PointElement,
+  LineElement,
+  LineController,
+  BarController,
 } from "chart.js";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidateMany } from "@/utils/common";
-import { Colors } from "chart.js";
 import autocolors from "chartjs-plugin-autocolors";
 import DatePicker from "react-datepicker";
 
@@ -53,11 +57,15 @@ ChartJS.register(
   ArcElement,
   Tooltip,
   Legend,
-  Colors,
   CategoryScale,
   LinearScale,
   BarElement,
   Title,
+  Colors,
+  PointElement,
+  LineElement,
+  LineController,
+  BarController,
   autocolors
 );
 
