@@ -21,6 +21,7 @@ import {
   withValidation,
 } from "./common";
 import { groupedTransactions } from "../../dbschema/queries/grouped-transactions.query";
+import { groupedTransactionsByDate } from "../../dbschema/queries/grouped-transactions-by-date.query";
 
 export const getUserIdAndDbname = withValidation(
   object({ username: string(), email: string() }),
@@ -470,7 +471,7 @@ export const getGroupedTransactions = withValidation(
       current_user_id: ownerId,
     });
 
-    return await groupedTransactions(client, {
+    const first = await groupedTransactions(client, {
       pIds: partitionIds,
       cIds: categoryIds,
       lIds: loanIds,
@@ -478,6 +479,15 @@ export const getGroupedTransactions = withValidation(
       tssDate: tssDate ? new Date(tssDate) : null,
       tseDate: tseDate ? new Date(tseDate) : null,
     });
+    const second = await groupedTransactionsByDate(client, {
+      pIds: partitionIds,
+      cIds: categoryIds,
+      lIds: loanIds,
+      isOverall,
+      tssDate: tssDate ? new Date(tssDate) : null,
+      tseDate: tseDate ? new Date(tseDate) : null,
+    });
+    return [first, second] as const;
   }
 );
 

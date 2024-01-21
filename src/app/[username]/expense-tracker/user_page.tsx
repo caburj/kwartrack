@@ -9,10 +9,6 @@ import {
   Link,
   ScrollArea,
   Switch,
-  Table,
-  TableBody,
-  TableHeader,
-  TableRowHeaderCell,
   Tabs,
   Text,
 } from "@radix-ui/themes";
@@ -34,19 +30,38 @@ import {
   TriangleRightIcon,
 } from "@radix-ui/react-icons";
 
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
-import { Doughnut } from "react-chartjs-2";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { rpc } from "@/app/rpc_client";
-import { QueryResult, formatValue, invalidateMany } from "@/utils/common";
-import { GroupedTransactionsReturns } from "../../../../dbschema/queries/grouped-transactions.query";
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+} from "chart.js";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateMany } from "@/utils/common";
 import { Colors } from "chart.js";
 import autocolors from "chartjs-plugin-autocolors";
 import DatePicker from "react-datepicker";
 
 import { useTransactions } from "./use_transactions";
+import { Dashboard } from "./dashboard";
 
-ChartJS.register(ArcElement, Tooltip, Legend, Colors, autocolors);
+ChartJS.register(
+  ArcElement,
+  Tooltip,
+  Legend,
+  Colors,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  autocolors
+);
+
+ChartJS.defaults.plugins.legend.display = false;
 
 const CustomDatePickerButton = forwardRef(function CustomInput(
   { value, onClick }: any,
@@ -268,16 +283,16 @@ export function UserPage(props: { id: string; dbname: string }) {
                   <Tabs.Trigger value="transactions">Transactions</Tabs.Trigger>
                   <Tabs.Trigger value="charts">Charts</Tabs.Trigger>
                 </Tabs.List>
-                <ScrollArea>
-                  <Flex p="4" direction="column">
-                    <Tabs.Content value="transactions" asChild>
-                      <TransactionsTable user={props} />
-                    </Tabs.Content>
-                    <Tabs.Content value="charts">
-                      <ChartBox user={props} />
-                    </Tabs.Content>
-                  </Flex>
-                </ScrollArea>
+                <Tabs.Content value="transactions" asChild>
+                  <ScrollArea>
+                    <TransactionsTable user={props} />
+                  </ScrollArea>
+                </Tabs.Content>
+                <Tabs.Content value="charts" asChild>
+                  <ScrollArea>
+                    <Dashboard user={props} />
+                  </ScrollArea>
+                </Tabs.Content>
               </Flex>
             </Tabs.Root>
           </Flex>
@@ -285,185 +300,4 @@ export function UserPage(props: { id: string; dbname: string }) {
       </Flex>
     </UserPageStoreProvider>
   );
-}
-
-function ChartBox(props: { user: { id: string; dbname: string } }) {
-  const [store] = useContext(UserPageStoreContext);
-
-  const groupedTransactions = useQuery(
-    [
-      "groupedTransactions",
-      store.loanIds,
-      store.categoryIds,
-      store.partitionIds,
-      store.tssDate,
-      store.tseDate,
-      store.showOverallBalance,
-    ],
-    async () => {
-      return await rpc.post.getGroupedTransactions({
-        loanIds: store.loanIds,
-        partitionIds: store.partitionIds,
-        categoryIds: store.categoryIds,
-        tssDate: store.tssDate?.toISOString(),
-        tseDate: store.tseDate?.toISOString(),
-        ownerId: props.user.id,
-        dbname: props.user.dbname,
-        isOverall: store.showOverallBalance,
-      });
-    }
-  );
-
-  return (
-    <QueryResult query={groupedTransactions}>
-      {(result) => {
-        const { incomes, expenses, summary } = getPieChartData(result);
-
-        if (incomes.labels.length === 0 && expenses.labels.length === 0) {
-          return (
-            <Flex align="center" justify="center">
-              <Text align="center">No charts to show</Text>
-            </Flex>
-          );
-        }
-
-        const negativeTotal = result
-          .filter((x) => !x.key.is_positive)
-          .reduce((t, gt) => t + parseFloat(gt.total), 0);
-
-        const positiveTotal = result
-          .filter((x) => x.key.is_positive)
-          .reduce((t, gt) => t + parseFloat(gt.total), 0);
-
-        const total = positiveTotal + negativeTotal;
-
-        return (
-          <ScrollArea>
-            <Flex direction="column">
-              <Flex direction="column" p="3">
-                <Table.Root>
-                  <TableHeader>
-                    <TableRowHeaderCell>
-                      <Text weight="bold">Summary</Text>
-                    </TableRowHeaderCell>
-                    <TableRowHeaderCell align="right">
-                      <Text weight="bold">Amount</Text>
-                    </TableRowHeaderCell>
-                  </TableHeader>
-                  <TableBody>
-                    <Table.Row>
-                      <Table.Cell>Income</Table.Cell>
-                      <Table.Cell align="right">
-                        {formatValue(positiveTotal)}
-                      </Table.Cell>
-                    </Table.Row>
-                    <Table.Row>
-                      <Table.Cell>Expenses</Table.Cell>
-                      <Table.Cell align="right">
-                        {formatValue(negativeTotal)}
-                      </Table.Cell>
-                    </Table.Row>
-                    <Table.Row>
-                      <Table.Cell>Balance</Table.Cell>
-                      <Table.Cell align="right">
-                        {formatValue(total)}
-                      </Table.Cell>
-                    </Table.Row>
-                  </TableBody>
-                </Table.Root>
-              </Flex>
-              <Flex>
-                {incomes.labels.length > 0 ? (
-                  <Flex direction="column" p="3">
-                    <Text align="center">Incomes</Text>
-                    <Box width="min-content">
-                      <Doughnut
-                        data={incomes}
-                        options={{
-                          plugins: {
-                            autocolors: {
-                              mode: "data",
-                              offset: 15,
-                            },
-                          },
-                        }}
-                      />
-                    </Box>
-                  </Flex>
-                ) : null}
-                {expenses.labels.length > 0 ? (
-                  <Flex direction="column" p="3">
-                    <Text align="center">Expenses</Text>
-                    <Box width="min-content">
-                      <Doughnut
-                        data={expenses}
-                        options={{
-                          plugins: {
-                            autocolors: {
-                              mode: "data",
-                            },
-                          },
-                        }}
-                      />
-                    </Box>
-                  </Flex>
-                ) : null}
-                {expenses.labels.length > 0 && incomes.labels.length > 0 ? (
-                  <Flex direction="column" p="3">
-                    <Text align="center">Summary</Text>
-                    <Box width="min-content">
-                      <Doughnut
-                        data={summary}
-                        options={{
-                          plugins: {
-                            autocolors: {
-                              mode: "data",
-                              offset: 20,
-                            },
-                          },
-                        }}
-                      />
-                    </Box>
-                  </Flex>
-                ) : null}
-              </Flex>
-            </Flex>
-          </ScrollArea>
-        );
-      }}
-    </QueryResult>
-  );
-}
-
-function getPieChartData(groupedTransactions: GroupedTransactionsReturns) {
-  const incomeVals = groupedTransactions.filter((x) => x.key.is_positive);
-  const expenseVals = groupedTransactions.filter((x) => !x.key.is_positive);
-
-  incomeVals.sort((a, b) => parseFloat(b.total) - parseFloat(a.total));
-  expenseVals.sort((a, b) => parseFloat(a.total) - parseFloat(b.total));
-
-  const positiveTotal = incomeVals.reduce(
-    (acc, cur) => acc + parseFloat(cur.total),
-    0
-  );
-
-  const negativeTotal = expenseVals.reduce(
-    (acc, cur) => acc + parseFloat(cur.total),
-    0
-  );
-
-  return {
-    incomes: {
-      labels: incomeVals.map((x) => x.key.category.name),
-      datasets: [{ data: incomeVals.map((x) => parseFloat(x.total)) }],
-    },
-    expenses: {
-      labels: expenseVals.map((x) => x.key.category.name),
-      datasets: [{ data: expenseVals.map((x) => parseFloat(x.total)) }],
-    },
-    summary: {
-      labels: ["Income", "Expenses"],
-      datasets: [{ data: [positiveTotal, negativeTotal] }],
-    },
-  };
 }

@@ -302,7 +302,7 @@ export function TransactionsTable({
   };
 
   return (
-    <Table.Root variant="surface" size="1" mb="4">
+    <Table.Root variant="surface" size="1" m="4">
       <Table.Header>
         <Table.Row>
           <Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
