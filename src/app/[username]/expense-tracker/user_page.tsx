@@ -3,40 +3,201 @@
 import { UserPageStoreContext, UserPageStoreProvider } from "./store";
 import {
   Box,
+  Button,
   Flex,
+  IconButton,
+  Link,
   ScrollArea,
+  Switch,
   Table,
   TableBody,
   TableHeader,
   TableRowHeaderCell,
+  Tabs,
   Text,
 } from "@radix-ui/themes";
 import { TransactionsTable } from "./transactions_table";
 import { SideBar } from "./side_bar";
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import {
+  ForwardedRef,
+  forwardRef,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { css } from "../../../../styled-system/css";
-import * as Accordion from "@radix-ui/react-accordion";
-import { AnimatedAccordionContent } from "./accordion";
 import "react-datepicker/dist/react-datepicker.css";
 import "react-loading-skeleton/dist/skeleton.css";
-import { ChevronUpIcon } from "@radix-ui/react-icons";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  TriangleRightIcon,
+} from "@radix-ui/react-icons";
 
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { rpc } from "@/app/rpc_client";
-import { QueryResult, formatValue } from "@/utils/common";
+import { QueryResult, formatValue, invalidateMany } from "@/utils/common";
 import { GroupedTransactionsReturns } from "../../../../dbschema/queries/grouped-transactions.query";
 import { Colors } from "chart.js";
 import autocolors from "chartjs-plugin-autocolors";
+import DatePicker from "react-datepicker";
 
-import { useClickAway } from "@uidotdev/usehooks";
+import { useTransactions } from "./use_transactions";
 
 ChartJS.register(ArcElement, Tooltip, Legend, Colors, autocolors);
+
+const CustomDatePickerButton = forwardRef(function CustomInput(
+  { value, onClick }: any,
+  ref: ForwardedRef<HTMLButtonElement>
+) {
+  return (
+    <Button onClick={onClick} ref={ref} variant="outline">
+      {value}
+    </Button>
+  );
+});
+
+const TableControls = (props: {
+  isTableLoading: boolean;
+  hasNextPage: boolean;
+}) => {
+  const queryClient = useQueryClient();
+
+  const [store, dispatch] = useContext(UserPageStoreContext);
+
+  const currentPage = store.currentPage;
+
+  const incrementPage = () => {
+    dispatch({ type: "SET_CURRENT_PAGE", payload: currentPage + 1 });
+  };
+
+  const decrementPage = () => {
+    dispatch({ type: "SET_CURRENT_PAGE", payload: currentPage - 1 });
+  };
+
+  const balanceLabel = store.showOverallBalance ? "Overall" : "Selected Date";
+
+  return (
+    <Flex justify="between" m="2">
+      {store.showOverallBalance ? (
+        <span>{/* empty span */}</span>
+      ) : (
+        <Flex mt="0" align="center">
+          <IconButton
+            mr="2"
+            variant="surface"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              dispatch({ type: "SET_PREV_MONTH" });
+            }}
+          >
+            <ChevronLeftIcon />
+          </IconButton>
+          <DatePicker
+            selected={store.tssDate}
+            onChange={(date) => {
+              dispatch({
+                type: "SET_TSS_DATE",
+                payload: date,
+              });
+              if (!store.showOverallBalance) {
+                invalidateMany(queryClient, [
+                  ["partitionBalance"],
+                  ["categoryBalance"],
+                  ["categoryKindBalance"],
+                ]);
+              }
+            }}
+            customInput={<CustomDatePickerButton />}
+          />
+          <TriangleRightIcon />
+          <DatePicker
+            selected={store.tseDate}
+            onChange={(date) => {
+              dispatch({
+                type: "SET_TSE_DATE",
+                payload: date,
+              });
+              if (!store.showOverallBalance) {
+                invalidateMany(queryClient, [
+                  ["partitionBalance"],
+                  ["categoryBalance"],
+                  ["categoryKindBalance"],
+                ]);
+              }
+            }}
+            customInput={<CustomDatePickerButton />}
+          />
+          <IconButton
+            ml="2"
+            variant="surface"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              dispatch({ type: "SET_NEXT_MONTH" });
+            }}
+          >
+            <ChevronRightIcon />
+          </IconButton>
+          <Link
+            ml="2"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              dispatch({ type: "SET_THIS_MONTH" });
+            }}
+          >
+            This Month
+          </Link>
+        </Flex>
+      )}
+      <Flex mt="0" gap="3" align="center">
+        <Text weight="medium">
+          <Flex gap="2" align="center">
+            Show <strong>{balanceLabel}</strong> balance
+            <Switch
+              checked={store.showOverallBalance}
+              onClick={() => {
+                dispatch({ type: "TOGGLE_BALANCE_TO_DISPLAY" });
+                invalidateMany(queryClient, [
+                  ["transactions"],
+                  ["groupedTransactions"],
+                  ["partitionBalance"],
+                  ["categoryBalance"],
+                  ["categoryKindBalance"],
+                ]);
+              }}
+            />
+          </Flex>
+        </Text>
+
+        <Flex gap="3" align="center">
+          <IconButton
+            onClick={decrementPage}
+            disabled={props.isTableLoading || currentPage === 1}
+          >
+            <ChevronLeftIcon />
+          </IconButton>
+          <Text>{currentPage}</Text>
+          <IconButton
+            onClick={incrementPage}
+            disabled={props.isTableLoading || !props.hasNextPage}
+          >
+            <ChevronRightIcon />
+          </IconButton>
+        </Flex>
+      </Flex>
+    </Flex>
+  );
+};
 
 export function UserPage(props: { id: string; dbname: string }) {
   const [width, setWidth] = useState(400);
   const [isDragging, setIsDragging] = useState(false);
+  const transactions = useTransactions(props);
 
   useEffect(() => {
     if (isDragging) {
@@ -94,69 +255,35 @@ export function UserPage(props: { id: string; dbname: string }) {
           style={{
             left: `${width}px`,
           }}
+          asChild
         >
-          <Flex direction="column" p="2" height="100%" justify="between">
-            <TransactionsTable user={props} />
-            <ChartContainer user={props} />
+          <Flex direction="column" justify="between">
+            <TableControls
+              isTableLoading={transactions.isLoading}
+              hasNextPage={transactions.data?.[1] ?? false}
+            />
+            <Tabs.Root defaultValue="transactions" asChild>
+              <Flex direction="column" grow="1" style={{ overflow: "hidden" }}>
+                <Tabs.List>
+                  <Tabs.Trigger value="transactions">Transactions</Tabs.Trigger>
+                  <Tabs.Trigger value="charts">Charts</Tabs.Trigger>
+                </Tabs.List>
+                <ScrollArea>
+                  <Flex p="4" direction="column">
+                    <Tabs.Content value="transactions" asChild>
+                      <TransactionsTable user={props} />
+                    </Tabs.Content>
+                    <Tabs.Content value="charts">
+                      <ChartBox user={props} />
+                    </Tabs.Content>
+                  </Flex>
+                </ScrollArea>
+              </Flex>
+            </Tabs.Root>
           </Flex>
         </Box>
       </Flex>
     </UserPageStoreProvider>
-  );
-}
-
-/**
- * This box should take the bottom and has a control to hide or show it. Also, height should be half of height of the page.
- */
-function ChartContainer(props: { user: { id: string; dbname: string } }) {
-  const triggerRef = useRef<HTMLDivElement>(null);
-
-  const closeChart = useCallback(() => {
-    if (triggerRef.current && triggerRef.current.dataset.state === "open") {
-      triggerRef.current.click();
-    }
-  }, [triggerRef]);
-
-  const ref = useClickAway<HTMLDivElement>(closeChart);
-
-  return (
-    <Flex direction="column" ref={ref}>
-      <Accordion.Root type="multiple">
-        <Accordion.Item value="only-item">
-          <Accordion.Header asChild>
-            <Accordion.Trigger asChild>
-              <Flex
-                ref={triggerRef}
-                justify="center"
-                align="center"
-                className={css({
-                  "&[data-state=open]": {
-                    "& svg": {
-                      transform: "rotate(180deg)",
-                    },
-                    borderTopLeftRadius: "5px",
-                    borderTopRightRadius: "5px",
-                  },
-                  "&[data-state=closed]": {
-                    borderBottomLeftRadius: "5px",
-                    borderBottomRightRadius: "5px",
-                    borderTopLeftRadius: "5px",
-                    borderTopRightRadius: "5px",
-                  },
-                  cursor: "pointer",
-                  backgroundColor: "var(--gray-5)",
-                })}
-              >
-                <ChevronUpIcon />
-              </Flex>
-            </Accordion.Trigger>
-          </Accordion.Header>
-          <AnimatedAccordionContent>
-            <ChartBox user={props.user} />
-          </AnimatedAccordionContent>
-        </Accordion.Item>
-      </Accordion.Root>
-    </Flex>
   );
 }
 
@@ -171,6 +298,7 @@ function ChartBox(props: { user: { id: string; dbname: string } }) {
       store.partitionIds,
       store.tssDate,
       store.tseDate,
+      store.showOverallBalance,
     ],
     async () => {
       return await rpc.post.getGroupedTransactions({
@@ -193,18 +321,7 @@ function ChartBox(props: { user: { id: string; dbname: string } }) {
 
         if (incomes.labels.length === 0 && expenses.labels.length === 0) {
           return (
-            <Flex
-              align="center"
-              justify="center"
-              className={css({
-                width: "100%",
-                minHeight: "300px",
-                maxHeight: "400px",
-                borderBottomLeftRadius: "5px",
-                borderBottomRightRadius: "5px",
-                border: "1px solid var(--gray-5)",
-              })}
-            >
+            <Flex align="center" justify="center">
               <Text align="center">No charts to show</Text>
             </Flex>
           );
@@ -222,16 +339,7 @@ function ChartBox(props: { user: { id: string; dbname: string } }) {
 
         return (
           <ScrollArea>
-            <Flex
-              className={css({
-                width: "100%",
-                minHeight: "300px",
-                maxHeight: "400px",
-                borderBottomLeftRadius: "5px",
-                borderBottomRightRadius: "5px",
-                border: "1px solid var(--gray-5)",
-              })}
-            >
+            <Flex direction="column">
               <Flex direction="column" p="3">
                 <Table.Root>
                   <TableHeader>
@@ -264,54 +372,61 @@ function ChartBox(props: { user: { id: string; dbname: string } }) {
                   </TableBody>
                 </Table.Root>
               </Flex>
-              {incomes.labels.length > 0 ? (
-                <Flex direction="column" p="3">
-                  <Text align="center">Incomes</Text>
-                  <Doughnut
-                    style={{ height: "100%" }}
-                    data={incomes}
-                    options={{
-                      plugins: {
-                        autocolors: {
-                          mode: "data",
-                          offset: 15,
-                        },
-                      },
-                    }}
-                  />
-                </Flex>
-              ) : null}
-              {expenses.labels.length > 0 ? (
-                <Flex direction="column" p="3">
-                  <Text align="center">Expenses</Text>
-                  <Doughnut
-                    data={expenses}
-                    options={{
-                      plugins: {
-                        autocolors: {
-                          mode: "data",
-                        },
-                      },
-                    }}
-                  />
-                </Flex>
-              ) : null}
-              {expenses.labels.length > 0 && incomes.labels.length > 0 ? (
-                <Flex direction="column" p="3">
-                  <Text align="center">Summary</Text>
-                  <Doughnut
-                    data={summary}
-                    options={{
-                      plugins: {
-                        autocolors: {
-                          mode: "data",
-                          offset: 20,
-                        },
-                      },
-                    }}
-                  />
-                </Flex>
-              ) : null}
+              <Flex>
+                {incomes.labels.length > 0 ? (
+                  <Flex direction="column" p="3">
+                    <Text align="center">Incomes</Text>
+                    <Box width="min-content">
+                      <Doughnut
+                        data={incomes}
+                        options={{
+                          plugins: {
+                            autocolors: {
+                              mode: "data",
+                              offset: 15,
+                            },
+                          },
+                        }}
+                      />
+                    </Box>
+                  </Flex>
+                ) : null}
+                {expenses.labels.length > 0 ? (
+                  <Flex direction="column" p="3">
+                    <Text align="center">Expenses</Text>
+                    <Box width="min-content">
+                      <Doughnut
+                        data={expenses}
+                        options={{
+                          plugins: {
+                            autocolors: {
+                              mode: "data",
+                            },
+                          },
+                        }}
+                      />
+                    </Box>
+                  </Flex>
+                ) : null}
+                {expenses.labels.length > 0 && incomes.labels.length > 0 ? (
+                  <Flex direction="column" p="3">
+                    <Text align="center">Summary</Text>
+                    <Box width="min-content">
+                      <Doughnut
+                        data={summary}
+                        options={{
+                          plugins: {
+                            autocolors: {
+                              mode: "data",
+                              offset: 20,
+                            },
+                          },
+                        }}
+                      />
+                    </Box>
+                  </Flex>
+                ) : null}
+              </Flex>
             </Flex>
           </ScrollArea>
         );

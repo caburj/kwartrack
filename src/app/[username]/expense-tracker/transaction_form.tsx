@@ -292,6 +292,7 @@ function TransactionFormMain(props: {
         setInputValue("");
         queryKeys.push(
           ["transactions"],
+          ["groupedTransactions"],
           ["categoryBalance", { categoryId: parsedData.categoryId }],
           ["categoryCanBeDeleted", { categoryId: parsedData.categoryId }],
           ["partitionBalance", { partitionId: parsedData.sourcePartitionId }],

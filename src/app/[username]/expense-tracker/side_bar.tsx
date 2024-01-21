@@ -695,6 +695,7 @@ const BudgetProfiles = ({ user }: { user: { id: string; dbname: string } }) => {
                 invalidateMany(queryClient, [
                   ["budgetAmount"],
                   ["transactions"],
+                  ["groupedTransactions"],
                 ]);
               }}
               variant={store.budgetProfileId === profile.id ? "solid" : "soft"}
@@ -777,6 +778,7 @@ const LoanItem = ({
 
     queryKeys.push(
       ["transactions"],
+      ["groupedTransactions"],
       ["categoryBalance", { categoryId: transaction.category.id }],
       ["categoryCanBeDeleted", { categoryId: transaction.category.id }],
       ["partitionBalance", { partitionId: transaction.source_partition.id }],
@@ -1174,7 +1176,11 @@ const EditAccountDialog = forwardRef(function EditAccountDialog(
     },
     {
       onSuccess: () => {
-        invalidateMany(queryClient, [["transactions"], ["accounts", user.id]]);
+        invalidateMany(queryClient, [
+          ["transactions"],
+          ["groupedTransactions"],
+          ["accounts", user.id],
+        ]);
       },
     }
   );
@@ -1320,6 +1326,7 @@ function PartitionLI({
       onSuccess: () => {
         invalidateMany(queryClient, [
           ["transactions"],
+          ["groupedTransactions"],
           ["partitions", user.id],
           ["accountCanBeDeleted", { accountId: partition.account.id }],
         ]);
@@ -1455,6 +1462,7 @@ function PartitionLI({
 
     queryKeys.push(
       ["transactions"],
+      ["groupedTransactions"],
       ["categoryBalance", { categoryId: loanCategoryId }],
       ["categoryCanBeDeleted", { categoryId: loanCategoryId }],
       ["partitionBalance", { partitionId: partition.id }],
@@ -1717,6 +1725,7 @@ const EditPartitionDialog = forwardRef(function EditPartitionDialog(
         invalidateMany(queryClient, [
           ["partitions", user.id, partition.account.id],
           ["transactions"],
+          ["groupedTransactions"],
           ["unpaidLoans", user.id, partition.id],
           ["partitionsWithLoans", user.id],
         ]);
@@ -2292,6 +2301,7 @@ const EditCategoryDialog = forwardRef(function EditCategoryDialog(
         invalidateMany(queryClient, [
           ["categories", user.id],
           ["transactions"],
+          ["groupedTransactions"],
         ]);
       },
     }

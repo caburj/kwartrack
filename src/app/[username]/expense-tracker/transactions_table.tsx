@@ -4,7 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { ForwardedRef, forwardRef, useContext, useState } from "react";
+import { useContext, useState } from "react";
 import { UserPageStoreContext } from "./store";
 import { rpc } from "@/app/rpc_client";
 import {
@@ -23,23 +23,14 @@ import {
   usePartitions,
 } from "@/utils/common";
 import {
-  Button,
   Badge,
   Flex,
   IconButton,
   Popover,
   Text,
   Table,
-  ScrollArea,
-  Link,
-  Switch,
 } from "@radix-ui/themes";
-import {
-  Cross1Icon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  TriangleRightIcon,
-} from "@radix-ui/react-icons";
+import { Cross1Icon, ChevronRightIcon } from "@radix-ui/react-icons";
 import { Combobox } from "./combobox";
 import { css } from "../../../../styled-system/css";
 import { TransactionForm } from "./transaction_form";
@@ -49,6 +40,7 @@ import { BiMoneyWithdraw } from "react-icons/bi";
 import DatePicker from "react-datepicker";
 import Skeleton from "react-loading-skeleton";
 import { toast } from "sonner";
+import { useTransactions } from "./use_transactions";
 
 type Transaction = Unpacked<
   NonNullable<Awaited<ReturnType<typeof rpc.post.findTransactions>>>[0]
@@ -132,6 +124,7 @@ function EditablePartitionBadge({
         });
         invalidateMany(queryClient, [
           ["transactions"],
+          ["groupedTransactions"],
           ["partitionBalance", { partitionId: par.id }],
           ["partitionBalance", { partitionId: partition.id }],
           ["accountBalance", { accountId: par.account.id }],
@@ -212,150 +205,6 @@ const CategoryText = ({ transaction }: { transaction: Transaction }) => {
   );
 };
 
-const CustomDatePickerButton = forwardRef(function CustomInput(
-  { value, onClick }: any,
-  ref: ForwardedRef<HTMLButtonElement>
-) {
-  return (
-    <Button onClick={onClick} ref={ref} variant="outline">
-      {value}
-    </Button>
-  );
-});
-
-const TableControls = (props: {
-  isTableLoading: boolean;
-  hasNextPage: boolean;
-}) => {
-  const queryClient = useQueryClient();
-
-  const [store, dispatch] = useContext(UserPageStoreContext);
-
-  const currentPage = store.currentPage;
-
-  const incrementPage = () => {
-    dispatch({ type: "SET_CURRENT_PAGE", payload: currentPage + 1 });
-  };
-
-  const decrementPage = () => {
-    dispatch({ type: "SET_CURRENT_PAGE", payload: currentPage - 1 });
-  };
-
-  const balanceLabel = store.showOverallBalance ? "Overall" : "Selected Date";
-
-  return (
-    <Flex justify="between">
-      {store.showOverallBalance ? (
-        <span>{/* empty span */}</span>
-      ) : (
-        <Flex my="2" mt="0" align="center">
-          <IconButton
-            mr="2"
-            variant="surface"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              dispatch({ type: "SET_PREV_MONTH" });
-            }}
-          >
-            <ChevronLeftIcon />
-          </IconButton>
-          <DatePicker
-            selected={store.tssDate}
-            onChange={(date) => {
-              dispatch({
-                type: "SET_TSS_DATE",
-                payload: date,
-              });
-              if (!store.showOverallBalance) {
-                invalidateMany(queryClient, [
-                  ["partitionBalance"],
-                  ["categoryBalance"],
-                  ["categoryKindBalance"],
-                ]);
-              }
-            }}
-            customInput={<CustomDatePickerButton />}
-          />
-          <TriangleRightIcon />
-          <DatePicker
-            selected={store.tseDate}
-            onChange={(date) => {
-              dispatch({
-                type: "SET_TSE_DATE",
-                payload: date,
-              });
-              if (!store.showOverallBalance) {
-                invalidateMany(queryClient, [
-                  ["partitionBalance"],
-                  ["categoryBalance"],
-                  ["categoryKindBalance"],
-                ]);
-              }
-            }}
-            customInput={<CustomDatePickerButton />}
-          />
-          <IconButton
-            ml="2"
-            variant="surface"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              dispatch({ type: "SET_NEXT_MONTH" });
-            }}
-          >
-            <ChevronRightIcon />
-          </IconButton>
-          <Link
-            ml="2"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              dispatch({ type: "SET_THIS_MONTH" });
-            }}
-          >
-            This Month
-          </Link>
-        </Flex>
-      )}
-      <Flex my="2" mt="0" gap="3" align="center">
-        <Text weight="medium">
-          <Flex gap="2" align="center">
-            Show <strong>{balanceLabel}</strong> balance
-            <Switch
-              checked={store.showOverallBalance}
-              onClick={() => {
-                dispatch({ type: "TOGGLE_BALANCE_TO_DISPLAY" });
-                invalidateMany(queryClient, [
-                  ["partitionBalance"],
-                  ["categoryBalance"],
-                  ["categoryKindBalance"],
-                ]);
-              }}
-            />
-          </Flex>
-        </Text>
-
-        <Flex gap="3" align="center">
-          <IconButton
-            onClick={decrementPage}
-            disabled={props.isTableLoading || currentPage === 1}
-          >
-            <ChevronLeftIcon />
-          </IconButton>
-          <Text>{currentPage}</Text>
-          <IconButton
-            onClick={incrementPage}
-            disabled={props.isTableLoading || !props.hasNextPage}
-          >
-            <ChevronRightIcon />
-          </IconButton>
-        </Flex>
-      </Flex>
-    </Flex>
-  );
-};
-
 export function TransactionsTable({
   user,
 }: {
@@ -364,36 +213,9 @@ export function TransactionsTable({
   const queryClient = useQueryClient();
   const [store, dispatch] = useContext(UserPageStoreContext);
 
-  const currentPage = store.currentPage;
-
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const transactions = useQuery(
-    [
-      "transactions",
-      currentPage,
-      store.categoryIds,
-      store.partitionIds,
-      store.loanIds,
-      store.tssDate,
-      store.tseDate,
-      store.nPerPage,
-    ],
-    () => {
-      return rpc.post.findTransactions({
-        currentPage,
-        nPerPage: store.nPerPage,
-        partitionIds: store.partitionIds,
-        categoryIds: store.categoryIds,
-        loanIds: store.loanIds,
-        ownerId: user.id,
-        dbname: user.dbname,
-        showOverall: store.showOverallBalance,
-        tssDate: store.tssDate?.toISOString(),
-        tseDate: store.tseDate?.toISOString(),
-      });
-    }
-  );
+  const transactions = useTransactions(user);
 
   const categories = useQuery(["categories", user.id], () => {
     return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
@@ -412,7 +234,10 @@ export function TransactionsTable({
     },
     {
       onSuccess: () => {
-        invalidateMany(queryClient, [["transactions"]]);
+        invalidateMany(queryClient, [
+          ["transactions"],
+          ["groupedTransactions"],
+        ]);
       },
     }
   );
@@ -477,242 +302,217 @@ export function TransactionsTable({
   };
 
   return (
-    <>
-      <TableControls
-        isTableLoading={transactions.isLoading}
-        hasNextPage={transactions.data?.[1] ?? false}
-      />
-      <ScrollArea>
-        <Table.Root variant="surface" size="1" mb="4">
-          <Table.Header>
-            <Table.Row>
-              <Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Category</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Partition</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell
-                justify="end"
-                style={{ minWidth: "11ch" }}
-              >
-                Amount
-              </Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell></Table.ColumnHeaderCell>
+    <Table.Root variant="surface" size="1" mb="4">
+      <Table.Header>
+        <Table.Row>
+          <Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
+          <Table.ColumnHeaderCell>Category</Table.ColumnHeaderCell>
+          <Table.ColumnHeaderCell>Partition</Table.ColumnHeaderCell>
+          <Table.ColumnHeaderCell justify="end" style={{ minWidth: "11ch" }}>
+            Amount
+          </Table.ColumnHeaderCell>
+          <Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
+          <Table.ColumnHeaderCell></Table.ColumnHeaderCell>
+        </Table.Row>
+      </Table.Header>
+      <Table.Body>
+        <TransactionForm user={user} />
+        <QueryResult
+          query={transactions}
+          onLoading={Array.from({ length: 10 }).map((_, i) => (
+            <Table.Row key={i}>
+              <Table.Cell>
+                <Skeleton />
+              </Table.Cell>
+              <Table.Cell>
+                <Skeleton />
+              </Table.Cell>
+              <Table.Cell>
+                <Skeleton />
+              </Table.Cell>
+              <Table.Cell>
+                <Skeleton />
+              </Table.Cell>
+              <Table.Cell>
+                <Skeleton />
+              </Table.Cell>
+              <Table.Cell></Table.Cell>
             </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            <TransactionForm user={user} />
-            <QueryResult
-              query={transactions}
-              onLoading={Array.from({ length: 10 }).map((_, i) => (
-                <Table.Row key={i}>
-                  <Table.Cell>
-                    <Skeleton />
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Skeleton />
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Skeleton />
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Skeleton />
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Skeleton />
-                  </Table.Cell>
-                  <Table.Cell></Table.Cell>
-                </Table.Row>
-              ))}
-            >
-              {([transactions]) => {
-                if (transactions.length > 0) {
-                  return transactions.map((transaction) => {
-                    const allowedCategories =
-                      categories.data?.[transaction.category.kind] ?? [];
-                    const variant = transaction.category.is_private
-                      ? "outline"
-                      : "soft";
-                    const amountColor = transaction.counterpart
-                      ? "blue"
-                      : parseValue(transaction.value) < 0
-                      ? "red"
-                      : "green";
-                    return (
-                      <Table.Row
-                        key={transaction.id}
-                        className={css({
-                          "& td": { whiteSpace: "nowrap" },
-                          "& .delete-button": {
-                            opacity: "0",
-                            transition: "opacity 0.2s ease-in-out",
-                          },
-                          "&:hover": {
-                            "& .delete-button": {
-                              opacity: "1",
-                            },
-                          },
-                        })}
-                      >
-                        <Table.Cell>
-                          <DatePicker
-                            popperProps={{
-                              // to make sure the datepicker is always visible and don't hide behind the table
-                              strategy: "fixed",
-                            }}
-                            selected={new Date(transaction.str_date)}
-                            onChange={(date) => {
-                              if (!date) {
-                                return;
-                              }
-                              updateTransactionDate.mutate({
-                                transactionId: transaction.id,
-                                newDate: date,
-                              });
-                            }}
-                            dateFormat="yyyy-MM-dd"
-                            customInput={
-                              <DateInput isPointer={isEditable(transaction)} />
-                            }
-                            readOnly={!isEditable(transaction)}
-                          />
-                        </Table.Cell>
-                        <Table.Cell>
-                          {isEditable(transaction) ? (
-                            <Combobox
-                              groupedItems={{
-                                [transaction.category.kind]: allowedCategories,
-                              }}
-                              getGroupHeading={(key) => key}
-                              getItemDisplay={(cat) =>
-                                getCategoryOptionName(cat)
-                              }
-                              getItemValue={(cat) =>
-                                `${
-                                  transaction.category.kind
-                                } ${getCategoryOptionName(cat)}`
-                              }
-                              getItemColor={(cat) => CATEGORY_COLOR[cat.kind]}
-                              onSelectItem={async (cat) => {
-                                await updateTransaction.mutateAsync({
-                                  transaction,
-                                  categoryId: cat.id,
-                                });
-                                invalidateMany(queryClient, [
-                                  ["transactions"],
-                                  [
-                                    "categoryBalance",
-                                    { categoryId: transaction.category.id },
-                                  ],
-                                  ["categoryBalance", { categoryId: cat.id }],
-                                  [
-                                    "categoryCanBeDeleted",
-                                    { categoryId: transaction.category.id },
-                                  ],
-                                  [
-                                    "categoryCanBeDeleted",
-                                    { categoryId: cat.id },
-                                  ],
-                                ]);
-                              }}
-                            >
-                              <Popover.Trigger>
-                                <Badge
-                                  color={
-                                    CATEGORY_COLOR[transaction.category.kind]
-                                  }
-                                  variant={variant}
-                                  style={{ cursor: "pointer" }}
-                                >
-                                  <CategoryText transaction={transaction} />
-                                </Badge>
-                              </Popover.Trigger>
-                            </Combobox>
-                          ) : (
+          ))}
+        >
+          {([transactions]) => {
+            if (transactions.length > 0) {
+              return transactions.map((transaction) => {
+                const allowedCategories =
+                  categories.data?.[transaction.category.kind] ?? [];
+                const variant = transaction.category.is_private
+                  ? "outline"
+                  : "soft";
+                const amountColor = transaction.counterpart
+                  ? "blue"
+                  : parseValue(transaction.value) < 0
+                  ? "red"
+                  : "green";
+                return (
+                  <Table.Row
+                    key={transaction.id}
+                    className={css({
+                      "& td": { whiteSpace: "nowrap" },
+                      "& .delete-button": {
+                        opacity: "0",
+                        transition: "opacity 0.2s ease-in-out",
+                      },
+                      "&:hover": {
+                        "& .delete-button": {
+                          opacity: "1",
+                        },
+                      },
+                    })}
+                  >
+                    <Table.Cell>
+                      <DatePicker
+                        popperProps={{
+                          // to make sure the datepicker is always visible and don't hide behind the table
+                          strategy: "fixed",
+                        }}
+                        selected={new Date(transaction.str_date)}
+                        onChange={(date) => {
+                          if (!date) {
+                            return;
+                          }
+                          updateTransactionDate.mutate({
+                            transactionId: transaction.id,
+                            newDate: date,
+                          });
+                        }}
+                        dateFormat="yyyy-MM-dd"
+                        customInput={
+                          <DateInput isPointer={isEditable(transaction)} />
+                        }
+                        readOnly={!isEditable(transaction)}
+                      />
+                    </Table.Cell>
+                    <Table.Cell>
+                      {isEditable(transaction) ? (
+                        <Combobox
+                          groupedItems={{
+                            [transaction.category.kind]: allowedCategories,
+                          }}
+                          getGroupHeading={(key) => key}
+                          getItemDisplay={(cat) => getCategoryOptionName(cat)}
+                          getItemValue={(cat) =>
+                            `${
+                              transaction.category.kind
+                            } ${getCategoryOptionName(cat)}`
+                          }
+                          getItemColor={(cat) => CATEGORY_COLOR[cat.kind]}
+                          onSelectItem={async (cat) => {
+                            await updateTransaction.mutateAsync({
+                              transaction,
+                              categoryId: cat.id,
+                            });
+                            invalidateMany(queryClient, [
+                              ["transactions"],
+                              ["groupedTransactions"],
+                              [
+                                "categoryBalance",
+                                { categoryId: transaction.category.id },
+                              ],
+                              ["categoryBalance", { categoryId: cat.id }],
+                              [
+                                "categoryCanBeDeleted",
+                                { categoryId: transaction.category.id },
+                              ],
+                              ["categoryCanBeDeleted", { categoryId: cat.id }],
+                            ]);
+                          }}
+                        >
+                          <Popover.Trigger>
                             <Badge
                               color={CATEGORY_COLOR[transaction.category.kind]}
-                              variant="surface"
+                              variant={variant}
+                              style={{ cursor: "pointer" }}
                             >
                               <CategoryText transaction={transaction} />
                             </Badge>
-                          )}
-                        </Table.Cell>
-                        <Table.Cell>
-                          {getPartitionColumn(transaction)}
-                        </Table.Cell>
-                        <Table.Cell justify="end">
-                          <Text color={amountColor} weight="medium">
-                            {isEditable(transaction) ? (
-                              <EditableAmountField {...{ transaction, user }} />
-                            ) : (
-                              formatValue(
-                                Math.abs(parseValue(transaction.value))
-                              )
-                            )}
-                          </Text>
-                        </Table.Cell>
-                        <Table.Cell style={{ minWidth: "300px" }}>
-                          {isEditable(transaction) ? (
-                            <EditableDescriptionField
-                              {...{ transaction, user }}
-                            />
-                          ) : (
-                            transaction.description
-                          )}
-                        </Table.Cell>
-                        <Table.Cell>
-                          {shouldShowDelete(transaction) && (
-                            <IconButton
-                              className="delete-button"
-                              variant="ghost"
-                              color="crimson"
-                              onClick={async () => {
-                                setIsDeleting(true);
-                                const result = await rpc.post.deleteTransaction(
-                                  {
-                                    transactionId: transaction.id,
-                                    userId: user.id,
-                                    dbname: user.dbname,
-                                  }
-                                );
-                                const queryKeys = getQueryKeysToInvalidate(
-                                  transaction,
-                                  user
-                                );
-                                if (result) {
-                                  if ("loanId" in result && result.loanId) {
-                                    dispatch({
-                                      type: "REMOVE_LOAN_IDS",
-                                      payload: [result.loanId],
-                                    });
-                                  }
-                                }
-                                invalidateMany(queryClient, queryKeys);
-                                setIsDeleting(false);
-                              }}
-                              disabled={isDeleting}
-                            >
-                              <Cross1Icon width="16" height="16" />
-                            </IconButton>
-                          )}
-                        </Table.Cell>
-                      </Table.Row>
-                    );
-                  });
-                } else {
-                  return (
-                    <Table.Row>
-                      <Table.Cell colSpan={6} align="center">
-                        <Text>No transactions found</Text>
-                      </Table.Cell>
-                    </Table.Row>
-                  );
-                }
-              }}
-            </QueryResult>
-          </Table.Body>
-        </Table.Root>
-      </ScrollArea>
-    </>
+                          </Popover.Trigger>
+                        </Combobox>
+                      ) : (
+                        <Badge
+                          color={CATEGORY_COLOR[transaction.category.kind]}
+                          variant="surface"
+                        >
+                          <CategoryText transaction={transaction} />
+                        </Badge>
+                      )}
+                    </Table.Cell>
+                    <Table.Cell>{getPartitionColumn(transaction)}</Table.Cell>
+                    <Table.Cell justify="end">
+                      <Text color={amountColor} weight="medium">
+                        {isEditable(transaction) ? (
+                          <EditableAmountField {...{ transaction, user }} />
+                        ) : (
+                          formatValue(Math.abs(parseValue(transaction.value)))
+                        )}
+                      </Text>
+                    </Table.Cell>
+                    <Table.Cell style={{ minWidth: "300px" }}>
+                      {isEditable(transaction) ? (
+                        <EditableDescriptionField {...{ transaction, user }} />
+                      ) : (
+                        transaction.description
+                      )}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {shouldShowDelete(transaction) && (
+                        <IconButton
+                          className="delete-button"
+                          variant="ghost"
+                          color="crimson"
+                          onClick={async () => {
+                            setIsDeleting(true);
+                            const result = await rpc.post.deleteTransaction({
+                              transactionId: transaction.id,
+                              userId: user.id,
+                              dbname: user.dbname,
+                            });
+                            const queryKeys = getQueryKeysToInvalidate(
+                              transaction,
+                              user
+                            );
+                            if (result) {
+                              if ("loanId" in result && result.loanId) {
+                                dispatch({
+                                  type: "REMOVE_LOAN_IDS",
+                                  payload: [result.loanId],
+                                });
+                              }
+                            }
+                            invalidateMany(queryClient, queryKeys);
+                            setIsDeleting(false);
+                          }}
+                          disabled={isDeleting}
+                        >
+                          <Cross1Icon width="16" height="16" />
+                        </IconButton>
+                      )}
+                    </Table.Cell>
+                  </Table.Row>
+                );
+              });
+            } else {
+              return (
+                <Table.Row>
+                  <Table.Cell colSpan={6} align="center">
+                    <Text>No transactions found</Text>
+                  </Table.Cell>
+                </Table.Row>
+              );
+            }
+          }}
+        </QueryResult>
+      </Table.Body>
+    </Table.Root>
   );
 }
 
@@ -793,7 +593,10 @@ const EditableDescriptionField = (props: {
     },
     {
       onSuccess: () => {
-        invalidateMany(queryClient, [["transactions"]]);
+        invalidateMany(queryClient, [
+          ["transactions"],
+          ["groupedTransactions"],
+        ]);
       },
     }
   );
@@ -830,6 +633,7 @@ const getQueryKeysToInvalidate = (
 ) => {
   const queryKeys: QueryKey[] = [
     ["transactions"],
+    ["groupedTransactions"],
     ["user", user.id],
     ["categoryCanBeDeleted", { categoryId: transaction.category.id }],
     [

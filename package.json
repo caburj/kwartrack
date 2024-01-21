@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "prepare": "panda codegen && npx @edgedb/generate@0.4.1 edgeql-js",
-    "dev": "next dev --turbo",
+    "dev": "next dev",
+    "dev-turbo": "next dev --turbo",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

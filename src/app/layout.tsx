@@ -1,5 +1,5 @@
-import "./globals.css";
 import "@radix-ui/themes/styles.css";
+import "./globals.css";
 import "../linear.scss";
 import { Providers } from "./providers";
 import type { Metadata } from "next";
