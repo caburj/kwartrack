@@ -131,13 +131,38 @@ export function Dashboard(props: { user: { id: string; dbname: string } }) {
                 <Chart
                   type="bar"
                   options={{
+                    plugins: {
+                      legend: { display: true },
+                    },
                     scales: {
                       x: {
                         stacked: true,
                       },
                       y: {
                         stacked: true,
+                        position: "left",
+                        title: {
+                          display: true,
+                          text: "Expense/Income"
+                        }
                       },
+                      ...(isExpense == "balance"
+                        ? ({
+                            y1: {
+                              type: "linear",
+                              display: true,
+                              position: "right",
+                              title: {
+                                display: true,
+                                text: "Balance"
+                              },
+                              // grid line settings
+                              grid: {
+                                drawOnChartArea: false, // only want the grid lines for one axis to show up
+                              },
+                            },
+                          } as const)
+                        : ({} as const)),
                     },
                   }}
                   data={getBarChartData(gpByDate, isExpense, accumulatedTotal)}
@@ -284,6 +309,7 @@ function getBarChartData(
             pointRadius: 4,
             pointBorderColor: blue9,
             pointBackgroundColor: blue3,
+            yAxisID: "y1",
           },
         ]
       : [];
