@@ -74,6 +74,7 @@ import {
 import { editAccount } from '@/disturbers/edit_account';
 import { editPartition } from '@/disturbers/edit_partition';
 import { editCategory } from '@/disturbers/edit_category';
+import { getPaymentInput } from '@/disturbers/get_payment_input';
 import { rpc } from '../../rpc_client';
 import { css } from '../../../../styled-system/css';
 import { AnimatedAccordionContent } from './accordion';
@@ -717,7 +718,6 @@ const LoanItem = ({
   user: { id: string; dbname: string };
 }) => {
   const queryClient = useQueryClient();
-  const hiddenDialogTriggerRef = useRef<HTMLButtonElement>(null);
   const [store, dispatch] = useContext(UserPageStoreContext);
   const borrower = loan.transaction.counterpart!.source_partition;
   const lenderName = `${lender.account.name} - ${lender.name}`;
@@ -731,76 +731,92 @@ const LoanItem = ({
   const categoryVariant = loan.transaction.category.is_private
     ? 'outline'
     : 'soft';
-  const paymentFormId = `payment-form-${loan.id}`;
   const rightClickItems = [
     {
       label: 'Pay',
-      onClick: () => {
-        hiddenDialogTriggerRef.current?.click();
+      onClick: async () => {
+        const resp = await getPaymentInput({
+          loanId: loan.id,
+          defaultAmount: loan.remaining_amount,
+          borrower: {
+            name: borrower.name,
+            color: borrowerColor,
+            variant: borrowerVariant,
+          },
+          lender: {
+            name: lenderName,
+            color: lenderColor,
+            variant: lenderVariant,
+          },
+          category: {
+            name: loan.transaction.category.name,
+            color: categoryColor,
+            variant: categoryVariant,
+          },
+        });
+        if (resp) {
+          await makeAPayment(resp);
+        }
       },
     } as RightClickItem,
   ];
 
-  const makeAPayment = useCallback(async () => {
-    const form = document.getElementById(paymentFormId);
-    const formdata = new FormData(form as HTMLFormElement);
-    const schema = object({
-      amount: transform(string(), v => parseFloat(v)),
-      description: optional(string()),
-    });
-    const toParse = {
-      ...Object.fromEntries(formdata.entries()),
-    };
-    const parsedData = parse(schema, toParse);
-    const result = await rpc.post.makeAPayment({
-      ...parsedData,
-      userId: user.id,
-      dbname: user.dbname,
-      loanId: loan.id,
-    });
+  const makeAPayment = useCallback(
+    async (data: { amount: number; description?: string }) => {
+      const result = await rpc.post.makeAPayment({
+        ...data,
+        userId: user.id,
+        dbname: user.dbname,
+        loanId: loan.id,
+      });
 
-    if (!result) {
-      throw new Error('Something went wrong');
-    }
+      if (!result) {
+        throw new Error('Something went wrong');
+      }
 
-    const { transaction } = loan;
-    const { counterpart } = transaction;
+      const { transaction } = loan;
+      const { counterpart } = transaction;
 
-    const queryKeys: QueryKey[] = [];
+      const queryKeys: QueryKey[] = [];
 
-    queryKeys.push(
-      ['transactions'],
-      ['groupedTransactions'],
-      ['categoryBalance', { categoryId: transaction.category.id }],
-      ['categoryCanBeDeleted', { categoryId: transaction.category.id }],
-      ['partitionBalance', { partitionId: transaction.source_partition.id }],
-      [
-        'accountCanBeDeleted',
-        { accountId: transaction.source_partition.account.id },
-      ],
-      [
-        'accountBalance',
-        { accountId: transaction.source_partition.account.id },
-      ],
-      ['categoryKindBalance', { kind: transaction.category.kind }],
-      ['unpaidLoans', user.id, lender.id],
-      ['partitionsWithLoans', user.id],
-    );
-    if (counterpart) {
       queryKeys.push(
-        ['partitionBalance', { partitionId: counterpart.source_partition.id }],
+        ['transactions'],
+        ['groupedTransactions'],
+        ['categoryBalance', { categoryId: transaction.category.id }],
+        ['categoryCanBeDeleted', { categoryId: transaction.category.id }],
+        ['partitionBalance', { partitionId: transaction.source_partition.id }],
         [
           'accountCanBeDeleted',
-          { accountId: counterpart.source_partition.account.id },
+          { accountId: transaction.source_partition.account.id },
         ],
         [
           'accountBalance',
-          { accountId: counterpart.source_partition.account.id },
+          { accountId: transaction.source_partition.account.id },
         ],
+        ['categoryKindBalance', { kind: transaction.category.kind }],
+        ['unpaidLoans', user.id, lender.id],
+        ['partitionsWithLoans', user.id],
       );
-    }
-    invalidateMany(queryClient, queryKeys);
-  }, [paymentFormId, user, loan, queryClient, lender.id]);
+      if (counterpart) {
+        queryKeys.push(
+          [
+            'partitionBalance',
+            { partitionId: counterpart.source_partition.id },
+          ],
+          [
+            'accountCanBeDeleted',
+            { accountId: counterpart.source_partition.account.id },
+          ],
+          [
+            'accountBalance',
+            { accountId: counterpart.source_partition.account.id },
+          ],
+        );
+      }
+      invalidateMany(queryClient, queryKeys);
+    },
+    [user, loan, queryClient, lender.id],
+  );
 
   return (
     <Flex direction="column" m="2" mt="1" key={loan.id}>
@@ -840,83 +856,6 @@ const LoanItem = ({
           </Flex>
         </Flex>
       </Flex>
-
-      <Dialog.Root>
-        <Dialog.Trigger>
-          <button ref={hiddenDialogTriggerRef} hidden></button>
-        </Dialog.Trigger>
-        <Dialog.Content style={{ maxWidth: 500 }}>
-          <Dialog.Title>Make a Payment</Dialog.Title>
-          <Separator size="4" mb="4" />
-          <Flex direction="column" gap="3" asChild>
-            <form
-              id={paymentFormId}
-              onSubmit={e => {
-                e.preventDefault();
-                makeAPayment();
-              }}
-            >
-              <TwoColumnInput>
-                <Text as="div" size="2" mb="1" weight="bold">
-                  Source
-                </Text>
-                <Flex>
-                  <Badge color={borrowerColor} variant={borrowerVariant}>
-                    <Text>{borrower.label}</Text>
-                  </Badge>
-                </Flex>
-              </TwoColumnInput>
-              <TwoColumnInput>
-                <Text as="div" size="2" mb="1" weight="bold">
-                  Destination
-                </Text>
-                <Flex>
-                  <Badge color={lenderColor} variant={lenderVariant}>
-                    <Text>{lenderName}</Text>
-                  </Badge>
-                </Flex>
-              </TwoColumnInput>
-              <TwoColumnInput>
-                <Text as="div" size="2" mb="1" weight="bold">
-                  Category
-                </Text>
-                <Flex>
-                  <Badge color={categoryColor} variant={categoryVariant}>
-                    <Text>{loan.transaction.category.name}</Text>
-                  </Badge>
-                </Flex>
-              </TwoColumnInput>
-              <TwoColumnInput>
-                <Text as="div" size="2" mb="1" weight="bold">
-                  Amount
-                </Text>
-                <TextField.Input
-                  name="amount"
-                  placeholder="Payment amount"
-                  type="numeric"
-                />
-              </TwoColumnInput>
-              <TwoColumnInput>
-                <Text as="div" size="2" mb="1" weight="bold">
-                  Description
-                </Text>
-                <TextField.Input name="description" placeholder="Description" />
-              </TwoColumnInput>
-            </form>
-          </Flex>
-          <Separator size="4" mt="4" />
-          <Flex gap="3" mt="4" justify="start" direction="row-reverse">
-            <Dialog.Close type="submit" form={paymentFormId}>
-              <Button>Save Payment</Button>
-            </Dialog.Close>
-            <Dialog.Close>
-              <Button variant="soft" color="gray">
-                Discard
-              </Button>
-            </Dialog.Close>
-          </Flex>
-        </Dialog.Content>
-      </Dialog.Root>
     </Flex>
   );
 };
