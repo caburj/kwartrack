@@ -32,6 +32,7 @@
     "chart.js": "^4.4.1",
     "chartjs-plugin-autocolors": "^0.2.2",
     "cmdk": "^0.2.0",
+    "disturb": "^1.0.9",
     "dotenv": "^16.3.2",
     "edgedb": "^1.4.1",
     "eslint": "8.56.0",

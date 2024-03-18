@@ -56,7 +56,6 @@ import {
   PARTITION_COLOR,
   QueryResult,
   RadixColor,
-  Unpacked,
   formatValue,
   getCategoryOptionName,
   getPartitionType,
@@ -72,22 +71,13 @@ import { css } from '../../../../styled-system/css';
 import { AnimatedAccordionContent } from './accordion';
 import { Combobox, ComboboxTrigger } from './combobox';
 import { UserPageStoreContext } from './store';
-
-type UserIDAndDBName = NonNullable<
-  Unpacked<Awaited<ReturnType<typeof rpc.post.getUserIdAndDbname>>>
->;
-
-type Account = Unpacked<
-  NonNullable<Awaited<ReturnType<typeof rpc.post.getAccounts>>>
->;
-
-type Partition = Unpacked<
-  NonNullable<Awaited<ReturnType<typeof rpc.post.getPartitions>>>
->;
-
-type Category = Awaited<
-  ReturnType<typeof rpc.post.getUserCategories>
->['Income'][number];
+import {
+  UserIDAndDBName,
+  Account,
+  Partition,
+  Category,
+} from '@/utils/derived_types';
+import { editAccount } from '@/disturbers/edit_account';
 
 const newPartitionSchema = object({
   name: string([minLength(1)]),
@@ -986,8 +976,6 @@ function AccountLI({
 }) {
   const queryClient = useQueryClient();
 
-  const editAccountTriggerRef = useRef<HTMLButtonElement>(null);
-
   const canBeDeleted = useQuery(
     ['accountCanBeDeleted', { accountId: account.id }],
     () => {
@@ -1016,14 +1004,37 @@ function AccountLI({
     },
   );
 
+  const update = useMutation(
+    async ({ name }: { name: string }) => {
+      return rpc.post.updateAccount({
+        userId: user.id,
+        dbname: user.dbname,
+        accountId: account.id,
+        name,
+      });
+    },
+    {
+      onSuccess: () => {
+        invalidateMany(queryClient, [
+          ['transactions'],
+          ['groupedTransactions'],
+          ['accounts', user.id],
+        ]);
+      },
+    },
+  );
+
   const rightClickItems = [
     ...(account.is_owned
       ? [
           {
             label: 'Edit',
-            onClick: e => {
+            onClick: async e => {
               e.stopPropagation();
-              editAccountTriggerRef.current?.click();
+              const resp = await editAccount({ account });
+              if (resp) {
+                update.mutate(resp);
+              }
             },
           } as RightClickItem,
         ]
@@ -1142,100 +1153,12 @@ function AccountLI({
                 );
               }}
             </FoldableList>
-            <EditAccountDialog
-              account={account}
-              user={user}
-              ref={editAccountTriggerRef}
-            />
           </>
         );
       }}
     </QueryResult>
   );
 }
-
-const EditAccountDialog = forwardRef(function EditAccountDialog(
-  props: {
-    account: Account;
-    user: { id: string; dbname: string };
-  },
-  ref: ForwardedRef<HTMLButtonElement>,
-) {
-  const { account, user } = props;
-  const formId = `edit-account-form-${account.id}`;
-
-  const queryClient = useQueryClient();
-
-  const update = useMutation(
-    async ({ name }: { name: string }) => {
-      return rpc.post.updateAccount({
-        userId: user.id,
-        dbname: user.dbname,
-        accountId: account.id,
-        name,
-      });
-    },
-    {
-      onSuccess: () => {
-        invalidateMany(queryClient, [
-          ['transactions'],
-          ['groupedTransactions'],
-          ['accounts', user.id],
-        ]);
-      },
-    },
-  );
-  return (
-    <Dialog.Root>
-      <Dialog.Trigger>
-        <button ref={ref} hidden></button>
-      </Dialog.Trigger>
-      <Dialog.Content style={{ maxWidth: 500 }}>
-        <Dialog.Title>Edit account</Dialog.Title>
-        <Separator size="4" mb="4" />
-        <Flex direction="column" gap="3" asChild>
-          <form
-            id={formId}
-            onSubmit={async e => {
-              e.preventDefault();
-              const form = document.getElementById(formId);
-              const formdata = new FormData(form as HTMLFormElement);
-              const schema = object({ name: string([minLength(1)]) });
-              const fdata = Object.fromEntries(formdata.entries());
-              const parsedData = parse(schema, fdata);
-              const result = await update.mutateAsync(parsedData);
-              if (!result) {
-                throw new Error('Something went wrong');
-              }
-            }}
-          >
-            <TwoColumnInput>
-              <Text as="div" size="2" mb="1" weight="bold">
-                Name
-              </Text>
-              <TextField.Input
-                name="name"
-                placeholder="Enter account name"
-                defaultValue={account.name}
-              />
-            </TwoColumnInput>
-          </form>
-        </Flex>
-        <Separator size="4" mt="4" />
-        <Flex gap="3" mt="4" justify="start" direction="row-reverse">
-          <Dialog.Close type="submit" form={formId}>
-            <Button>Save</Button>
-          </Dialog.Close>
-          <Dialog.Close>
-            <Button variant="soft" color="gray">
-              Discard
-            </Button>
-          </Dialog.Close>
-        </Flex>
-      </Dialog.Content>
-    </Dialog.Root>
-  );
-});
 
 function Accounts({ user }: { user: { id: string; dbname: string } }) {
   const accounts = useQuery(['accounts', user.id, false], () => {

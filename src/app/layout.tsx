@@ -8,6 +8,7 @@ import { Theme } from '@radix-ui/themes';
 import { Toaster } from 'sonner';
 import { ClerkProvider, UserButton } from '@clerk/nextjs';
 import { Positioned } from '@/utils/common';
+import { Disturbers } from 'disturb';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -35,6 +36,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
             <UserButton afterSignOutUrl="/" />
           </Positioned>
           <Toaster closeButton richColors theme="system" />
+          <Disturbers />
         </body>
       </ClerkProvider>
     </html>
