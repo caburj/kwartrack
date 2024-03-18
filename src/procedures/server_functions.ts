@@ -1,5 +1,4 @@
 import * as edgedb from 'edgedb';
-import e from '../../dbschema/edgeql-js';
 import {
   object,
   string,
@@ -12,6 +11,10 @@ import {
   parse,
 } from 'valibot';
 import { Transaction } from 'edgedb/dist/transaction';
+import e from '../../dbschema/edgeql-js';
+import { groupedTransactions } from '../../dbschema/queries/grouped-transactions.query';
+import { groupedTransactionsByDate } from '../../dbschema/queries/grouped-transactions-by-date.query';
+import { totalPerDateOverall } from '../../dbschema/queries/total-per-date-overall.query';
 import {
   _createInitialData,
   _createInvitation,
@@ -20,9 +23,6 @@ import {
   makeCreateCategoryQuery,
   withValidation,
 } from './common';
-import { groupedTransactions } from '../../dbschema/queries/grouped-transactions.query';
-import { groupedTransactionsByDate } from '../../dbschema/queries/grouped-transactions-by-date.query';
-import { totalPerDateOverall } from '../../dbschema/queries/total-per-date-overall.query';
 
 export const getUserIdAndDbname = withValidation(
   object({ username: string(), email: string() }),
@@ -417,24 +417,23 @@ export const findTransactions = withValidation(
                   },
                 }
               : null,
-            counterpart:
-              tx.counterpart && tx.counterpart.is_visible
-                ? {
-                    ...tx.counterpart,
-                    source_partition: {
-                      ...tx.counterpart.source_partition,
-                      label: `${computeAccountLabel(
+            counterpart: tx.counterpart?.is_visible
+              ? {
+                  ...tx.counterpart,
+                  source_partition: {
+                    ...tx.counterpart.source_partition,
+                    label: `${computeAccountLabel(
+                      tx.counterpart.source_partition.account,
+                    )} - ${tx.counterpart.source_partition.name}`,
+                    account: {
+                      ...tx.counterpart.source_partition.account,
+                      label: computeAccountLabel(
                         tx.counterpart.source_partition.account,
-                      )} - ${tx.counterpart.source_partition.name}`,
-                      account: {
-                        ...tx.counterpart.source_partition.account,
-                        label: computeAccountLabel(
-                          tx.counterpart.source_partition.account,
-                        ),
-                      },
+                      ),
                     },
-                  }
-                : null,
+                  },
+                }
+              : null,
           };
         })
         .slice(0, nPerPage),
@@ -661,7 +660,6 @@ const makeTransactionCreator = withValidation(
         realValue = -Math.abs(value);
       }
 
-      let transactionId: string;
       let counterpartId: string | undefined;
       if (destinationPartitionId) {
         const { id } = await createQuery.run(tx, {
@@ -677,9 +675,9 @@ const makeTransactionCreator = withValidation(
         sourcePartitionId,
         categoryId,
         description,
-        counterpartId: counterpartId,
+        counterpartId,
       });
-      transactionId = id;
+      const transactionId = id;
 
       const transaction = await selectTransactionQuery.run(tx, {
         id: transactionId,
@@ -1024,7 +1022,7 @@ export const createUserCategory = withValidation(
     dbname: string(),
   }),
   async ({ userId, name, kind, dbname }) => {
-    const query = e.params({ id: e.uuid, name: e.str }, ({ id, name }) =>
+    const query = e.params({ id: e.uuid, name: e.str }, ({ name }) =>
       e.insert(e.ECategory, {
         name,
         kind:
@@ -1445,7 +1443,7 @@ export const updateCategory = withValidation(
           filter_single: e.op(category.id, '=', id),
           set: {
             name,
-            is_private: is_private,
+            is_private,
             default_partition: e.select(e.EPartition, partition => ({
               filter_single: e.op(
                 e.op(partition.id, '=', default_partition_id),
@@ -2200,7 +2198,7 @@ export const acceptInvitation = withValidation(
       return _createInitialData(
         {
           asFirstUser: isOwnedDb,
-          username: username,
+          username,
           name: fullName,
           email: invitationEmail,
         },

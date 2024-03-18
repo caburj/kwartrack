@@ -1,9 +1,9 @@
+import { useReducer, createContext, ReactNode } from 'react';
 import {
   getFirstDayOfMonth,
   getLastDayOfMonth,
   plusMonths,
 } from '@/utils/common';
-import { useReducer, createContext, ReactNode } from 'react';
 
 type UserPageStore = {
   partitionIds: string[];
@@ -66,7 +66,7 @@ const userPageStoreReducer = (
 ): UserPageStore => {
   switch (action.type) {
     case 'TOGGLE_PARTITIONS': {
-      let partitionIds = state.partitionIds;
+      let { partitionIds } = state;
       for (const id of action.payload) {
         if (partitionIds.includes(id)) {
           partitionIds = partitionIds.filter(_id => _id !== id);
@@ -102,7 +102,7 @@ const userPageStoreReducer = (
       }
     }
     case 'TOGGLE_CATEGORIES': {
-      let categoryIds = state.categoryIds;
+      let { categoryIds } = state;
       for (const id of action.payload) {
         if (categoryIds.includes(id)) {
           categoryIds = categoryIds.filter(_id => _id !== id);
@@ -184,7 +184,7 @@ const userPageStoreReducer = (
       return { ...state, selectedDestinationId: action.payload };
     }
     case 'TOGGLE_LOAN_IDS': {
-      let loanIds = state.loanIds;
+      let { loanIds } = state;
       for (const id of action.payload) {
         if (loanIds.includes(id)) {
           loanIds = loanIds.filter(_id => _id !== id);
@@ -252,6 +252,9 @@ const userPageStoreReducer = (
           currentPage: 1,
         };
       }
+    }
+    default: {
+      return state;
     }
   }
 };

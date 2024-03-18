@@ -1,7 +1,7 @@
 import { useContext } from 'react';
-import { UserPageStoreContext } from './store';
 import { useQuery } from '@tanstack/react-query';
 import { rpc } from '@/app/rpc_client';
+import { UserPageStoreContext } from './store';
 
 export const useTransactions = (user: { id: string; dbname: string }) => {
   const [store] = useContext(UserPageStoreContext);

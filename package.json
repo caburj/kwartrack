@@ -8,7 +8,7 @@
     "dev-turbo": "next dev --turbo",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "next lint --fix",
     "prettier": "prettier --write . --ignore-path .prettierignore",
     "update-deps": "ncu --upgrade",
     "migrate-all": "tsc -p tsconfig.scripts.json && node compiled/scripts/migrate-all.js",

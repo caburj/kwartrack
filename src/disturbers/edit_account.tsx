@@ -1,6 +1,4 @@
 import { createDisturber } from 'disturb';
-import { Account } from '@/utils/derived_types';
-import { TwoColumnInput } from '@/utils/common';
 import {
   Button,
   Dialog,
@@ -10,6 +8,8 @@ import {
   TextField,
 } from '@radix-ui/themes';
 import { minLength, object, parse, string } from 'valibot';
+import { Account } from '@/utils/derived_types';
+import { TwoColumnInput } from '@/utils/common';
 
 export const editAccount = createDisturber<
   { name: string },

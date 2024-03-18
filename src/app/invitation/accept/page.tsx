@@ -1,13 +1,13 @@
+import { currentUser } from '@clerk/nextjs';
+import { Card, Flex, Text, TextFieldInput } from '@radix-ui/themes';
+import { minLength, object, string, parse } from 'valibot';
+import { notFound, redirect } from 'next/navigation';
+import { Centered, TwoColumnInput } from '@/utils/common';
 import {
   acceptInvitation,
   getMyInvitation,
 } from '@/procedures/server_functions';
-import { Centered, TwoColumnInput } from '@/utils/common';
-import { currentUser } from '@clerk/nextjs';
-import { Card, Flex, Text, TextFieldInput } from '@radix-ui/themes';
 import { css } from '../../../../styled-system/css';
-import { minLength, object, string, parse } from 'valibot';
-import { notFound, redirect } from 'next/navigation';
 import { SubmitButton } from '../submit_button';
 
 const acceptInvitationAction = async (data: FormData) => {

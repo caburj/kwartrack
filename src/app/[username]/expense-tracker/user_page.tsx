@@ -1,6 +1,5 @@
 'use client';
 
-import { UserPageStoreContext, UserPageStoreProvider } from './store';
 import {
   Box,
   Button,
@@ -12,8 +11,6 @@ import {
   Tabs,
   Text,
 } from '@radix-ui/themes';
-import { TransactionsTable } from './transactions_table';
-import { SideBar } from './side_bar';
 import {
   ForwardedRef,
   forwardRef,
@@ -21,7 +18,6 @@ import {
   useEffect,
   useState,
 } from 'react';
-import { css } from '../../../../styled-system/css';
 import 'react-datepicker/dist/react-datepicker.css';
 import 'react-loading-skeleton/dist/skeleton.css';
 import {
@@ -46,12 +42,16 @@ import {
   BarController,
 } from 'chart.js';
 import { useQueryClient } from '@tanstack/react-query';
-import { invalidateMany } from '@/utils/common';
 import autocolors from 'chartjs-plugin-autocolors';
 import DatePicker from 'react-datepicker';
+import { invalidateMany } from '@/utils/common';
+import { css } from '../../../../styled-system/css';
+import { SideBar } from './side_bar';
+import { TransactionsTable } from './transactions_table';
 
 import { useTransactions } from './use_transactions';
 import { Dashboard } from './dashboard';
+import { UserPageStoreContext, UserPageStoreProvider } from './store';
 
 ChartJS.register(
   ArcElement,
@@ -90,7 +90,7 @@ const TableControls = (props: {
 
   const [store, dispatch] = useContext(UserPageStoreContext);
 
-  const currentPage = store.currentPage;
+  const { currentPage } = store;
 
   const incrementPage = () => {
     dispatch({ type: 'SET_CURRENT_PAGE', payload: currentPage + 1 });
@@ -225,7 +225,9 @@ export function UserPage(props: { id: string; dbname: string }) {
   useEffect(() => {
     if (isDragging) {
       const onMouseMove = (e: MouseEvent) => {
-        if (e.clientX < 300 || e.clientX > 600) return;
+        if (e.clientX < 300 || e.clientX > 600) {
+          return;
+        }
         setWidth(e.clientX);
       };
       const onMouseUp = () => {

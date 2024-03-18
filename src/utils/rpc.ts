@@ -39,7 +39,7 @@ export function createRPCHandler(
 /**
  * Only expected to be used in the browser.
  */
-export function createRPCClient<T extends any>(): { get: T; post: T } {
+export function createRPCClient<T>(): { get: T; post: T } {
   const get = new Proxy(
     {},
     {

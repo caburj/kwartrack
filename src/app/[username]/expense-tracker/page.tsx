@@ -1,7 +1,7 @@
-import { getUserIdAndDbname } from '@/procedures/server_functions';
 import { currentUser } from '@clerk/nextjs';
-import { UserPage } from './user_page';
 import { notFound } from 'next/navigation';
+import { getUserIdAndDbname } from '@/procedures/server_functions';
+import { UserPage } from './user_page';
 
 export default async function Page({
   params: { username },

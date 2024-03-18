@@ -1,4 +1,3 @@
-import e from '../../dbschema/edgeql-js';
 import {
   type Input,
   type BaseSchema,
@@ -9,12 +8,12 @@ import {
   parse,
 } from 'valibot';
 import { Transaction } from 'edgedb/dist/transaction';
+import e from '../../dbschema/edgeql-js';
 
-export function withValidation<
-  S extends BaseSchema,
-  R extends any,
-  O extends any[],
->(paramSchema: S, fn: (param: Input<S>, ...otherParams: O) => R) {
+export function withValidation<S extends BaseSchema, O extends any[], R>(
+  paramSchema: S,
+  fn: (param: Input<S>, ...otherParams: O) => R,
+) {
   return (param: Input<S>, ...otherParams: O) => {
     const result = parse(paramSchema, param);
     return fn(result, ...otherParams);
@@ -292,7 +291,7 @@ export const _createInitialData = withValidation(
           forNewAccount: true,
           isPrivate: false,
           name: 'Main',
-          userId: userId,
+          userId,
           newAccountName: 'Bank Account',
           isSharedAccount: false,
           // TODO: Seems to be unused. Remove?

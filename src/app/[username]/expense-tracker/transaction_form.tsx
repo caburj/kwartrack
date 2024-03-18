@@ -1,19 +1,3 @@
-import { rpc } from '@/app/rpc_client';
-import {
-  CATEGORY_COLOR,
-  Categories,
-  Category,
-  DateInput,
-  PARTITION_COLOR,
-  Partitions,
-  Unpacked,
-  getCategoryOptionName,
-  getPartitionType,
-  invalidateMany,
-  parseValue,
-  useGroupedPartitions,
-  usePartitions,
-} from '@/utils/common';
 import {
   QueryKey,
   useMutation,
@@ -31,12 +15,28 @@ import {
 } from 'react';
 import { number, object, optional, string, parse } from 'valibot';
 import { Flex, Table, IconButton } from '@radix-ui/themes';
-import { Combobox, ComboboxTrigger } from './combobox';
 import { ChevronRightIcon, PaperPlaneIcon } from '@radix-ui/react-icons';
-import { css } from '../../../../styled-system/css';
-import { UserPageStoreContext } from './store';
 import { toast } from 'sonner';
 import DatePicker from 'react-datepicker';
+import {
+  CATEGORY_COLOR,
+  Categories,
+  Category,
+  DateInput,
+  PARTITION_COLOR,
+  Partitions,
+  Unpacked,
+  getCategoryOptionName,
+  getPartitionType,
+  invalidateMany,
+  parseValue,
+  useGroupedPartitions,
+  usePartitions,
+} from '@/utils/common';
+import { rpc } from '@/app/rpc_client';
+import { css } from '../../../../styled-system/css';
+import { UserPageStoreContext } from './store';
+import { Combobox, ComboboxTrigger } from './combobox';
 
 type PartitionOption = Unpacked<
   Awaited<ReturnType<typeof rpc.post.getPartitionOptions>>
@@ -51,7 +51,7 @@ const CategoryComboBox = forwardRef(function CategoryComboBox(
 
   const [store, dispatch] = useContext(UserPageStoreContext);
 
-  const selectedCategoryId = store.selectedCategoryId;
+  const { selectedCategoryId } = store;
 
   const selectedCategory = useMemo(() => {
     if (categories) {
@@ -107,24 +107,22 @@ const PartitionCombobox = forwardRef(function PartitionCombobox(
   },
   ref: ForwardedRef<HTMLButtonElement>,
 ) {
-  const { partitions, user, selectedPartitionId, command, selectedCategory } =
-    props;
+  const { partitions, selectedPartitionId, command, selectedCategory } = props;
 
   const selectedPartition = useMemo(() => {
     return partitions.find(p => p.id === selectedPartitionId);
   }, [partitions, selectedPartitionId]);
 
-  const [store, dispatch] = useContext(UserPageStoreContext);
+  const [, dispatch] = useContext(UserPageStoreContext);
 
-  const groupedPartitions = useGroupedPartitions(partitions, user.id);
+  const groupedPartitions = useGroupedPartitions(partitions);
 
   const partitionName = selectedPartition
     ? `${selectedPartition.account.label} - ${selectedPartition.name}`
     : props.placeholder;
 
   const color =
-    selectedPartition &&
-    PARTITION_COLOR[getPartitionType(selectedPartition, user.id)];
+    selectedPartition && PARTITION_COLOR[getPartitionType(selectedPartition)];
 
   const variant = selectedPartition?.is_private ? 'outline' : 'soft';
 
@@ -133,13 +131,11 @@ const PartitionCombobox = forwardRef(function PartitionCombobox(
       groupedItems={groupedPartitions}
       getGroupHeading={(key, items) => items[0].account.label}
       getItemColor={item => {
-        const _type = getPartitionType(item, user.id);
+        const _type = getPartitionType(item);
         return PARTITION_COLOR[_type];
       }}
       isItemIncluded={p => !selectedCategory?.is_private || p.is_private}
-      getItemValue={p =>
-        `${getPartitionType(p, user.id)} ${p.account.label} ${p.name}`
-      }
+      getItemValue={p => `${getPartitionType(p)} ${p.account.label} ${p.name}`}
       getItemDisplay={p => p.name}
       onSelectItem={p => {
         dispatch({ type: command, payload: p.id });
@@ -164,15 +160,15 @@ function TransactionFormMain(props: {
 
   const [store, dispatch] = useContext(UserPageStoreContext);
 
-  const selectedSourceId = store.selectedSourceId;
-  const selectedDestinationId = store.selectedDestinationId;
+  const { selectedSourceId } = store;
+  const { selectedDestinationId } = store;
 
   const [inputValue, setInputValue] = useState('');
   const [inputDescription, setInputDescription] = useState('');
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  const selectedCategoryId = store.selectedCategoryId;
+  const { selectedCategoryId } = store;
 
   const categories = useMemo(() => {
     return [
@@ -239,7 +235,7 @@ function TransactionFormMain(props: {
   const categoryButtonRef = useRef<HTMLButtonElement>(null);
   const partitionButtonRef = useRef<HTMLButtonElement>(null);
 
-  let value: number | undefined = undefined;
+  let value: number | undefined;
   try {
     value = parseValue(inputValue);
   } catch (_error) {}
@@ -248,7 +244,9 @@ function TransactionFormMain(props: {
     !value || value <= 0 || isNaN(value) || createTransaction.isLoading;
 
   const onSubmit = async () => {
-    if (disableSubmit) return;
+    if (disableSubmit) {
+      return;
+    }
 
     const dataSchema = object({
       sourcePartitionId: string(),

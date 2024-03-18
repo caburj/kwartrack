@@ -1,13 +1,13 @@
-import { center } from '../../../../styled-system/patterns';
-import { UserPageStoreContext } from './store';
 import { Box, Flex, Grid, Text } from '@radix-ui/themes';
 import { useContext, useState } from 'react';
 import { Doughnut, Chart } from 'react-chartjs-2';
 import { useQuery } from '@tanstack/react-query';
 import { rpc } from '@/app/rpc_client';
 import { QueryResult, formatValue } from '@/utils/common';
+import { center } from '../../../../styled-system/patterns';
 import { GroupedTransactionsReturns } from '../../../../dbschema/queries/grouped-transactions.query';
 import { GroupedTransactionsByDateReturns } from '../../../../dbschema/queries/grouped-transactions-by-date.query';
+import { UserPageStoreContext } from './store';
 
 type Summary = 'income' | 'expense' | 'balance';
 
@@ -259,6 +259,10 @@ function getPieChartData(
           },
         ],
       };
+    default: {
+      const _exhaustiveCheck: never = summary;
+      return _exhaustiveCheck;
+    }
   }
 }
 

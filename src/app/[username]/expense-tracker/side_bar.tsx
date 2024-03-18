@@ -66,11 +66,6 @@ import {
   TwoColumnInput,
 } from '@/utils/common';
 
-import { rpc } from '../../rpc_client';
-import { css } from '../../../../styled-system/css';
-import { AnimatedAccordionContent } from './accordion';
-import { Combobox, ComboboxTrigger } from './combobox';
-import { UserPageStoreContext } from './store';
 import {
   UserIDAndDBName,
   Account,
@@ -78,6 +73,11 @@ import {
   Category,
 } from '@/utils/derived_types';
 import { editAccount } from '@/disturbers/edit_account';
+import { rpc } from '../../rpc_client';
+import { css } from '../../../../styled-system/css';
+import { AnimatedAccordionContent } from './accordion';
+import { Combobox, ComboboxTrigger } from './combobox';
+import { UserPageStoreContext } from './store';
 
 const newPartitionSchema = object({
   name: string([minLength(1)]),
@@ -520,7 +520,7 @@ const ActiveLoans = ({ user }: { user: { id: string; dbname: string } }) => {
                 openValues={[]}
                 getHeaderLabel={id => {
                   const partition = partitionById[id][0];
-                  const _type = getPartitionType2(partition, user.id);
+                  const _type = getPartitionType2(partition);
                   const color = PARTITION_COLOR[_type];
                   const variant = partition.is_private ? 'outline' : 'soft';
                   return (
@@ -722,9 +722,9 @@ const LoanItem = ({
   const lenderName = `${lender.account.name} - ${lender.name}`;
   const borrowerColor = store.loanIds.includes(loan.id)
     ? 'cyan'
-    : PARTITION_COLOR[getPartitionType2(borrower, user.id)];
+    : PARTITION_COLOR[getPartitionType2(borrower)];
   const borrowerVariant = borrower.is_private ? 'outline' : 'soft';
-  const lenderColor = PARTITION_COLOR[getPartitionType2(lender, user.id)];
+  const lenderColor = PARTITION_COLOR[getPartitionType2(lender)];
   const lenderVariant = lender.is_private ? 'outline' : 'soft';
   const categoryColor = CATEGORY_COLOR[loan.transaction.category.kind];
   const categoryVariant = loan.transaction.category.is_private
@@ -734,7 +734,7 @@ const LoanItem = ({
   const rightClickItems = [
     {
       label: 'Pay',
-      onClick: e => {
+      onClick: () => {
         hiddenDialogTriggerRef.current?.click();
       },
     } as RightClickItem,
@@ -762,8 +762,8 @@ const LoanItem = ({
       throw new Error('Something went wrong');
     }
 
-    const transaction = loan.transaction;
-    const counterpart = transaction.counterpart;
+    const { transaction } = loan;
+    const { counterpart } = transaction;
 
     const queryKeys: QueryKey[] = [];
 
@@ -1069,7 +1069,7 @@ function AccountLI({
     return false;
   }, [partitions?.data, store.partitionIds]);
 
-  const accountGroup = getAccountGroup(account, user.id);
+  const accountGroup = getAccountGroup(account);
 
   return (
     <QueryResult
@@ -1180,7 +1180,7 @@ function Accounts({ user }: { user: { id: string; dbname: string } }) {
     >
       {accounts => {
         const groupedAccounts = groupBy(accounts, account => {
-          return getAccountGroup(account, user.id);
+          return getAccountGroup(account);
         });
         const sortedAccounts = [
           ...(groupedAccounts.owned || []),
@@ -1200,10 +1200,7 @@ function Accounts({ user }: { user: { id: string; dbname: string } }) {
 }
 
 // TODO: Refactor this. This is just the same as getPartitionType from common.
-export function getPartitionType2(
-  p: Partition,
-  userId: string,
-): 'owned' | 'common' | 'others' {
+export function getPartitionType2(p: Partition): 'owned' | 'common' | 'others' {
   if (p.is_owned) {
     if (p.owners.length === 1) {
       return 'owned';
@@ -1300,7 +1297,7 @@ function PartitionLI({
                         }
                       },
                     },
-                    cancel: { label: 'No', onClick: () => {} },
+                    cancel: { label: 'No' },
                   },
                 );
               }
@@ -1315,11 +1312,11 @@ function PartitionLI({
     : partition.is_private
     ? 'outline'
     : 'soft';
-  const _type = getPartitionType2(partition, user.id);
+  const _type = getPartitionType2(partition);
   const color = isSelected ? 'cyan' : PARTITION_COLOR[_type];
 
   const loanFormId = `make-a-loan-form-${partition.id}`;
-  const groupedPartitions = useGroupedPartitions(partitions, user.id);
+  const groupedPartitions = useGroupedPartitions(partitions);
 
   const selectedDestination = useMemo(() => {
     return partitions.find(p => p.id === selectedDestinationId);
@@ -1327,11 +1324,12 @@ function PartitionLI({
 
   const destinationName = selectedDestination?.name || 'Select destination';
 
-  const destinationVariant =
-    selectedDestination && selectedDestination.is_private ? 'outline' : 'soft';
+  const destinationVariant = selectedDestination?.is_private
+    ? 'outline'
+    : 'soft';
 
   const destinationType =
-    selectedDestination && getPartitionType(selectedDestination, user.id);
+    selectedDestination && getPartitionType(selectedDestination);
 
   const destinationColor =
     (destinationType && PARTITION_COLOR[destinationType]) || 'gray';
@@ -1378,7 +1376,7 @@ function PartitionLI({
       throw new Error('Something went wrong');
     }
     const { transaction } = result;
-    const counterpart = transaction.counterpart;
+    const { counterpart } = transaction;
 
     const queryKeys: QueryKey[] = [];
 
@@ -1517,16 +1515,14 @@ function PartitionLI({
                   groupedItems={groupedPartitions}
                   getGroupHeading={(key, items) => items[0].account.label}
                   getItemColor={item => {
-                    const _type = getPartitionType(item, user.id);
+                    const _type = getPartitionType(item);
                     return PARTITION_COLOR[_type];
                   }}
                   isItemIncluded={p =>
                     p.account.is_owned && p.id !== partition.id
                   }
                   getItemValue={p =>
-                    `${getPartitionType(p, user.id)} ${p.account.label} ${
-                      p.name
-                    }`
+                    `${getPartitionType(p)} ${p.account.label} ${p.name}`
                   }
                   getItemDisplay={p => p.name}
                   onSelectItem={p => setSelectedDestinationId(p.id)}
@@ -1881,8 +1877,7 @@ function FoldableList<X extends { name: string }>(props: {
                   </Accordion.Trigger>
                   {props.getHeaderLabel(key)}
                 </Flex>
-                {props.getHeaderExtraContent &&
-                  props.getHeaderExtraContent(key)}
+                {props.getHeaderExtraContent?.(key)}
               </Flex>
             </Accordion.Header>
             <AnimatedAccordionContent>
@@ -2139,9 +2134,9 @@ function BudgetTextAmount({
       return rpc.post.updateBudget({
         dbname: user.dbname,
         userId: user.id,
-        budgetId: budgetId,
-        categoryId: categoryId,
-        profileId: profileId,
+        budgetId,
+        categoryId,
+        profileId,
         amount: parseFloat(amount),
       });
     },
@@ -2317,10 +2312,7 @@ function GenericLoadingValue(props: {
   );
 }
 
-function getAccountGroup(
-  account: Account,
-  userId: string,
-): 'owned' | 'common' | 'others' {
+function getAccountGroup(account: Account): 'owned' | 'common' | 'others' {
   if (account.is_owned) {
     if (account.owners.length === 1) {
       return 'owned';
@@ -2376,7 +2368,7 @@ const useDefaultPartitionInput = ({
 }) => {
   const partitions = usePartitions(user);
 
-  const groupedPartitions = useGroupedPartitions(partitions, user.id);
+  const groupedPartitions = useGroupedPartitions(partitions);
 
   const initialDefaultPartition = partitions.find(
     p => p.id === defaultPartitionId,
@@ -2391,7 +2383,7 @@ const useDefaultPartitionInput = ({
     : 'soft';
 
   const type = selectedDefaultPartition
-    ? getPartitionType(selectedDefaultPartition, user.id)
+    ? getPartitionType(selectedDefaultPartition)
     : 'others';
 
   const defaultPartitionColor = PARTITION_COLOR[type];
@@ -2409,12 +2401,12 @@ const useDefaultPartitionInput = ({
         groupedItems={groupedPartitions}
         getGroupHeading={(_key, items) => items[0].account.label}
         getItemColor={item => {
-          const type = getPartitionType(item, user.id);
+          const type = getPartitionType(item);
           return PARTITION_COLOR[type];
         }}
         isItemIncluded={p => (categoryIsPrivate ? p.is_private : true)}
         getItemValue={p =>
-          `${getPartitionType(p, user.id)} ${p.account.label} ${p.name}`
+          `${getPartitionType(p)} ${p.account.label} ${p.name}`
         }
         getItemDisplay={p => p.name}
         onSelectItem={p => {

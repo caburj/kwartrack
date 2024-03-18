@@ -5,8 +5,21 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { useContext, useState } from 'react';
-import { UserPageStoreContext } from './store';
-import { rpc } from '@/app/rpc_client';
+import {
+  Badge,
+  Flex,
+  IconButton,
+  Popover,
+  Text,
+  Table,
+} from '@radix-ui/themes';
+import { Cross1Icon, ChevronRightIcon } from '@radix-ui/react-icons';
+import { GiPayMoney } from 'react-icons/gi';
+import { BiMoneyWithdraw } from 'react-icons/bi';
+
+import DatePicker from 'react-datepicker';
+import Skeleton from 'react-loading-skeleton';
+import { toast } from 'sonner';
 import {
   CATEGORY_COLOR,
   DateInput,
@@ -22,24 +35,11 @@ import {
   useGroupedPartitions,
   usePartitions,
 } from '@/utils/common';
-import {
-  Badge,
-  Flex,
-  IconButton,
-  Popover,
-  Text,
-  Table,
-} from '@radix-ui/themes';
-import { Cross1Icon, ChevronRightIcon } from '@radix-ui/react-icons';
-import { Combobox } from './combobox';
+import { rpc } from '@/app/rpc_client';
 import { css } from '../../../../styled-system/css';
 import { TransactionForm } from './transaction_form';
-import { GiPayMoney } from 'react-icons/gi';
-import { BiMoneyWithdraw } from 'react-icons/bi';
-
-import DatePicker from 'react-datepicker';
-import Skeleton from 'react-loading-skeleton';
-import { toast } from 'sonner';
+import { Combobox } from './combobox';
+import { UserPageStoreContext } from './store';
 import { useTransactions } from './use_transactions';
 
 type Transaction = Unpacked<
@@ -94,13 +94,9 @@ function EditablePartitionBadge({
       });
     },
   );
-  const _type = getPartitionType(partition, user.id);
+  const _type = getPartitionType(partition);
   const color = PARTITION_COLOR[_type];
-  const groupedPartitions = useGroupedPartitions(
-    partitions,
-    user.id,
-    !isCounterpart,
-  );
+  const groupedPartitions = useGroupedPartitions(partitions, !isCounterpart);
   const selectedCategory = transaction.category;
   const variant = partition.is_private ? 'outline' : 'soft';
   return (
@@ -108,13 +104,11 @@ function EditablePartitionBadge({
       groupedItems={groupedPartitions}
       getGroupHeading={(key, items) => items[0].account.label}
       getItemColor={item => {
-        const _type = getPartitionType(item, user.id);
+        const _type = getPartitionType(item);
         return PARTITION_COLOR[_type];
       }}
       isItemIncluded={p => !selectedCategory.is_private || p.is_private}
-      getItemValue={p =>
-        `${getPartitionType(p, user.id)} ${p.account.label} ${p.name}`
-      }
+      getItemValue={p => `${getPartitionType(p)} ${p.account.label} ${p.name}`}
       getItemDisplay={p => p.name}
       onSelectItem={async par => {
         await updateTransaction.mutateAsync({
@@ -155,7 +149,7 @@ function PartitionBadge({
   isCounterpart: boolean;
 }) {
   if (partition) {
-    const _type = getPartitionType(partition, user.id);
+    const _type = getPartitionType(partition);
     const color = PARTITION_COLOR[_type];
     if (isEditable(transaction) && !partition.archived) {
       return (
@@ -211,7 +205,7 @@ export function TransactionsTable({
   user: { id: string; dbname: string };
 }) {
   const queryClient = useQueryClient();
-  const [store, dispatch] = useContext(UserPageStoreContext);
+  const [, dispatch] = useContext(UserPageStoreContext);
 
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -245,7 +239,9 @@ export function TransactionsTable({
   const updateTransaction = useMutation(
     async (arg: { transaction: Transaction; categoryId: string }) => {
       const { transaction, categoryId } = arg;
-      if (transaction.category.id === categoryId) return;
+      if (transaction.category.id === categoryId) {
+        return;
+      }
       return rpc.post.updateTransaction({
         transactionId: transaction.id,
         categoryId,
@@ -545,7 +541,9 @@ const EditableAmountField = (props: {
         const newValue = success ? value : originalValue;
         setValue(formatValue(Math.abs(parseValue(newValue))));
 
-        if (!success) return;
+        if (!success) {
+          return;
+        }
         const queryKeys = getQueryKeysToInvalidate(transaction, user);
         invalidateMany(queryClient, queryKeys);
       },

@@ -1,5 +1,5 @@
-import { Centered } from '@/utils/common';
 import { SignUp } from '@clerk/nextjs';
+import { Centered } from '@/utils/common';
 
 export default function Page() {
   return (

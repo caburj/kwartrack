@@ -1,14 +1,14 @@
 import '@radix-ui/themes/styles.css';
 import './globals.css';
 import '../linear.scss';
-import { Providers } from './providers';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Theme } from '@radix-ui/themes';
 import { Toaster } from 'sonner';
 import { ClerkProvider, UserButton } from '@clerk/nextjs';
-import { Positioned } from '@/utils/common';
 import { Disturbers } from 'disturb';
+import { Positioned } from '@/utils/common';
+import { Providers } from './providers';
 
 const inter = Inter({ subsets: ['latin'] });
 

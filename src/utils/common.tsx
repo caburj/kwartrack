@@ -1,4 +1,3 @@
-import { rpc } from '@/app/rpc_client';
 import { Badge, Flex, Grid, textPropDefs } from '@radix-ui/themes';
 import {
   UseQueryResult,
@@ -7,6 +6,7 @@ import {
   useQuery,
 } from '@tanstack/react-query';
 import { ForwardedRef, ReactHTML, forwardRef, useMemo } from 'react';
+import { rpc } from '@/app/rpc_client';
 
 export type Unpacked<T> = T extends (infer U)[] ? U : T;
 
@@ -46,13 +46,12 @@ function createParser(locale: string) {
   );
   const numeral = new RegExp(`[${numerals.join('')}]`, 'g');
   const parse = (string: string) => {
-    return (string = string
+    string = string
       .trim()
       .replace(group, '')
       .replace(decimal, '.')
-      .replace(numeral, x => index.get(x)!.toString()))
-      ? +string
-      : NaN;
+      .replace(numeral, x => index.get(x)!.toString());
+    return string ? Number(string) : NaN;
   };
   return parse;
 }
@@ -93,7 +92,9 @@ export function QueryResult<T>(props: {
   } else {
     node = props.children(data);
   }
-  if (Tag === undefined) return <>{node}</>;
+  if (Tag === undefined) {
+    return <>{node}</>;
+  }
   return <Tag className={props.className}>{node}</Tag>;
 }
 
@@ -104,7 +105,6 @@ export type PartitionOption = Unpacked<NonNullable<Partitions>>;
 
 export function getPartitionType(
   p: PartitionOption,
-  userId: string,
 ): 'owned' | 'common' | 'others' {
   if (p.account.is_owned) {
     if (p.account.owners.length === 1) {
@@ -148,20 +148,19 @@ export function invalidateMany(client: QueryClient, keys: QueryKey[]) {
 
 export function useGroupedPartitions(
   partitions: Partitions,
-  userId: string,
   onlyOwned = false,
 ) {
   const sortedPartitions = useMemo(() => {
     const partitionsByType = groupBy(
       partitions.filter(p => (onlyOwned ? p.account.is_owned : true)),
-      p => getPartitionType(p, userId),
+      p => getPartitionType(p),
     );
     return [
       ...(partitionsByType.owned || []),
       ...(partitionsByType.common || []),
       ...(partitionsByType.others || []),
     ];
-  }, [partitions, userId, onlyOwned]);
+  }, [partitions, onlyOwned]);
 
   const groupedPartitions = useMemo(() => {
     return groupBy(sortedPartitions, p => p.account.id);

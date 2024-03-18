@@ -1,9 +1,9 @@
+import { currentUser } from '@clerk/nextjs';
+import { notFound, redirect } from 'next/navigation';
 import {
   checkPendingInvitation,
   findUserByEmail,
 } from '@/procedures/server_functions';
-import { currentUser } from '@clerk/nextjs';
-import { notFound, redirect } from 'next/navigation';
 
 export default async function Home() {
   const user = await currentUser();

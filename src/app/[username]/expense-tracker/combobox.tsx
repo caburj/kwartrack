@@ -1,7 +1,6 @@
 import {
   Badge,
   Box,
-  Button,
   Flex,
   Grid,
   Popover,
@@ -10,9 +9,9 @@ import {
 } from '@radix-ui/themes';
 import { Command } from 'cmdk';
 import { forwardRef, useState } from 'react';
-import { css } from '../../../../styled-system/css';
 import { MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import { RadixColor } from '@/utils/common';
+import { css } from '../../../../styled-system/css';
 
 export function Combobox<
   I extends { id: string; is_private: boolean },
@@ -63,7 +62,9 @@ export function Combobox<
                   Object.entries(props.groupedItems) as unknown as [K, I[]][]
                 ).map(([key, items]) => {
                   const itemsToDisplay = items.filter(pred);
-                  if (itemsToDisplay.length === 0) return null;
+                  if (itemsToDisplay.length === 0) {
+                    return null;
+                  }
                   return (
                     <Command.Group
                       heading={props.getGroupHeading(key, itemsToDisplay)}
