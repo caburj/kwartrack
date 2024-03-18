@@ -1,6 +1,7 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Disturbers } from 'disturb';
 
 export default function UserLayout(props: { children: React.ReactNode }) {
   return (
@@ -16,6 +17,7 @@ export default function UserLayout(props: { children: React.ReactNode }) {
       }
     >
       {props.children}
+      <Disturbers />
     </QueryClientProvider>
   );
 }

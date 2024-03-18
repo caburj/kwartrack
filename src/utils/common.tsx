@@ -1,12 +1,20 @@
-import { Badge, Flex, Grid, textPropDefs } from '@radix-ui/themes';
+'use client';
+
+import { Badge, Flex, Grid, textPropDefs, Box, Text } from '@radix-ui/themes';
 import {
   UseQueryResult,
   QueryClient,
   QueryKey,
   useQuery,
 } from '@tanstack/react-query';
-import { ForwardedRef, ReactHTML, forwardRef, useMemo } from 'react';
+import { ForwardedRef, ReactHTML, forwardRef, useMemo, useState } from 'react';
+import { Cross2Icon } from '@radix-ui/react-icons';
 import { rpc } from '@/app/rpc_client';
+import { css } from '../../styled-system/css';
+import {
+  Combobox,
+  ComboboxTrigger,
+} from '../app/[username]/expense-tracker/combobox';
 
 export type Unpacked<T> = T extends (infer U)[] ? U : T;
 
@@ -273,4 +281,88 @@ export const plusMonths = (date: Date, n: number) => {
   const d = new Date(date);
   d.setMonth(d.getMonth() + n);
   return new Date(d);
+};
+
+type UsePartitionItem = ReturnType<typeof usePartitions>[number];
+
+export const useDefaultPartitionInput = ({
+  user,
+  categoryIsPrivate,
+  defaultPartitionId,
+}: {
+  user: { id: string; dbname: string };
+  categoryIsPrivate: boolean;
+  defaultPartitionId?: string;
+}) => {
+  const partitions = usePartitions(user);
+
+  const groupedPartitions = useGroupedPartitions(partitions);
+
+  const initialDefaultPartition = partitions.find(
+    p => p.id === defaultPartitionId,
+  );
+
+  const [selectedDefaultPartition, setSelectedDefaultPartition] = useState<
+    UsePartitionItem | undefined
+  >(initialDefaultPartition);
+
+  const defaultPartitionVariant = selectedDefaultPartition?.is_private
+    ? 'outline'
+    : 'soft';
+
+  const type = selectedDefaultPartition
+    ? getPartitionType(selectedDefaultPartition)
+    : 'others';
+
+  const defaultPartitionColor = PARTITION_COLOR[type];
+
+  const defaultPartitionLabel = selectedDefaultPartition
+    ? `${selectedDefaultPartition.account.label} - ${selectedDefaultPartition.name}`
+    : 'None';
+
+  const inputEl = (
+    <TwoColumnInput>
+      <Text as="div" size="2" weight="bold">
+        Default Partition
+      </Text>
+      <Combobox
+        groupedItems={groupedPartitions}
+        getGroupHeading={(_key, items) => items[0].account.label}
+        getItemColor={item => {
+          const type = getPartitionType(item);
+          return PARTITION_COLOR[type];
+        }}
+        isItemIncluded={p => (categoryIsPrivate ? p.is_private : true)}
+        getItemValue={p =>
+          `${getPartitionType(p)} ${p.account.label} ${p.name}`
+        }
+        getItemDisplay={p => p.name}
+        onSelectItem={p => {
+          setSelectedDefaultPartition(p);
+        }}
+      >
+        <Flex align="center" gap="1">
+          <ComboboxTrigger
+            color={defaultPartitionColor}
+            variant={defaultPartitionVariant}
+          >
+            {defaultPartitionLabel}
+          </ComboboxTrigger>
+          <Box
+            onClick={e => {
+              setSelectedDefaultPartition(undefined);
+              e.preventDefault();
+            }}
+            className={css({ cursor: 'pointer' })}
+          >
+            <Text color="gray">
+              <Cross2Icon width="18" height="18" />
+            </Text>
+          </Box>
+        </Flex>
+      </Combobox>
+    </TwoColumnInput>
+  );
+
+  return { inputEl, selectedDefaultPartition };
 };

@@ -6,7 +6,6 @@ import { Inter } from 'next/font/google';
 import { Theme } from '@radix-ui/themes';
 import { Toaster } from 'sonner';
 import { ClerkProvider, UserButton } from '@clerk/nextjs';
-import { Disturbers } from 'disturb';
 import { Positioned } from '@/utils/common';
 import { Providers } from './providers';
 
@@ -36,7 +35,6 @@ export default function RootLayout(props: { children: React.ReactNode }) {
             <UserButton afterSignOutUrl="/" />
           </Positioned>
           <Toaster closeButton richColors theme="system" />
-          <Disturbers />
         </body>
       </ClerkProvider>
     </html>

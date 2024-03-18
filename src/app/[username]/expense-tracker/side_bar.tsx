@@ -8,8 +8,6 @@ import {
   ReactNode,
   useCallback,
   useMemo,
-  forwardRef,
-  ForwardedRef,
 } from 'react';
 import {
   useQuery,
@@ -64,6 +62,7 @@ import {
   useGroupedPartitions,
   usePartitions,
   TwoColumnInput,
+  useDefaultPartitionInput,
 } from '@/utils/common';
 
 import {
@@ -74,6 +73,7 @@ import {
 } from '@/utils/derived_types';
 import { editAccount } from '@/disturbers/edit_account';
 import { editPartition } from '@/disturbers/edit_partition';
+import { editCategory } from '@/disturbers/edit_category';
 import { rpc } from '../../rpc_client';
 import { css } from '../../../../styled-system/css';
 import { AnimatedAccordionContent } from './accordion';
@@ -1873,7 +1873,31 @@ function CategoryLI({
   const queryClient = useQueryClient();
   const [store, dispatch] = useContext(UserPageStoreContext);
 
-  const editCategoryTriggerRef = useRef<HTMLButtonElement>(null);
+  const updateCategory = useMutation(
+    async (arg: {
+      name: string;
+      isPrivate: boolean;
+      defaultCategoryId?: string;
+    }) => {
+      return rpc.post.updateCategory({
+        categoryId: category.id,
+        dbname: user.dbname,
+        userId: user.id,
+        name: arg.name,
+        isPrivate: arg.isPrivate,
+        defaultPartitionId: arg.defaultCategoryId,
+      });
+    },
+    {
+      onSuccess: () => {
+        invalidateMany(queryClient, [
+          ['categories', user.id],
+          ['transactions'],
+          ['groupedTransactions'],
+        ]);
+      },
+    },
+  );
 
   const canBeDeleted = useQuery(
     ['categoryCanBeDeleted', { categoryId: category.id }],
@@ -1906,9 +1930,12 @@ function CategoryLI({
       ? [
           {
             label: 'Edit',
-            onClick: e => {
+            onClick: async e => {
               e.stopPropagation();
-              editCategoryTriggerRef.current?.click();
+              const resp = await editCategory({ category, user });
+              if (resp) {
+                await updateCategory.mutateAsync(resp);
+              }
             },
           } as RightClickItem,
         ]
@@ -1981,11 +2008,6 @@ function CategoryLI({
       >
         {value => <CategoryValue value={value} weight="regular" />}
       </GenericLoadingValue>
-      <EditCategoryDialog
-        category={category}
-        user={user}
-        ref={editCategoryTriggerRef}
-      />
     </Flex>
   );
 }
@@ -2101,126 +2123,6 @@ function BudgetTextAmount({
   );
 }
 
-// TODO: REF: This component is very similar to EditPartitionDialog.
-const EditCategoryDialog = forwardRef(function EditCategoryDialog(
-  props: {
-    category: Category;
-    user: { id: string; dbname: string };
-  },
-  ref: ForwardedRef<HTMLButtonElement>,
-) {
-  const { category, user } = props;
-  const queryClient = useQueryClient();
-
-  const [categoryIsPrivate, setCategoryIsPrivate] = useState(
-    category.is_private,
-  );
-
-  const { selectedDefaultPartition, inputEl } = useDefaultPartitionInput({
-    user,
-    categoryIsPrivate,
-    defaultPartitionId: category.default_partition?.id,
-  });
-
-  const update = useMutation(
-    async (arg: {
-      name: string;
-      isPrivate: boolean;
-      defaultCategoryId?: string;
-    }) => {
-      return rpc.post.updateCategory({
-        categoryId: category.id,
-        dbname: user.dbname,
-        userId: user.id,
-        name: arg.name,
-        isPrivate: arg.isPrivate,
-        defaultPartitionId: arg.defaultCategoryId,
-      });
-    },
-    {
-      onSuccess: () => {
-        invalidateMany(queryClient, [
-          ['categories', user.id],
-          ['transactions'],
-          ['groupedTransactions'],
-        ]);
-      },
-    },
-  );
-  const formId = `edit-category-form-${category.id}`;
-  return (
-    <Dialog.Root>
-      <Dialog.Trigger>
-        <button ref={ref} hidden></button>
-      </Dialog.Trigger>
-      <Dialog.Content style={{ maxWidth: 500 }}>
-        <Dialog.Title>Edit category</Dialog.Title>
-        <Separator size="4" mb="4" />
-        <Flex direction="column" gap="3" asChild>
-          <form
-            id={formId}
-            onSubmit={async e => {
-              e.preventDefault();
-              const form = document.getElementById(formId);
-              const formdata = new FormData(form as HTMLFormElement);
-              const schema = object({
-                name: string([minLength(1)]),
-                isPrivate: boolean(),
-                defaultCategoryId: optional(string([minLength(1)])),
-              });
-              const fdata = Object.fromEntries(formdata.entries());
-              const parsedData = parse(schema, {
-                name: fdata.name,
-                isPrivate: fdata.isPrivate === 'on',
-                defaultCategoryId: selectedDefaultPartition?.id,
-              });
-              const result = await update.mutateAsync(parsedData);
-              if (!result) {
-                throw new Error('Something went wrong');
-              }
-            }}
-          >
-            <TwoColumnInput>
-              <Text as="div" size="2" weight="bold">
-                Name
-              </Text>
-              <TextField.Input
-                name="name"
-                placeholder="Enter category name"
-                defaultValue={category.name}
-              />
-            </TwoColumnInput>
-            <TwoColumnInput>
-              <Text as="div" size="2" weight="bold">
-                Private
-              </Text>
-              <Switch
-                name="isPrivate"
-                checked={categoryIsPrivate}
-                onClick={() => {
-                  setCategoryIsPrivate(!categoryIsPrivate);
-                }}
-              />
-            </TwoColumnInput>
-            {inputEl}
-          </form>
-        </Flex>
-        <Separator size="4" mt="4" />
-        <Flex gap="3" mt="4" justify="start" direction="row-reverse">
-          <Dialog.Close type="submit" form={formId}>
-            <Button>Save</Button>
-          </Dialog.Close>
-          <Dialog.Close>
-            <Button variant="soft" color="gray">
-              Discard
-            </Button>
-          </Dialog.Close>
-        </Flex>
-      </Dialog.Content>
-    </Dialog.Root>
-  );
-});
-
 function GenericLoadingValue(props: {
   queryKey: [string, ...any];
   valueLoader: () => Promise<string>;
@@ -2278,87 +2180,3 @@ function FoldableListSkeleton({ nItems = 3 }: { nItems?: number }) {
     </Flex>
   );
 }
-
-type UsePartitionItem = ReturnType<typeof usePartitions>[number];
-
-const useDefaultPartitionInput = ({
-  user,
-  categoryIsPrivate,
-  defaultPartitionId,
-}: {
-  user: { id: string; dbname: string };
-  categoryIsPrivate: boolean;
-  defaultPartitionId?: string;
-}) => {
-  const partitions = usePartitions(user);
-
-  const groupedPartitions = useGroupedPartitions(partitions);
-
-  const initialDefaultPartition = partitions.find(
-    p => p.id === defaultPartitionId,
-  );
-
-  const [selectedDefaultPartition, setSelectedDefaultPartition] = useState<
-    UsePartitionItem | undefined
-  >(initialDefaultPartition);
-
-  const defaultPartitionVariant = selectedDefaultPartition?.is_private
-    ? 'outline'
-    : 'soft';
-
-  const type = selectedDefaultPartition
-    ? getPartitionType(selectedDefaultPartition)
-    : 'others';
-
-  const defaultPartitionColor = PARTITION_COLOR[type];
-
-  const defaultPartitionLabel = selectedDefaultPartition
-    ? `${selectedDefaultPartition.account.label} - ${selectedDefaultPartition.name}`
-    : 'None';
-
-  const inputEl = (
-    <TwoColumnInput>
-      <Text as="div" size="2" weight="bold">
-        Default Partition
-      </Text>
-      <Combobox
-        groupedItems={groupedPartitions}
-        getGroupHeading={(_key, items) => items[0].account.label}
-        getItemColor={item => {
-          const type = getPartitionType(item);
-          return PARTITION_COLOR[type];
-        }}
-        isItemIncluded={p => (categoryIsPrivate ? p.is_private : true)}
-        getItemValue={p =>
-          `${getPartitionType(p)} ${p.account.label} ${p.name}`
-        }
-        getItemDisplay={p => p.name}
-        onSelectItem={p => {
-          setSelectedDefaultPartition(p);
-        }}
-      >
-        <Flex align="center" gap="1">
-          <ComboboxTrigger
-            color={defaultPartitionColor}
-            variant={defaultPartitionVariant}
-          >
-            {defaultPartitionLabel}
-          </ComboboxTrigger>
-          <Box
-            onClick={e => {
-              setSelectedDefaultPartition(undefined);
-              e.preventDefault();
-            }}
-            className={css({ cursor: 'pointer' })}
-          >
-            <Text color="gray">
-              <Cross2Icon width="18" height="18" />
-            </Text>
-          </Box>
-        </Flex>
-      </Combobox>
-    </TwoColumnInput>
-  );
-
-  return { inputEl, selectedDefaultPartition };
-};
