@@ -7,16 +7,16 @@ import {
   Popover,
   ScrollArea,
   Text,
-} from "@radix-ui/themes";
-import { Command } from "cmdk";
-import { forwardRef, useState } from "react";
-import { css } from "../../../../styled-system/css";
-import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
-import { RadixColor } from "@/utils/common";
+} from '@radix-ui/themes';
+import { Command } from 'cmdk';
+import { forwardRef, useState } from 'react';
+import { css } from '../../../../styled-system/css';
+import { MagnifyingGlassIcon } from '@radix-ui/react-icons';
+import { RadixColor } from '@/utils/common';
 
 export function Combobox<
   I extends { id: string; is_private: boolean },
-  K extends string
+  K extends string,
 >(props: {
   groupedItems: Record<K, I[]>;
   isItemIncluded?: (item: I) => boolean;
@@ -33,9 +33,9 @@ export function Combobox<
     <Popover.Root open={open} onOpenChange={setOpen}>
       {props.children}
       <Popover.Content
-        style={{ padding: "0px" }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
+        style={{ padding: '0px' }}
+        onKeyDown={e => {
+          if (e.key === 'Enter') {
             e.stopPropagation();
           }
         }}
@@ -45,7 +45,7 @@ export function Combobox<
             p="2"
             gap="1"
             className={css({
-              borderBottom: "1px solid var(--gray-a6)",
+              borderBottom: '1px solid var(--gray-a6)',
             })}
           >
             <Grid align="center">
@@ -55,7 +55,7 @@ export function Combobox<
           </Flex>
           <ScrollArea
             scrollbars="vertical"
-            className={css({ maxHeight: "200px" })}
+            className={css({ maxHeight: '200px' })}
           >
             <Box px="4" pb="4">
               <Command.List>
@@ -69,9 +69,9 @@ export function Combobox<
                       heading={props.getGroupHeading(key, itemsToDisplay)}
                       key={key}
                     >
-                      {itemsToDisplay.map((item) => {
+                      {itemsToDisplay.map(item => {
                         const color = props.getItemColor(item, key);
-                        const variant = item.is_private ? "outline" : "soft";
+                        const variant = item.is_private ? 'outline' : 'soft';
                         return (
                           <Command.Item
                             key={item.id}
@@ -84,7 +84,7 @@ export function Combobox<
                             <Badge
                               color={color}
                               variant={variant}
-                              style={{ cursor: "pointer" }}
+                              style={{ cursor: 'pointer' }}
                             >
                               {props.getItemDisplay(item, key)}
                             </Badge>
@@ -107,17 +107,17 @@ export const ComboboxTrigger = forwardRef(function ComboboxTrigger(
   props: {
     children: React.ReactNode;
     color?: RadixColor;
-    variant?: "outline" | "soft";
+    variant?: 'outline' | 'soft';
   },
-  ref: React.Ref<HTMLButtonElement>
+  ref: React.Ref<HTMLButtonElement>,
 ) {
   return (
     <Popover.Trigger>
       <button
         ref={ref}
-        style={{ outline: "none" }}
-        onKeyDown={(ev) => {
-          if (["Space", "Enter"].includes(ev.key)) {
+        style={{ outline: 'none' }}
+        onKeyDown={ev => {
+          if (['Space', 'Enter'].includes(ev.key)) {
             ev.preventDefault();
             ev.stopPropagation();
             ev.currentTarget.click();
@@ -125,9 +125,9 @@ export const ComboboxTrigger = forwardRef(function ComboboxTrigger(
         }}
       >
         <Badge
-          variant={props.variant ?? "soft"}
-          color={props.color ?? "gray"}
-          style={{ cursor: "pointer" }}
+          variant={props.variant ?? 'soft'}
+          color={props.color ?? 'gray'}
+          style={{ cursor: 'pointer' }}
         >
           <Text>{props.children}</Text>
         </Badge>

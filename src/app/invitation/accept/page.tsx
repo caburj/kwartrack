@@ -1,17 +1,17 @@
 import {
   acceptInvitation,
   getMyInvitation,
-} from "@/procedures/server_functions";
-import { Centered, TwoColumnInput } from "@/utils/common";
-import { currentUser } from "@clerk/nextjs";
-import { Card, Flex, Text, TextFieldInput } from "@radix-ui/themes";
-import { css } from "../../../../styled-system/css";
-import { minLength, object, string, parse } from "valibot";
-import { notFound, redirect } from "next/navigation";
-import { SubmitButton } from "../submit_button";
+} from '@/procedures/server_functions';
+import { Centered, TwoColumnInput } from '@/utils/common';
+import { currentUser } from '@clerk/nextjs';
+import { Card, Flex, Text, TextFieldInput } from '@radix-ui/themes';
+import { css } from '../../../../styled-system/css';
+import { minLength, object, string, parse } from 'valibot';
+import { notFound, redirect } from 'next/navigation';
+import { SubmitButton } from '../submit_button';
 
 const acceptInvitationAction = async (data: FormData) => {
-  "use server";
+  'use server';
   const formData = Object.fromEntries(data.entries());
   const schema = object({
     code: string([minLength(3)]),
@@ -36,13 +36,13 @@ export default async function AcceptInvitationPage({
 }) {
   const user = await currentUser();
   if (!user) {
-    throw new Error("Not logged in");
+    throw new Error('Not logged in');
   }
   const primaryEmail = user.emailAddresses.find(
-    (em) => em.id === user.primaryEmailAddressId
+    em => em.id === user.primaryEmailAddressId,
   );
   if (!primaryEmail) {
-    throw new Error("Email not found");
+    throw new Error('Email not found');
   }
   const code = searchParams?.code as string | undefined;
   const myInvitation = await getMyInvitation({
@@ -53,7 +53,7 @@ export default async function AcceptInvitationPage({
     return notFound();
   }
 
-  const submitButtonText = myInvitation.startOwnDb ? "Start New DB" : "Join";
+  const submitButtonText = myInvitation.startOwnDb ? 'Start New DB' : 'Join';
 
   return (
     <Centered>
@@ -61,7 +61,7 @@ export default async function AcceptInvitationPage({
         <Flex direction="column" gap="2" asChild>
           <form
             action={acceptInvitationAction}
-            className={css({ width: "350px" })}
+            className={css({ width: '350px' })}
           >
             <TwoColumnInput>
               <Text as="div" size="2" mb="1" weight="bold">
@@ -83,7 +83,7 @@ export default async function AcceptInvitationPage({
                 name="code"
                 placeholder="Code"
                 defaultValue={
-                  myInvitation.isCorrectCode ? myInvitation.code : ""
+                  myInvitation.isCorrectCode ? myInvitation.code : ''
                 }
                 readOnly={myInvitation.isCorrectCode}
               />

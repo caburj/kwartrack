@@ -1,8 +1,8 @@
-import { useReducer, createContext, ReactNode, useContext } from "react";
+import { useReducer, createContext, ReactNode, useContext } from 'react';
 
 export function createStore<Store, Action>(
   init: Store,
-  reducer: (state: Store, action: Action) => Store
+  reducer: (state: Store, action: Action) => Store,
 ) {
   const StoreContext = createContext<[Store, (action: Action) => void]>([
     init,

@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "prettier": "prettier --write . --ignore-path .prettierignore",
     "update-deps": "ncu --upgrade",
     "migrate-all": "tsc -p tsconfig.scripts.json && node compiled/scripts/migrate-all.js",
     "invite-user": "tsc -p tsconfig.scripts.json && node compiled/scripts/invite-user.js",

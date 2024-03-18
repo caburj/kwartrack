@@ -1,24 +1,24 @@
-import { Centered, TwoColumnInput } from "@/utils/common";
-import { Card, Flex, Text, TextFieldInput } from "@radix-ui/themes";
-import { css } from "../../../../styled-system/css";
-import { minLength, object, string, parse } from "valibot";
-import { currentUser } from "@clerk/nextjs/server";
-import { createInvitation } from "@/procedures/server_functions";
-import { redirect } from "next/navigation";
-import { SubmitButton } from "../submit_button";
+import { Centered, TwoColumnInput } from '@/utils/common';
+import { Card, Flex, Text, TextFieldInput } from '@radix-ui/themes';
+import { css } from '../../../../styled-system/css';
+import { minLength, object, string, parse } from 'valibot';
+import { currentUser } from '@clerk/nextjs/server';
+import { createInvitation } from '@/procedures/server_functions';
+import { redirect } from 'next/navigation';
+import { SubmitButton } from '../submit_button';
 
 const createInvitationAction = async (data: FormData) => {
-  "use server";
+  'use server';
 
   const user = await currentUser();
   if (!user) {
-    throw new Error("Not logged in");
+    throw new Error('Not logged in');
   }
   const primaryEmailAddress = user.emailAddresses.find(
-    (em) => em.id === user.primaryEmailAddressId
+    em => em.id === user.primaryEmailAddressId,
   );
   if (!primaryEmailAddress) {
-    throw new Error("Email not found");
+    throw new Error('Email not found');
   }
 
   const formData = Object.fromEntries(data.entries());
@@ -37,12 +37,12 @@ const createInvitationAction = async (data: FormData) => {
   });
 
   if (!result) {
-    throw new Error("Failed to create invitation");
+    throw new Error('Failed to create invitation');
   }
-  if ("error" in result) {
+  if ('error' in result) {
     throw new Error(result.error);
   }
-  return redirect("/invitation/list");
+  return redirect('/invitation/list');
 };
 
 export default function CreateInvitationPage() {
@@ -52,7 +52,7 @@ export default function CreateInvitationPage() {
         <Flex direction="column" gap="2" asChild>
           <form
             action={createInvitationAction}
-            className={css({ width: "350px" })}
+            className={css({ width: '350px' })}
           >
             <TwoColumnInput>
               <Text as="div" size="2" mb="1" weight="bold">

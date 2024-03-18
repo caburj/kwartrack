@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { ClipboardCopyIcon } from "@radix-ui/react-icons";
-import { Flex, IconButton } from "@radix-ui/themes";
+import { ClipboardCopyIcon } from '@radix-ui/react-icons';
+import { Flex, IconButton } from '@radix-ui/themes';
 
 export function CopyClipboardButton({ url }: { url: string }) {
   const copyToClipboard = () => {

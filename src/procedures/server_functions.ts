@@ -1,5 +1,5 @@
-import * as edgedb from "edgedb";
-import e from "../../dbschema/edgeql-js";
+import * as edgedb from 'edgedb';
+import e from '../../dbschema/edgeql-js';
 import {
   object,
   string,
@@ -10,8 +10,8 @@ import {
   boolean,
   minLength,
   parse,
-} from "valibot";
-import { Transaction } from "edgedb/dist/transaction";
+} from 'valibot';
+import { Transaction } from 'edgedb/dist/transaction';
 import {
   _createInitialData,
   _createInvitation,
@@ -19,24 +19,24 @@ import {
   createInvitationSchema,
   makeCreateCategoryQuery,
   withValidation,
-} from "./common";
-import { groupedTransactions } from "../../dbschema/queries/grouped-transactions.query";
-import { groupedTransactionsByDate } from "../../dbschema/queries/grouped-transactions-by-date.query";
-import { totalPerDateOverall } from "../../dbschema/queries/total-per-date-overall.query";
+} from './common';
+import { groupedTransactions } from '../../dbschema/queries/grouped-transactions.query';
+import { groupedTransactionsByDate } from '../../dbschema/queries/grouped-transactions-by-date.query';
+import { totalPerDateOverall } from '../../dbschema/queries/total-per-date-overall.query';
 
 export const getUserIdAndDbname = withValidation(
   object({ username: string(), email: string() }),
   async ({ username, email }) => {
-    const masterdbClient = edgedb.createClient({ database: "edgedb" });
+    const masterdbClient = edgedb.createClient({ database: 'edgedb' });
 
-    const query = e.select(e.masterdb.EUser, (user) => ({
+    const query = e.select(e.masterdb.EUser, user => ({
       id: true,
       username: true,
       dbname: user.db.name,
       filter_single: e.op(
-        e.op(user.username, "=", username),
-        "and",
-        e.op(user.email, "=", email)
+        e.op(user.username, '=', username),
+        'and',
+        e.op(user.email, '=', email),
       ),
     }));
 
@@ -53,8 +53,8 @@ export const getUserIdAndDbname = withValidation(
     const dbClient = edgedb.createClient({ database: result.dbname });
 
     const user = await e
-      .select(e.EUser, (user) => ({
-        filter_single: e.op(user.username, "=", username),
+      .select(e.EUser, user => ({
+        filter_single: e.op(user.username, '=', username),
         id: true,
       }))
       .run(dbClient);
@@ -63,26 +63,26 @@ export const getUserIdAndDbname = withValidation(
       return null;
     }
     return { id: user.id, dbname: result.dbname };
-  }
+  },
 );
 
 export const findUserByEmail = withValidation(
   object({ email: string() }),
   async ({ email }) => {
-    const masterdbClient = edgedb.createClient({ database: "edgedb" });
+    const masterdbClient = edgedb.createClient({ database: 'edgedb' });
 
-    const query = e.select(e.masterdb.EUser, (user) => ({
+    const query = e.select(e.masterdb.EUser, user => ({
       id: true,
       username: true,
       dbname: user.db.name,
-      filter: e.op(user.email, "=", email),
+      filter: e.op(user.email, '=', email),
     }));
 
     const result = await query.run(masterdbClient);
     if (result.length !== 0) {
       return result[0];
     }
-  }
+  },
 );
 
 type Account = {
@@ -103,7 +103,7 @@ export const getAccounts = withValidation(
   object({ userId: string(), dbname: string(), owned: boolean() }),
   async ({ userId, dbname, owned }) => {
     // return all accounts that has visible partitions
-    const query = e.select(e.EAccount, (account) => ({
+    const query = e.select(e.EAccount, account => ({
       id: true,
       name: true,
       owners: {
@@ -129,21 +129,21 @@ export const getAccounts = withValidation(
 
     const result = await query.run(client);
     if (result.length !== 0) {
-      return result.map((acc) => {
+      return result.map(acc => {
         return { ...acc, label: computeAccountLabel(acc) };
       });
     }
-  }
+  },
 );
 
 export const getPartitions = withValidation(
   object({ userId: string(), accountId: string(), dbname: string() }),
   async ({ userId, accountId, dbname }) => {
-    const query = e.select(e.EPartition, (partition) => {
+    const query = e.select(e.EPartition, partition => {
       const belongToAccount = e.op(
         partition.account.id,
-        "=",
-        e.uuid(accountId)
+        '=',
+        e.uuid(accountId),
       );
       // get all private partitions of the user
       return {
@@ -159,9 +159,9 @@ export const getPartitions = withValidation(
         is_private: true,
         is_owned: true,
         filter: e.op(
-          e.op(belongToAccount, "and", partition.is_visible),
-          "and",
-          e.op("not", partition.archived)
+          e.op(belongToAccount, 'and', partition.is_visible),
+          'and',
+          e.op('not', partition.archived),
         ),
         order_by: {
           expression: partition.name,
@@ -172,17 +172,17 @@ export const getPartitions = withValidation(
     const result = await query.run(
       edgedb
         .createClient({ database: dbname })
-        .withGlobals({ current_user_id: userId })
+        .withGlobals({ current_user_id: userId }),
     );
     return result;
-  }
+  },
 );
 
 // TODO: Match type of getPartitions, getPartitionOptions and findTransactions.
 export const getPartitionOptions = withValidation(
   object({ userId: string(), dbname: string() }),
   async ({ userId, dbname }) => {
-    const query = e.select(e.EPartition, (partition) => {
+    const query = e.select(e.EPartition, partition => {
       return {
         id: true,
         name: true,
@@ -198,8 +198,8 @@ export const getPartitionOptions = withValidation(
         is_private: true,
         filter: e.op(
           partition.is_visible,
-          "and",
-          e.op("not", partition.archived)
+          'and',
+          e.op('not', partition.archived),
         ),
         order_by: {
           expression: partition.name,
@@ -210,9 +210,9 @@ export const getPartitionOptions = withValidation(
     const result = await query.run(
       edgedb
         .createClient({ database: dbname })
-        .withGlobals({ current_user_id: userId })
+        .withGlobals({ current_user_id: userId }),
     );
-    return result.map((p) => {
+    return result.map(p => {
       return {
         ...p,
         account: {
@@ -221,7 +221,7 @@ export const getPartitionOptions = withValidation(
         },
       };
     });
-  }
+  },
 );
 
 export const findTransactions = withValidation(
@@ -252,19 +252,19 @@ export const findTransactions = withValidation(
     const query = e.params(
       { pIds: e.array(e.uuid), cIds: e.array(e.uuid), lIds: e.array(e.uuid) },
       ({ pIds, cIds, lIds }) =>
-        e.select(e.ETransaction, (transaction) => {
+        e.select(e.ETransaction, transaction => {
           let baseFilter = e.op(
             e.op(
               transaction.is_visible,
-              "and",
-              e.op("not", transaction.is_counterpart)
+              'and',
+              e.op('not', transaction.is_counterpart),
             ),
-            "or",
+            'or',
             e.op(
-              e.op("exists", transaction.counterpart),
-              "and",
-              e.any(transaction.counterpart.is_visible)
-            )
+              e.op('exists', transaction.counterpart),
+              'and',
+              e.any(transaction.counterpart.is_visible),
+            ),
           );
 
           let filter;
@@ -274,30 +274,30 @@ export const findTransactions = withValidation(
               if (tssDate) {
                 baseFilter = e.op(
                   baseFilter,
-                  "and",
-                  e.op(transaction.date, ">=", new Date(tssDate))
+                  'and',
+                  e.op(transaction.date, '>=', new Date(tssDate)),
                 );
               }
               if (tseDate) {
                 baseFilter = e.op(
                   baseFilter,
-                  "and",
+                  'and',
                   e.op(
                     transaction.date,
-                    "<",
+                    '<',
                     // add one day to the end date to include it in the range
-                    new Date(new Date(tseDate).getTime() + 86400000)
-                  )
+                    new Date(new Date(tseDate).getTime() + 86400000),
+                  ),
                 );
               }
             }
             const cids = e.array_unpack(cIds);
             const cFilter = e.op(
-              e.op(transaction.category.id, "in", cids),
-              "if",
-              e.op("exists", cids),
-              "else",
-              true
+              e.op(transaction.category.id, 'in', cids),
+              'if',
+              e.op('exists', cids),
+              'else',
+              true,
             );
 
             const pids = e.array_unpack(pIds);
@@ -305,32 +305,32 @@ export const findTransactions = withValidation(
               e.op(
                 e.op(
                   transaction.source_partition.id,
-                  "union",
-                  transaction.counterpart.source_partition.id
+                  'union',
+                  transaction.counterpart.source_partition.id,
                 ),
-                "in",
-                pids
+                'in',
+                pids,
               ),
-              "if",
-              e.op("exists", pids),
-              "else",
-              true
+              'if',
+              e.op('exists', pids),
+              'else',
+              true,
             );
-            filter = e.op(baseFilter, "and", e.op(cFilter, "and", pFilter));
+            filter = e.op(baseFilter, 'and', e.op(cFilter, 'and', pFilter));
           } else {
             // I want to get all transaction that are linked to the loan
             filter = e.op(
               baseFilter,
-              "and",
+              'and',
               e.op(
                 e.op(
-                  transaction["<transaction[is ELoan]"].id,
-                  "union",
-                  transaction["<transaction[is EPayment]"].loan.id
+                  transaction['<transaction[is ELoan]'].id,
+                  'union',
+                  transaction['<transaction[is EPayment]'].loan.id,
                 ),
-                "in",
-                e.array_unpack(lIds)
-              )
+                'in',
+                e.array_unpack(lIds),
+              ),
             );
           }
 
@@ -353,14 +353,14 @@ export const findTransactions = withValidation(
           return {
             id: true,
             value: true,
-            is_loan: e.op("exists", transaction["<transaction[is ELoan]"]),
+            is_loan: e.op('exists', transaction['<transaction[is ELoan]']),
             has_payments: e.op(
-              "exists",
-              transaction["<transaction[is ELoan]"]["<loan[is EPayment]"]
+              'exists',
+              transaction['<transaction[is ELoan]']['<loan[is EPayment]'],
             ),
             is_payment: e.op(
-              "exists",
-              transaction["<transaction[is EPayment]"]
+              'exists',
+              transaction['<transaction[is EPayment]'],
             ),
             source_partition: partitionFields,
             counterpart: {
@@ -378,7 +378,7 @@ export const findTransactions = withValidation(
             is_visible: true,
             description: true,
             kind: transaction.category.kind,
-            str_date: e.to_str(transaction.date, "YYYY-mm-dd"),
+            str_date: e.to_str(transaction.date, 'YYYY-mm-dd'),
             is_owned: true,
             filter,
             order_by: {
@@ -388,7 +388,7 @@ export const findTransactions = withValidation(
             offset: (currentPage - 1) * nPerPage,
             limit: nPerPage + 1,
           };
-        })
+        }),
     );
 
     const client = edgedb
@@ -402,14 +402,14 @@ export const findTransactions = withValidation(
     const hasNextPage = result.length === nPerPage + 1;
     return [
       result
-        .map((tx) => {
+        .map(tx => {
           return {
             ...tx,
             source_partition: tx.is_visible
               ? {
                   ...tx.source_partition,
                   label: `${computeAccountLabel(
-                    tx.source_partition.account
+                    tx.source_partition.account,
                   )} - ${tx.source_partition.name}`,
                   account: {
                     ...tx.source_partition.account,
@@ -424,12 +424,12 @@ export const findTransactions = withValidation(
                     source_partition: {
                       ...tx.counterpart.source_partition,
                       label: `${computeAccountLabel(
-                        tx.counterpart.source_partition.account
+                        tx.counterpart.source_partition.account,
                       )} - ${tx.counterpart.source_partition.name}`,
                       account: {
                         ...tx.counterpart.source_partition.account,
                         label: computeAccountLabel(
-                          tx.counterpart.source_partition.account
+                          tx.counterpart.source_partition.account,
                         ),
                       },
                     },
@@ -440,7 +440,7 @@ export const findTransactions = withValidation(
         .slice(0, nPerPage),
       hasNextPage,
     ] as const;
-  }
+  },
 );
 
 export const getGroupedTransactions = withValidation(
@@ -489,7 +489,7 @@ export const getGroupedTransactions = withValidation(
       tseDate: tseDate ? new Date(tseDate) : null,
     });
     return [first, second] as const;
-  }
+  },
 );
 
 export const getTotalPerDate = withValidation(
@@ -527,7 +527,7 @@ export const getTotalPerDate = withValidation(
       tseDate: tseDate ? new Date(tseDate) : null,
     });
     return result;
-  }
+  },
 );
 
 /**
@@ -552,7 +552,7 @@ const makeTransactionCreator = withValidation(
     date,
   }) => {
     if (sourcePartitionId === destinationPartitionId) {
-      throw new Error("Source and destination partitions cannot be the same.");
+      throw new Error('Source and destination partitions cannot be the same.');
     }
 
     const createQuery = e.params(
@@ -567,17 +567,17 @@ const makeTransactionCreator = withValidation(
         e.insert(e.ETransaction, {
           value,
           description,
-          category: e.select(e.ECategory, (category) => ({
-            filter_single: e.op(category.id, "=", categoryId),
+          category: e.select(e.ECategory, category => ({
+            filter_single: e.op(category.id, '=', categoryId),
           })),
-          source_partition: e.select(e.EPartition, (partition) => ({
-            filter_single: e.op(partition.id, "=", sourcePartitionId),
+          source_partition: e.select(e.EPartition, partition => ({
+            filter_single: e.op(partition.id, '=', sourcePartitionId),
           })),
-          counterpart: e.select(e.ETransaction, (transaction) => ({
-            filter_single: e.op(transaction.id, "=", counterpartId),
+          counterpart: e.select(e.ETransaction, transaction => ({
+            filter_single: e.op(transaction.id, '=', counterpartId),
           })),
           date: date ? e.datetime(new Date(date)) : undefined,
-        })
+        }),
     );
 
     const selectTransactionQuery = e.params(
@@ -585,8 +585,8 @@ const makeTransactionCreator = withValidation(
         id: e.uuid,
       },
       ({ id }) =>
-        e.select(e.ETransaction, (transaction) => ({
-          filter_single: e.op(transaction.id, "=", id),
+        e.select(e.ETransaction, transaction => ({
+          filter_single: e.op(transaction.id, '=', id),
           id: true,
           value: true,
           source_partition: {
@@ -603,7 +603,7 @@ const makeTransactionCreator = withValidation(
             kind: true,
           },
           description: true,
-        }))
+        })),
     );
 
     const partitionQuery = e.params(
@@ -611,25 +611,25 @@ const makeTransactionCreator = withValidation(
         id: e.uuid,
       },
       ({ id }) =>
-        e.select(e.EPartition, (partition) => ({
+        e.select(e.EPartition, partition => ({
           filter_single: e.op(
-            e.op(partition.is_visible, "and", partition.is_private),
-            "and",
-            e.op(partition.id, "=", id)
+            e.op(partition.is_visible, 'and', partition.is_private),
+            'and',
+            e.op(partition.id, '=', id),
           ),
-        }))
+        })),
     );
     return async (tx: Transaction) => {
       const selectedCategory = await e
-        .select(e.ECategory, (category) => ({
-          filter_single: e.op(category.id, "=", e.uuid(categoryId)),
+        .select(e.ECategory, category => ({
+          filter_single: e.op(category.id, '=', e.uuid(categoryId)),
           kind: true,
           is_private: true,
         }))
         .run(tx);
 
       if (!selectedCategory) {
-        throw new Error("Category not found.");
+        throw new Error('Category not found.');
       }
 
       if (selectedCategory.is_private) {
@@ -639,7 +639,7 @@ const makeTransactionCreator = withValidation(
         });
         if (!sourcePartition) {
           throw new Error(
-            "Selected source partition should be privately owned by the user."
+            'Selected source partition should be privately owned by the user.',
           );
         }
         if (destinationPartitionId) {
@@ -648,14 +648,14 @@ const makeTransactionCreator = withValidation(
           });
           if (!destinationPartition) {
             throw new Error(
-              "Selected destination partition should be privately owned by the user."
+              'Selected destination partition should be privately owned by the user.',
             );
           }
         }
       }
 
       let realValue: number;
-      if (selectedCategory.kind === "Income") {
+      if (selectedCategory.kind === 'Income') {
         realValue = Math.abs(value);
       } else {
         realValue = -Math.abs(value);
@@ -695,7 +695,7 @@ const makeTransactionCreator = withValidation(
         counterpart: counterpart || undefined,
       };
     };
-  }
+  },
 );
 
 export const createTransaction = withValidation(
@@ -730,27 +730,27 @@ export const createTransaction = withValidation(
         description,
         destinationPartitionId,
         date,
-      })
+      }),
     );
-  }
+  },
 );
 
 export const deleteTransaction = withValidation(
   object({ transactionId: string(), userId: string(), dbname: string() }),
   async ({ transactionId, userId, dbname }) => {
     const getLinkedUnpaidLoan = e.params({ tId: e.uuid }, ({ tId }) => {
-      return e.select(e.ELoan, (loan) => ({
+      return e.select(e.ELoan, loan => ({
         filter_single: e.op(
-          e.op(loan.transaction.id, "=", tId),
-          "and",
-          e.op("not", e.op("exists", loan["<loan[is EPayment]"]))
+          e.op(loan.transaction.id, '=', tId),
+          'and',
+          e.op('not', e.op('exists', loan['<loan[is EPayment]'])),
         ),
       }));
     });
 
     const getLinkedPayment = e.params({ tId: e.uuid }, ({ tId }) => {
-      return e.select(e.EPayment, (payment) => ({
-        filter_single: e.op(payment.transaction.id, "=", tId),
+      return e.select(e.EPayment, payment => ({
+        filter_single: e.op(payment.transaction.id, '=', tId),
         loan: {
           id: true,
         },
@@ -761,7 +761,7 @@ export const deleteTransaction = withValidation(
       .createClient({ database: dbname })
       .withGlobals({ current_user_id: userId });
 
-    return client.transaction(async (tx) => {
+    return client.transaction(async tx => {
       const unpaidLoan = await getLinkedUnpaidLoan.run(tx, {
         tId: transactionId,
       });
@@ -770,11 +770,11 @@ export const deleteTransaction = withValidation(
 
         if (payment) {
           await e
-            .delete(e.EPayment, (payment) => ({
+            .delete(e.EPayment, payment => ({
               filter_single: e.op(
                 payment.transaction.id,
-                "=",
-                e.uuid(transactionId)
+                '=',
+                e.uuid(transactionId),
               ),
             }))
             .run(tx);
@@ -782,14 +782,14 @@ export const deleteTransaction = withValidation(
         }
 
         return e
-          .delete(e.ETransaction, (transaction) => ({
-            filter_single: e.op(transaction.id, "=", e.uuid(transactionId)),
+          .delete(e.ETransaction, transaction => ({
+            filter_single: e.op(transaction.id, '=', e.uuid(transactionId)),
           }))
           .run(tx);
       } else {
         const deletedLoan = await e
-          .delete(e.ELoan, (loan) => ({
-            filter_single: e.op(loan.id, "=", e.uuid(unpaidLoan.id)),
+          .delete(e.ELoan, loan => ({
+            filter_single: e.op(loan.id, '=', e.uuid(unpaidLoan.id)),
           }))
           .run(tx);
         if (deletedLoan) {
@@ -800,7 +800,7 @@ export const deleteTransaction = withValidation(
         }
       }
     });
-  }
+  },
 );
 
 export const getUserCategories = withValidation(
@@ -809,7 +809,7 @@ export const getUserCategories = withValidation(
     const client = edgedb.createClient({ database: dbname }).withGlobals({
       current_user_id: userId,
     });
-    const result = await client.transaction(async (tx) => {
+    const result = await client.transaction(async tx => {
       const fields = {
         id: true,
         name: true,
@@ -819,12 +819,12 @@ export const getUserCategories = withValidation(
         default_partition: { id: true },
       } as const;
       const expense = await e
-        .select(e.ECategory, (category) => ({
+        .select(e.ECategory, category => ({
           ...fields,
           filter: e.op(
             category.is_visible,
-            "and",
-            e.op(category.kind, "=", e.ECategoryKind.Expense)
+            'and',
+            e.op(category.kind, '=', e.ECategoryKind.Expense),
           ),
           order_by: {
             expression: category.name,
@@ -833,12 +833,12 @@ export const getUserCategories = withValidation(
         }))
         .run(tx);
       const income = await e
-        .select(e.ECategory, (category) => ({
+        .select(e.ECategory, category => ({
           ...fields,
           filter: e.op(
             category.is_visible,
-            "and",
-            e.op(category.kind, "=", e.ECategoryKind.Income)
+            'and',
+            e.op(category.kind, '=', e.ECategoryKind.Income),
           ),
           order_by: {
             expression: category.name,
@@ -847,12 +847,12 @@ export const getUserCategories = withValidation(
         }))
         .run(tx);
       const transfer = await e
-        .select(e.ECategory, (category) => ({
+        .select(e.ECategory, category => ({
           ...fields,
           filter: e.op(
             category.is_visible,
-            "and",
-            e.op(category.kind, "=", e.ECategoryKind.Transfer)
+            'and',
+            e.op(category.kind, '=', e.ECategoryKind.Transfer),
           ),
           order_by: {
             expression: category.name,
@@ -867,34 +867,34 @@ export const getUserCategories = withValidation(
       };
     });
     return result;
-  }
+  },
 );
 
 const _categoryCanBeDeleted = async (
   tx: Transaction,
-  categoryId: string
+  categoryId: string,
 ): Promise<[boolean, string]> => {
   const findCategory = e.params({ id: e.uuid }, ({ id }) =>
-    e.select(e.ECategory, (category) => ({
-      filter_single: e.op(category.id, "=", id),
-    }))
+    e.select(e.ECategory, category => ({
+      filter_single: e.op(category.id, '=', id),
+    })),
   );
   const transactionsCount = e.params({ id: e.uuid }, ({ id }) =>
     e.count(
-      e.select(e.ETransaction, (transaction) => ({
-        filter: e.op(transaction.category.id, "=", id),
-      }))
-    )
+      e.select(e.ETransaction, transaction => ({
+        filter: e.op(transaction.category.id, '=', id),
+      })),
+    ),
   );
   const category = await findCategory.run(tx, { id: categoryId });
   if (!category) {
-    return [false, "Category not found."];
+    return [false, 'Category not found.'];
   }
   const count = await transactionsCount.run(tx, { id: categoryId });
   if (count !== 0) {
-    return [false, "Category has linked transactions."];
+    return [false, 'Category has linked transactions.'];
   }
-  return [true, ""];
+  return [true, ''];
 };
 
 export const categoryCanBeDeleted = withValidation(
@@ -903,39 +903,39 @@ export const categoryCanBeDeleted = withValidation(
     const client = edgedb.createClient({ database: dbname }).withGlobals({
       current_user_id: userId,
     });
-    const result = await client.transaction(async (tx) =>
-      _categoryCanBeDeleted(tx, categoryId)
+    const result = await client.transaction(async tx =>
+      _categoryCanBeDeleted(tx, categoryId),
     );
     return result[0];
-  }
+  },
 );
 
 export const deleteCategory = withValidation(
   object({ categoryId: string(), userId: string(), dbname: string() }),
   async ({ categoryId, dbname, userId }) => {
     const deleteQuery = e.params({ id: e.uuid }, ({ id }) =>
-      e.delete(e.ECategory, (category) => ({
+      e.delete(e.ECategory, category => ({
         filter_single: e.op(
-          e.op("not", e.op("exists", category["<category[is ETransaction]"])),
-          "and",
-          e.op(category.id, "=", id)
+          e.op('not', e.op('exists', category['<category[is ETransaction]'])),
+          'and',
+          e.op(category.id, '=', id),
         ),
-      }))
+      })),
     );
     const client = edgedb.createClient({ database: dbname }).withGlobals({
       current_user_id: userId,
     });
-    return client.transaction(async (tx) => {
+    return client.transaction(async tx => {
       const [canBeDeleted, errMsg] = await _categoryCanBeDeleted(
         tx,
-        categoryId
+        categoryId,
       );
       if (!canBeDeleted) {
         throw new Error(errMsg);
       }
       return deleteQuery.run(tx, { id: categoryId });
     });
-  }
+  },
 );
 
 export const getCategoryBalance = withValidation(
@@ -958,54 +958,54 @@ export const getCategoryBalance = withValidation(
     tseDate,
   }) => {
     if (!isOverall && !tssDate && !tseDate) {
-      throw new Error("Start and/or end date must be provided.");
+      throw new Error('Start and/or end date must be provided.');
     }
 
     const query = e.params(
       { id: e.uuid, pIds: e.array(e.uuid) },
       ({ id, pIds }) => {
-        const transactions = e.select(e.ETransaction, (transaction) => {
+        const transactions = e.select(e.ETransaction, transaction => {
           const pids = e.array_unpack(pIds);
           const pFilter = e.op(
-            e.op(transaction.source_partition.id, "in", pids),
-            "if",
-            e.op("exists", pids),
-            "else",
-            true
+            e.op(transaction.source_partition.id, 'in', pids),
+            'if',
+            e.op('exists', pids),
+            'else',
+            true,
           );
           let filter = e.op(
             e.op(
               transaction.is_visible,
-              "and",
-              e.op(transaction.category.id, "=", id)
+              'and',
+              e.op(transaction.category.id, '=', id),
             ),
-            "and",
-            pFilter
+            'and',
+            pFilter,
           );
           if (!isOverall) {
             if (tssDate) {
               filter = e.op(
                 filter,
-                "and",
-                e.op(transaction.date, ">=", new Date(tssDate))
+                'and',
+                e.op(transaction.date, '>=', new Date(tssDate)),
               );
             }
             if (tseDate) {
               filter = e.op(
                 filter,
-                "and",
+                'and',
                 e.op(
                   transaction.date,
-                  "<",
-                  new Date(new Date(tseDate).getTime() + 86400000)
-                )
+                  '<',
+                  new Date(new Date(tseDate).getTime() + 86400000),
+                ),
               );
             }
           }
           return { filter };
         });
         return e.sum(transactions.value);
-      }
+      },
     );
 
     const client = edgedb.createClient({ database: dbname }).withGlobals({
@@ -1013,7 +1013,7 @@ export const getCategoryBalance = withValidation(
     });
 
     return await query.run(client, { id: categoryId, pIds: partitionIds });
-  }
+  },
 );
 
 export const createUserCategory = withValidation(
@@ -1028,19 +1028,19 @@ export const createUserCategory = withValidation(
       e.insert(e.ECategory, {
         name,
         kind:
-          kind === "Expense"
-            ? "Expense"
-            : kind === "Income"
-            ? "Income"
-            : "Transfer",
-      })
+          kind === 'Expense'
+            ? 'Expense'
+            : kind === 'Income'
+            ? 'Income'
+            : 'Transfer',
+      }),
     );
     const result = await query.run(edgedb.createClient({ database: dbname }), {
       id: userId,
       name,
     });
     return result;
-  }
+  },
 );
 
 export const getPartitionBalance = withValidation(
@@ -1054,15 +1054,15 @@ export const getPartitionBalance = withValidation(
   }),
   async ({ partitionId, userId, dbname, isOverall, tssDate, tseDate }) => {
     if (!isOverall && !tssDate && !tseDate) {
-      throw new Error("Start and/or end date must be provided.");
+      throw new Error('Start and/or end date must be provided.');
     }
 
     const balanceQuery = e.params({ id: e.uuid }, ({ id }) => {
-      const transactions = e.select(e.ETransaction, (transaction) => {
+      const transactions = e.select(e.ETransaction, transaction => {
         let filter = e.op(
           transaction.is_visible,
-          "and",
-          e.op(transaction.source_partition.id, "=", id)
+          'and',
+          e.op(transaction.source_partition.id, '=', id),
         );
 
         // TODO: Duplicate code around `isOverall`. Refactor when inferring types from overloaded functions is supported.
@@ -1070,19 +1070,19 @@ export const getPartitionBalance = withValidation(
           if (tssDate) {
             filter = e.op(
               filter,
-              "and",
-              e.op(transaction.date, ">=", new Date(tssDate))
+              'and',
+              e.op(transaction.date, '>=', new Date(tssDate)),
             );
           }
           if (tseDate) {
             filter = e.op(
               filter,
-              "and",
+              'and',
               e.op(
                 transaction.date,
-                "<",
-                new Date(new Date(tseDate).getTime() + 86400000)
-              )
+                '<',
+                new Date(new Date(tseDate).getTime() + 86400000),
+              ),
             );
           }
         }
@@ -1095,7 +1095,7 @@ export const getPartitionBalance = withValidation(
       current_user_id: userId,
     });
     return await balanceQuery.run(client, { id: partitionId });
-  }
+  },
 );
 
 export const getAccountBalance = withValidation(
@@ -1109,33 +1109,33 @@ export const getAccountBalance = withValidation(
   }),
   async ({ accountId, userId, dbname, isOverall, tssDate, tseDate }) => {
     if (!isOverall && !tssDate && !tseDate) {
-      throw new Error("Start and/or end date must be provided.");
+      throw new Error('Start and/or end date must be provided.');
     }
 
     const query = e.params({ id: e.uuid }, ({ id }) => {
-      const tx = e.select(e.ETransaction, (transaction) => {
+      const tx = e.select(e.ETransaction, transaction => {
         let filter = e.op(
           transaction.is_visible,
-          "and",
-          e.op(transaction.source_partition.account.id, "=", id)
+          'and',
+          e.op(transaction.source_partition.account.id, '=', id),
         );
         if (!isOverall) {
           if (tssDate) {
             filter = e.op(
               filter,
-              "and",
-              e.op(transaction.date, ">=", new Date(tssDate))
+              'and',
+              e.op(transaction.date, '>=', new Date(tssDate)),
             );
           }
           if (tseDate) {
             filter = e.op(
               filter,
-              "and",
+              'and',
               e.op(
                 transaction.date,
-                "<",
-                new Date(new Date(tseDate).getTime() + 86400000)
-              )
+                '<',
+                new Date(new Date(tseDate).getTime() + 86400000),
+              ),
             );
           }
         }
@@ -1147,7 +1147,7 @@ export const getAccountBalance = withValidation(
       current_user_id: userId,
     });
     return await query.run(client, { id: accountId });
-  }
+  },
 );
 
 export const getCategoryKindBalance = withValidation(
@@ -1170,60 +1170,60 @@ export const getCategoryKindBalance = withValidation(
     tseDate,
   }) => {
     if (!isOverall && !tssDate && !tseDate) {
-      throw new Error("Start and/or end date must be provided.");
+      throw new Error('Start and/or end date must be provided.');
     }
     const query = e.params(
       { kind: e.ECategoryKind, pIds: e.array(e.uuid) },
       ({ kind, pIds }) => {
-        const tx = e.select(e.ETransaction, (transaction) => {
+        const tx = e.select(e.ETransaction, transaction => {
           // TODO: REF: Duplicate code around isOverall and partitions filter. Check getCategoryBalance.
           const pids = e.array_unpack(pIds);
           const pFilter = e.op(
-            e.op(transaction.source_partition.id, "in", pids),
-            "if",
-            e.op("exists", pids),
-            "else",
-            true
+            e.op(transaction.source_partition.id, 'in', pids),
+            'if',
+            e.op('exists', pids),
+            'else',
+            true,
           );
           let filter = e.op(
             e.op(
               transaction.is_visible,
-              "and",
-              e.op(transaction.category.kind, "=", kind)
+              'and',
+              e.op(transaction.category.kind, '=', kind),
             ),
-            "and",
-            pFilter
+            'and',
+            pFilter,
           );
           if (!isOverall) {
             if (tssDate) {
               filter = e.op(
                 filter,
-                "and",
-                e.op(transaction.date, ">=", new Date(tssDate))
+                'and',
+                e.op(transaction.date, '>=', new Date(tssDate)),
               );
             }
             if (tseDate) {
               filter = e.op(
                 filter,
-                "and",
+                'and',
                 e.op(
                   transaction.date,
-                  "<",
-                  new Date(new Date(tseDate).getTime() + 86400000)
-                )
+                  '<',
+                  new Date(new Date(tseDate).getTime() + 86400000),
+                ),
               );
             }
           }
           return { filter };
         });
         return e.sum(tx.value);
-      }
+      },
     );
     const client = edgedb.createClient({ database: dbname }).withGlobals({
       current_user_id: userId,
     });
     return await query.run(client, { kind: kind as any, pIds: partitionIds });
-  }
+  },
 );
 
 export const createCategory = withValidation(
@@ -1239,23 +1239,23 @@ export const createCategory = withValidation(
     const query = makeCreateCategoryQuery();
     const result = await query.run(edgedb.createClient({ database: dbname }), {
       name,
-      kind: kind as Readonly<"Income" | "Expense" | "Transfer">,
+      kind: kind as Readonly<'Income' | 'Expense' | 'Transfer'>,
       is_private: isPrivate,
       user_id: userId,
       default_partition_id: defaultPartitionId,
     });
     return result;
-  }
+  },
 );
 
 export const createPartition = async (
-  args: Parameters<typeof _createPartition>[0] & { dbname: string }
+  args: Parameters<typeof _createPartition>[0] & { dbname: string },
 ) => {
   const dbname = parse(string(), args.dbname);
   const client = edgedb.createClient({ database: dbname }).withGlobals({
     current_user_id: args.userId,
   });
-  return client.transaction(async (tx) => {
+  return client.transaction(async tx => {
     return _createPartition(args, tx);
   });
 };
@@ -1270,41 +1270,41 @@ export const deletePartition = withValidation(
   async ({ partitionId, userId, dbname, archive }) => {
     const transactionsCountQuery = e.params({ id: e.uuid }, ({ id }) =>
       e.count(
-        e.select(e.ETransaction, (transaction) => ({
-          filter: e.op(transaction.source_partition.id, "=", id),
-        }))
-      )
+        e.select(e.ETransaction, transaction => ({
+          filter: e.op(transaction.source_partition.id, '=', id),
+        })),
+      ),
     );
 
     const deleteQuery = e.params({ id: e.uuid }, ({ id }) =>
-      e.delete(e.EPartition, (partition) => ({
-        filter_single: e.op(partition.id, "=", id),
-      }))
+      e.delete(e.EPartition, partition => ({
+        filter_single: e.op(partition.id, '=', id),
+      })),
     );
 
     const archiveQuery = e.params({ id: e.uuid }, ({ id }) =>
-      e.update(e.EPartition, (partition) => ({
-        filter_single: e.op(partition.id, "=", id),
+      e.update(e.EPartition, partition => ({
+        filter_single: e.op(partition.id, '=', id),
         set: { archived: true },
-      }))
+      })),
     );
 
     const client = edgedb.createClient({ database: dbname }).withGlobals({
       current_user_id: userId,
     });
 
-    return client.transaction(async (tx) => {
+    return client.transaction(async tx => {
       const partition = await e
-        .select(e.EPartition, (partition) => ({
-          filter_single: e.op(partition.id, "=", e.uuid(partitionId)),
+        .select(e.EPartition, partition => ({
+          filter_single: e.op(partition.id, '=', e.uuid(partitionId)),
           is_owned: true,
         }))
         .run(tx);
       if (!partition) {
-        throw new Error("Partition not found.");
+        throw new Error('Partition not found.');
       }
       if (!partition.is_owned) {
-        throw new Error("Partition is not owned by the user.");
+        throw new Error('Partition is not owned by the user.');
       }
       const txCount = await transactionsCountQuery.run(tx, { id: partitionId });
       if (txCount !== 0) {
@@ -1319,7 +1319,7 @@ export const deletePartition = withValidation(
         return true;
       }
     });
-  }
+  },
 );
 
 export const updatePartition = withValidation(
@@ -1338,14 +1338,14 @@ export const updatePartition = withValidation(
         isPrivate: e.bool,
       },
       ({ id, name }) =>
-        e.update(e.EPartition, (partition) => ({
+        e.update(e.EPartition, partition => ({
           filter_single: e.op(
             partition.is_owned,
-            "and",
-            e.op(partition.id, "=", id)
+            'and',
+            e.op(partition.id, '=', id),
           ),
           set: { name, is_private: isPrivate },
-        }))
+        })),
     );
     return updateNameQuery.run(
       edgedb
@@ -1355,26 +1355,26 @@ export const updatePartition = withValidation(
         id: partitionId,
         name: name.trim(),
         isPrivate,
-      }
+      },
     );
-  }
+  },
 );
 
 const _canDeleteAccount = async (
   accountId: string,
-  tx: Transaction | edgedb.Client
+  tx: Transaction | edgedb.Client,
 ) => {
   const count = await e
     .params({ accountId: e.uuid }, ({ accountId }) =>
       e.count(
-        e.select(e.EAccount, (account) => ({
+        e.select(e.EAccount, account => ({
           filter: e.op(
-            e.op(account.id, "=", accountId),
-            "and",
-            e.op(account.is_empty, "and", account.is_owned)
+            e.op(account.id, '=', accountId),
+            'and',
+            e.op(account.is_empty, 'and', account.is_owned),
           ),
-        }))
-      )
+        })),
+      ),
     )
     .run(tx, { accountId });
 
@@ -1388,32 +1388,32 @@ export const accountCanBeDeleted = withValidation(
       accountId,
       edgedb.createClient({ database: dbname }).withGlobals({
         current_user_id: userId,
-      })
+      }),
     );
-  }
+  },
 );
 
 export const deleteAccount = withValidation(
   object({ accountId: string(), userId: string(), dbname: string() }),
   async ({ accountId, userId, dbname }) => {
     const deleteQuery = e.params({ id: e.uuid }, ({ id }) =>
-      e.delete(e.EAccount, (account) => ({
-        filter_single: e.op(account.id, "=", id),
-      }))
+      e.delete(e.EAccount, account => ({
+        filter_single: e.op(account.id, '=', id),
+      })),
     );
     return edgedb
       .createClient({ database: dbname })
       .withGlobals({
         current_user_id: userId,
       })
-      .transaction(async (tx) => {
+      .transaction(async tx => {
         const canDelete = await _canDeleteAccount(accountId, tx);
         if (!canDelete) {
-          throw new Error("Account has linked transactions.");
+          throw new Error('Account has linked transactions.');
         }
         await deleteQuery.run(tx, { id: accountId });
       });
-  }
+  },
 );
 
 export const updateCategory = withValidation(
@@ -1441,26 +1441,26 @@ export const updateCategory = withValidation(
         default_partition_id: e.optional(e.uuid),
       },
       ({ id, name, is_private, default_partition_id }) =>
-        e.update(e.ECategory, (category) => ({
-          filter_single: e.op(category.id, "=", id),
+        e.update(e.ECategory, category => ({
+          filter_single: e.op(category.id, '=', id),
           set: {
             name,
             is_private: is_private,
-            default_partition: e.select(e.EPartition, (partition) => ({
+            default_partition: e.select(e.EPartition, partition => ({
               filter_single: e.op(
-                e.op(partition.id, "=", default_partition_id),
-                "and",
+                e.op(partition.id, '=', default_partition_id),
+                'and',
                 e.op(
-                  e.op(partition.is_owned, "and", partition.is_private),
-                  "if",
+                  e.op(partition.is_owned, 'and', partition.is_private),
+                  'if',
                   is_private,
-                  "else",
-                  true
-                )
+                  'else',
+                  true,
+                ),
               ),
             })),
           },
-        }))
+        })),
     );
     return updateQuery.run(
       edgedb
@@ -1471,9 +1471,9 @@ export const updateCategory = withValidation(
         name: name.trim(),
         is_private: isPrivate,
         default_partition_id: defaultPartitionId,
-      }
+      },
     );
-  }
+  },
 );
 
 export const updateTransaction = withValidation(
@@ -1498,10 +1498,10 @@ export const updateTransaction = withValidation(
         id: e.uuid,
       },
       ({ id }) =>
-        e.select(e.ETransaction, (transaction) => ({
-          filter_single: e.op(transaction.id, "=", id),
+        e.select(e.ETransaction, transaction => ({
+          filter_single: e.op(transaction.id, '=', id),
           counterpart: { id: true },
-        }))
+        })),
     );
 
     const updateCategoryQuery = e.params(
@@ -1510,14 +1510,14 @@ export const updateTransaction = withValidation(
         categoryId: e.uuid,
       },
       ({ ids, categoryId }) =>
-        e.update(e.ETransaction, (transaction) => ({
-          filter: e.op(transaction.id, "in", e.array_unpack(ids)),
+        e.update(e.ETransaction, transaction => ({
+          filter: e.op(transaction.id, 'in', e.array_unpack(ids)),
           set: {
-            category: e.select(e.ECategory, (category) => ({
-              filter_single: e.op(category.id, "=", categoryId),
+            category: e.select(e.ECategory, category => ({
+              filter_single: e.op(category.id, '=', categoryId),
             })),
           },
-        }))
+        })),
     );
 
     const updatePartitionQuery = e.params(
@@ -1526,22 +1526,22 @@ export const updateTransaction = withValidation(
         partitionId: e.uuid,
       },
       ({ id, partitionId }) => {
-        return e.update(e.ETransaction, (transaction) => ({
-          filter_single: e.op(transaction.id, "=", id),
+        return e.update(e.ETransaction, transaction => ({
+          filter_single: e.op(transaction.id, '=', id),
           set: {
-            source_partition: e.select(e.EPartition, (partition) => ({
-              filter_single: e.op(partition.id, "=", partitionId),
+            source_partition: e.select(e.EPartition, partition => ({
+              filter_single: e.op(partition.id, '=', partitionId),
             })),
           },
         }));
-      }
+      },
     );
 
     const client = edgedb
       .createClient({ database: dbname })
       .withGlobals({ current_user_id: userId });
 
-    await client.transaction(async (tx) => {
+    await client.transaction(async tx => {
       if (categoryId) {
         const transaction = await selectTransactionQuery.run(tx, {
           id: transactionId,
@@ -1555,10 +1555,10 @@ export const updateTransaction = withValidation(
       if (partitionId) {
         await updatePartitionQuery.run(tx, { id: transactionId, partitionId });
       }
-      if (typeof description === "string") {
+      if (typeof description === 'string') {
         await e
-          .update(e.ETransaction, (transaction) => ({
-            filter_single: e.op(transaction.id, "=", e.uuid(transactionId)),
+          .update(e.ETransaction, transaction => ({
+            filter_single: e.op(transaction.id, '=', e.uuid(transactionId)),
             set: { description },
           }))
           .run(tx);
@@ -1566,7 +1566,7 @@ export const updateTransaction = withValidation(
     });
 
     return true;
-  }
+  },
 );
 
 export const updateTransactionValue = withValidation(
@@ -1587,16 +1587,16 @@ export const updateTransactionValue = withValidation(
         value: e.decimal,
       },
       ({ id, value }) =>
-        e.update(e.ETransaction, (transaction) => ({
-          filter_single: e.op(transaction.id, "=", id),
+        e.update(e.ETransaction, transaction => ({
+          filter_single: e.op(transaction.id, '=', id),
           set: { value },
-        }))
+        })),
     );
 
-    return client.transaction(async (tx) => {
+    return client.transaction(async tx => {
       const transaction = await e
-        .select(e.ETransaction, (transaction) => ({
-          filter_single: e.op(transaction.id, "=", e.uuid(transactionId)),
+        .select(e.ETransaction, transaction => ({
+          filter_single: e.op(transaction.id, '=', e.uuid(transactionId)),
           id: true,
           counterpart: { id: true },
           category: { kind: true },
@@ -1604,30 +1604,30 @@ export const updateTransactionValue = withValidation(
         .run(tx);
 
       if (!transaction) {
-        throw new Error("Transaction not found.");
+        throw new Error('Transaction not found.');
       }
 
       const tId = transaction.id;
       const cId = transaction.counterpart?.id;
 
-      if (transaction.category.kind === "Transfer") {
+      if (transaction.category.kind === 'Transfer') {
         await updateValueQuery.run(tx, { id: tId, value: (-value).toString() });
         if (!cId) {
           // should never happen
-          throw new Error("Counterpart not found.");
+          throw new Error('Counterpart not found.');
         }
         await updateValueQuery.run(tx, { id: cId, value: value.toString() });
-      } else if (transaction.category.kind === "Income") {
+      } else if (transaction.category.kind === 'Income') {
         await updateValueQuery.run(tx, { id: tId, value: value.toString() });
-      } else if (transaction.category.kind === "Expense") {
+      } else if (transaction.category.kind === 'Expense') {
         await updateValueQuery.run(tx, { id: tId, value: (-value).toString() });
       } else {
         // should never happen
-        throw new Error("Invalid category kind.");
+        throw new Error('Invalid category kind.');
       }
       return true;
     });
-  }
+  },
 );
 
 export const updateTransactionDate = withValidation(
@@ -1641,10 +1641,10 @@ export const updateTransactionDate = withValidation(
     const client = edgedb.createClient({ database: dbname }).withGlobals({
       current_user_id: userId,
     });
-    return client.transaction(async (tx) => {
+    return client.transaction(async tx => {
       const transaction = await e
-        .select(e.ETransaction, (transaction) => ({
-          filter_single: e.op(transaction.id, "=", e.uuid(transactionId)),
+        .select(e.ETransaction, transaction => ({
+          filter_single: e.op(transaction.id, '=', e.uuid(transactionId)),
           id: true,
           counterpart: { id: true },
         }))
@@ -1657,16 +1657,16 @@ export const updateTransactionDate = withValidation(
         const updateQuery = e.params(
           { trIds: e.array(e.uuid) },
           ({ trIds }) => {
-            return e.update(e.ETransaction, (transaction) => ({
-              filter: e.op(transaction.id, "in", e.array_unpack(trIds)),
+            return e.update(e.ETransaction, transaction => ({
+              filter: e.op(transaction.id, 'in', e.array_unpack(trIds)),
               set: { date: new Date(date) },
             }));
-          }
+          },
         );
         await updateQuery.run(tx, { trIds: ids });
       }
     });
-  }
+  },
 );
 
 export const makeALoan = withValidation(
@@ -1691,7 +1691,7 @@ export const makeALoan = withValidation(
     toPay,
   }) => {
     if (amount === 0) {
-      throw new Error("Amount cannot be zero.");
+      throw new Error('Amount cannot be zero.');
     }
     toPay = toPay || amount;
 
@@ -1702,12 +1702,12 @@ export const makeALoan = withValidation(
       },
       ({ transactionId, toPay }) => {
         return e.insert(e.ELoan, {
-          transaction: e.select(e.ETransaction, (transaction) => ({
-            filter_single: e.op(transaction.id, "=", transactionId),
+          transaction: e.select(e.ETransaction, transaction => ({
+            filter_single: e.op(transaction.id, '=', transactionId),
           })),
           amount_to_pay: toPay,
         });
-      }
+      },
     );
 
     const client = edgedb
@@ -1723,7 +1723,7 @@ export const makeALoan = withValidation(
       },
     } as const;
 
-    return client.transaction(async (tx) => {
+    return client.transaction(async tx => {
       const createTransaction = makeTransactionCreator({
         value: amount,
         sourcePartitionId,
@@ -1733,7 +1733,7 @@ export const makeALoan = withValidation(
       });
       const { transaction } = await createTransaction(tx);
       if (!transaction) {
-        throw new Error("Failed to create the transaction.");
+        throw new Error('Failed to create the transaction.');
       }
 
       const { id: loanId } = await createLoanQuery.run(tx, {
@@ -1742,8 +1742,8 @@ export const makeALoan = withValidation(
       });
 
       return e
-        .select(e.ELoan, (loan) => ({
-          filter_single: e.op(loan.id, "=", e.uuid(loanId)),
+        .select(e.ELoan, loan => ({
+          filter_single: e.op(loan.id, '=', e.uuid(loanId)),
           id: true,
           amount_to_pay: true,
           transaction: {
@@ -1764,7 +1764,7 @@ export const makeALoan = withValidation(
         }))
         .run(tx);
     });
-  }
+  },
 );
 
 const partitionFields = {
@@ -1803,7 +1803,7 @@ const getPartitionLabel = (partition: Partition) => {
     : partition.account.name;
 
   const label = `${accountName} - ${partition.name}`;
-  return !partition.is_owned && partition.is_private ? "Private" : label;
+  return !partition.is_owned && partition.is_private ? 'Private' : label;
 };
 
 /**
@@ -1819,30 +1819,30 @@ export const getPartitionsWithLoans = withValidation(
       current_user_id: userId,
     });
 
-    const partitionsWithLoansQuery = e.select(e.EPartition, (partition) => {
+    const partitionsWithLoansQuery = e.select(e.EPartition, partition => {
       return {
         ...partitionFields,
         // FIXME: Partitions that the user doesn't own and are not involved in should not be returned.
         filter: e.any(
           e.op(
-            "not",
-            partition["<source_partition[is ETransaction]"][
-              "<transaction[is ELoan]"
-            ].is_paid
-          )
+            'not',
+            partition['<source_partition[is ETransaction]'][
+              '<transaction[is ELoan]'
+            ].is_paid,
+          ),
         ),
       };
     });
 
     const result = await partitionsWithLoansQuery.run(client);
 
-    return result.map((p) => {
+    return result.map(p => {
       return {
         ...p,
         label: getPartitionLabel(p),
       };
     });
-  }
+  },
 );
 
 export const getUnpaidLoans = withValidation(
@@ -1856,17 +1856,17 @@ export const getUnpaidLoans = withValidation(
       current_user_id: userId,
     });
 
-    const loansQuery = e.select(e.ELoan, (loan) => ({
+    const loansQuery = e.select(e.ELoan, loan => ({
       filter: e.op(
-        e.op(loan.transaction.source_partition.id, "=", e.uuid(partitionId)),
-        "and",
-        e.op("not", loan.is_paid)
+        e.op(loan.transaction.source_partition.id, '=', e.uuid(partitionId)),
+        'and',
+        e.op('not', loan.is_paid),
       ),
       id: true,
       amount_to_pay: true,
       amount_paid: true,
       amount: true,
-      remaining_amount: e.op(loan.amount_to_pay, "-", loan.amount_paid),
+      remaining_amount: e.op(loan.amount_to_pay, '-', loan.amount_paid),
       transaction: {
         id: true,
         value: true,
@@ -1887,7 +1887,7 @@ export const getUnpaidLoans = withValidation(
 
     const result = await loansQuery.run(client);
 
-    return result.map((loan) => {
+    return result.map(loan => {
       return {
         ...loan,
         transaction: {
@@ -1898,7 +1898,7 @@ export const getUnpaidLoans = withValidation(
                 source_partition: {
                   ...loan.transaction.counterpart.source_partition,
                   label: getPartitionLabel(
-                    loan.transaction.counterpart.source_partition
+                    loan.transaction.counterpart.source_partition,
                   ),
                 },
               }
@@ -1906,7 +1906,7 @@ export const getUnpaidLoans = withValidation(
         },
       };
     });
-  }
+  },
 );
 
 export const makeAPayment = withValidation(
@@ -1922,8 +1922,8 @@ export const makeAPayment = withValidation(
       current_user_id: userId,
     });
 
-    const loanQuery = e.select(e.ELoan, (loan) => ({
-      filter_single: e.op(loan.id, "=", e.uuid(loanId)),
+    const loanQuery = e.select(e.ELoan, loan => ({
+      filter_single: e.op(loan.id, '=', e.uuid(loanId)),
       id: true,
       amount_to_pay: true,
       amount_paid: true,
@@ -1945,13 +1945,13 @@ export const makeAPayment = withValidation(
       },
     }));
 
-    return client.transaction(async (tx) => {
+    return client.transaction(async tx => {
       const loan = await loanQuery.run(tx);
       if (!loan) {
-        throw new Error("Loan not found.");
+        throw new Error('Loan not found.');
       }
       if (!loan.transaction.counterpart) {
-        throw new Error("Loan counterpart not found.");
+        throw new Error('Loan counterpart not found.');
       }
 
       const sourcePartitionId =
@@ -1970,23 +1970,23 @@ export const makeAPayment = withValidation(
       const { transaction: newTransaction } = await createTransaction(tx);
 
       if (!newTransaction) {
-        throw new Error("Failed to create the transaction.");
+        throw new Error('Failed to create the transaction.');
       }
 
       const payment = await e
         .insert(e.EPayment, {
-          transaction: e.select(e.ETransaction, (t) => ({
-            filter_single: e.op(t.id, "=", e.uuid(newTransaction.id)),
+          transaction: e.select(e.ETransaction, t => ({
+            filter_single: e.op(t.id, '=', e.uuid(newTransaction.id)),
           })),
-          loan: e.select(e.ELoan, (loan) => ({
-            filter_single: e.op(loan.id, "=", e.uuid(loanId)),
+          loan: e.select(e.ELoan, loan => ({
+            filter_single: e.op(loan.id, '=', e.uuid(loanId)),
           })),
         })
         .run(tx);
 
       return payment;
     });
-  }
+  },
 );
 
 /**
@@ -1998,14 +1998,14 @@ export const checkUsername = withValidation(
     if (username.length < 1) {
       return false;
     }
-    const client = edgedb.createClient({ database: "edgedb" });
+    const client = edgedb.createClient({ database: 'edgedb' });
     const result = await e
-      .select(e.masterdb.EUser, (user) => ({
-        filter_single: e.op(user.username, "=", username),
+      .select(e.masterdb.EUser, user => ({
+        filter_single: e.op(user.username, '=', username),
       }))
       .run(client);
     return result === null;
-  }
+  },
 );
 
 export const updateAccount = withValidation(
@@ -2022,14 +2022,14 @@ export const updateAccount = withValidation(
         name: e.str,
       },
       ({ id, name }) =>
-        e.update(e.EAccount, (account) => ({
+        e.update(e.EAccount, account => ({
           filter_single: e.op(
-            e.op(account.id, "=", id),
-            "and",
-            account.is_owned
+            e.op(account.id, '=', id),
+            'and',
+            account.is_owned,
           ),
           set: { name },
-        }))
+        })),
     );
     return updateQuery.run(
       edgedb
@@ -2038,58 +2038,58 @@ export const updateAccount = withValidation(
       {
         id: accountId,
         name: name.trim(),
-      }
+      },
     );
-  }
+  },
 );
 
 export const createInvitation = withValidation(
   createInvitationSchema,
-  async (args) => {
-    const client = edgedb.createClient({ database: "edgedb" });
-    return client.transaction(async (tx) => {
+  async args => {
+    const client = edgedb.createClient({ database: 'edgedb' });
+    return client.transaction(async tx => {
       return _createInvitation(args, tx);
     });
-  }
+  },
 );
 
 export const getActiveInvitations = withValidation(
   object({ inviterEmail: string() }),
   async ({ inviterEmail }) => {
-    const client = edgedb.createClient({ database: "edgedb" });
-    const query = e.select(e.masterdb.EInvitation, (i) => ({
+    const client = edgedb.createClient({ database: 'edgedb' });
+    const query = e.select(e.masterdb.EInvitation, i => ({
       filter: e.op(
-        e.op(i.inviter.email, "=", inviterEmail),
-        "and",
-        e.op("not", i.is_accepted)
+        e.op(i.inviter.email, '=', inviterEmail),
+        'and',
+        e.op('not', i.is_accepted),
       ),
       id: true,
       code: true,
       email: true,
     }));
     const result = await query.run(client);
-    return result.map((i) => ({
+    return result.map(i => ({
       ...i,
       url: `/invitation/accept?code=${i.code}`,
     }));
-  }
+  },
 );
 
 export const getMyInvitation = withValidation(
   object({ email: string(), code: optional(string()) }),
   async ({ email, code }) => {
-    const client = edgedb.createClient({ database: "edgedb" });
-    const query = e.select(e.masterdb.EInvitation, (i) => ({
+    const client = edgedb.createClient({ database: 'edgedb' });
+    const query = e.select(e.masterdb.EInvitation, i => ({
       filter_single: e.op(
-        e.op(i.email, "=", email),
-        "and",
-        e.op("not", i.is_accepted)
+        e.op(i.email, '=', email),
+        'and',
+        e.op('not', i.is_accepted),
       ),
       inviterEmail: i.inviter.email,
       id: true,
       code: true,
       email: true,
-      startOwnDb: e.op("exists", i.db),
+      startOwnDb: e.op('exists', i.db),
     }));
     const result = await query.run(client);
     return (
@@ -2098,7 +2098,7 @@ export const getMyInvitation = withValidation(
         isCorrectCode: result.code === code,
       }
     );
-  }
+  },
 );
 
 export const acceptInvitation = withValidation(
@@ -2109,15 +2109,15 @@ export const acceptInvitation = withValidation(
     code: string(),
   }),
   async ({ invitationId, username, fullName, code }) => {
-    const deleteInvitationQuery = e.delete(e.masterdb.EInvitation, (i) => ({
-      filter_single: e.op(i.id, "=", e.uuid(invitationId)),
+    const deleteInvitationQuery = e.delete(e.masterdb.EInvitation, i => ({
+      filter_single: e.op(i.id, '=', e.uuid(invitationId)),
     }));
 
-    const masterDbClient = edgedb.createClient({ database: "edgedb" });
-    const masterDbUser = await masterDbClient.transaction(async (tx) => {
+    const masterDbClient = edgedb.createClient({ database: 'edgedb' });
+    const masterDbUser = await masterDbClient.transaction(async tx => {
       const invitation = await e
-        .select(e.masterdb.EInvitation, (i) => ({
-          filter_single: e.op(i.id, "=", e.uuid(invitationId)),
+        .select(e.masterdb.EInvitation, i => ({
+          filter_single: e.op(i.id, '=', e.uuid(invitationId)),
           id: true,
           code: true,
           is_accepted: true,
@@ -2134,17 +2134,17 @@ export const acceptInvitation = withValidation(
         }))
         .run(tx);
       if (!invitation) {
-        throw new Error("Invitation not found.");
+        throw new Error('Invitation not found.');
       }
       if (invitation.is_accepted) {
-        throw new Error("Invitation already accepted.");
+        throw new Error('Invitation already accepted.');
       }
       if (invitation.code !== code) {
-        throw new Error("Invalid code.");
+        throw new Error('Invalid code.');
       }
       const inviter = await e
-        .select(e.masterdb.EUser, (user) => ({
-          filter_single: e.op(user.username, "=", invitation.inviter.username),
+        .select(e.masterdb.EUser, user => ({
+          filter_single: e.op(user.username, '=', invitation.inviter.username),
           id: true,
           db: {
             id: true,
@@ -2154,7 +2154,7 @@ export const acceptInvitation = withValidation(
         .run(tx);
 
       if (!inviter) {
-        throw new Error("Inviter not found.");
+        throw new Error('Inviter not found.');
       }
 
       if (!inviter.db) {
@@ -2172,12 +2172,12 @@ export const acceptInvitation = withValidation(
         .run(tx);
 
       await e
-        .update(e.masterdb.EDatabase, (db) => ({
-          filter_single: e.op(db.id, "=", e.uuid(dbToUse.id)),
+        .update(e.masterdb.EDatabase, db => ({
+          filter_single: e.op(db.id, '=', e.uuid(dbToUse.id)),
           set: {
             users: {
-              "+=": e.select(e.masterdb.EUser, (user) => ({
-                filter: e.op(user.id, "=", e.uuid(newUserInMasterDb.id)),
+              '+=': e.select(e.masterdb.EUser, user => ({
+                filter: e.op(user.id, '=', e.uuid(newUserInMasterDb.id)),
               })),
             },
           },
@@ -2196,7 +2196,7 @@ export const acceptInvitation = withValidation(
     const { invitationEmail, dbname, isOwnedDb } = masterDbUser;
     const inviterDbClient = edgedb.createClient({ database: dbname });
 
-    await inviterDbClient.transaction(async (tx) => {
+    await inviterDbClient.transaction(async tx => {
       return _createInitialData(
         {
           asFirstUser: isOwnedDb,
@@ -2204,29 +2204,29 @@ export const acceptInvitation = withValidation(
           name: fullName,
           email: invitationEmail,
         },
-        tx
+        tx,
       );
     });
 
     return { dbname, username };
-  }
+  },
 );
 
 export const checkPendingInvitation = withValidation(
   object({ email: string() }),
   async ({ email }) => {
-    const client = edgedb.createClient({ database: "edgedb" });
-    const query = e.select(e.masterdb.EInvitation, (i) => ({
+    const client = edgedb.createClient({ database: 'edgedb' });
+    const query = e.select(e.masterdb.EInvitation, i => ({
       filter_single: e.op(
-        e.op(i.email, "=", email),
-        "and",
-        e.op("not", i.is_accepted)
+        e.op(i.email, '=', email),
+        'and',
+        e.op('not', i.is_accepted),
       ),
       id: true,
     }));
     const result = await query.run(client);
     return Boolean(result);
-  }
+  },
 );
 
 export const getBudgetProfiles = withValidation(
@@ -2236,7 +2236,7 @@ export const getBudgetProfiles = withValidation(
       current_user_id: userId,
     });
     return e
-      .select(e.EBudgetProfile, (bp) => ({
+      .select(e.EBudgetProfile, bp => ({
         filter: bp.is_owned,
         id: true,
         name: true,
@@ -2245,7 +2245,7 @@ export const getBudgetProfiles = withValidation(
         },
       }))
       .run(client);
-  }
+  },
 );
 
 export const createBudgetProfile = withValidation(
@@ -2268,13 +2268,13 @@ export const createBudgetProfile = withValidation(
           name,
           owners: isForAll
             ? undefined
-            : e.select(e.EUser, (user) => ({
-                filter_single: e.op(user.id, "=", userId),
+            : e.select(e.EUser, user => ({
+                filter_single: e.op(user.id, '=', userId),
               })),
-          partitions: e.select(e.EPartition, (partition) => ({
-            filter: e.op(partition.id, "in", e.array_unpack(partitionIds)),
+          partitions: e.select(e.EPartition, partition => ({
+            filter: e.op(partition.id, 'in', e.array_unpack(partitionIds)),
           })),
-        })
+        }),
     );
     return query.run(
       edgedb
@@ -2284,9 +2284,9 @@ export const createBudgetProfile = withValidation(
         userId,
         name,
         partitionIds,
-      }
+      },
     );
-  }
+  },
 );
 
 export const getBudget = withValidation(
@@ -2303,15 +2303,15 @@ export const getBudget = withValidation(
         categoryId: e.uuid,
       },
       ({ profileId, categoryId }) =>
-        e.select(e.EBudget, (b) => ({
+        e.select(e.EBudget, b => ({
           filter_single: e.op(
-            e.op(b.profile.id, "=", profileId),
-            "and",
-            e.op(b.category.id, "=", categoryId)
+            e.op(b.profile.id, '=', profileId),
+            'and',
+            e.op(b.category.id, '=', categoryId),
           ),
           id: true,
           amount: true,
-        }))
+        })),
     );
     return query.run(
       edgedb
@@ -2320,9 +2320,9 @@ export const getBudget = withValidation(
       {
         profileId,
         categoryId,
-      }
+      },
     );
-  }
+  },
 );
 
 export const updateBudget = withValidation(
@@ -2339,7 +2339,7 @@ export const updateBudget = withValidation(
       .createClient({ database: dbname })
       .withGlobals({ current_user_id: userId });
 
-    if (budgetId === "") {
+    if (budgetId === '') {
       const query = e.params(
         {
           amount: e.decimal,
@@ -2347,13 +2347,13 @@ export const updateBudget = withValidation(
         ({ amount }) =>
           e.insert(e.EBudget, {
             amount,
-            category: e.select(e.ECategory, (category) => ({
-              filter_single: e.op(category.id, "=", e.uuid(categoryId)),
+            category: e.select(e.ECategory, category => ({
+              filter_single: e.op(category.id, '=', e.uuid(categoryId)),
             })),
-            profile: e.select(e.EBudgetProfile, (profile) => ({
-              filter_single: e.op(profile.id, "=", e.uuid(profileId)),
+            profile: e.select(e.EBudgetProfile, profile => ({
+              filter_single: e.op(profile.id, '=', e.uuid(profileId)),
             })),
-          })
+          }),
       );
       return query.run(client, { amount: amount.toString() });
     } else {
@@ -2363,17 +2363,17 @@ export const updateBudget = withValidation(
           amount: e.decimal,
         },
         ({ id, amount }) =>
-          e.update(e.EBudget, (b) => ({
-            filter_single: e.op(b.id, "=", id),
+          e.update(e.EBudget, b => ({
+            filter_single: e.op(b.id, '=', id),
             set: { amount },
-          }))
+          })),
       );
       return query.run(client, {
         id: budgetId,
         amount: amount.toString(),
       });
     }
-  }
+  },
 );
 
 export const toggleBudgetPartitions = withValidation(
@@ -2390,29 +2390,29 @@ export const toggleBudgetPartitions = withValidation(
       .createClient({ database: dbname })
       .withGlobals({ current_user_id: userId });
 
-    return client.transaction(async (tx) => {
+    return client.transaction(async tx => {
       const query = e.params(
         {
           profileId: e.uuid,
         },
         ({ profileId }) =>
-          e.select(e.EBudgetProfile, (profile) => ({
-            filter_single: e.op(profile.id, "=", profileId),
+          e.select(e.EBudgetProfile, profile => ({
+            filter_single: e.op(profile.id, '=', profileId),
             partitions: {
               id: true,
             },
-          }))
+          })),
       );
       const profile = await query.run(tx, { profileId });
       if (!profile) {
-        throw new Error("Profile not found.");
+        throw new Error('Profile not found.');
       }
-      const partitionIdsInProfile = profile.partitions.map((p) => p.id);
+      const partitionIdsInProfile = profile.partitions.map(p => p.id);
       const partitionIdsToAdd = partitionIds.filter(
-        (id) => !partitionIdsInProfile.includes(id)
+        id => !partitionIdsInProfile.includes(id),
       );
-      const partitionIdsToRemove = partitionIds.filter((id) =>
-        partitionIdsInProfile.includes(id)
+      const partitionIdsToRemove = partitionIds.filter(id =>
+        partitionIdsInProfile.includes(id),
       );
       const addQuery = e.params(
         {
@@ -2420,20 +2420,20 @@ export const toggleBudgetPartitions = withValidation(
           partitionIds: e.array(e.uuid),
         },
         ({ profileId, partitionIds }) =>
-          e.update(e.EBudgetProfile, (profile) => ({
-            filter_single: e.op(profile.id, "=", profileId),
+          e.update(e.EBudgetProfile, profile => ({
+            filter_single: e.op(profile.id, '=', profileId),
             set: {
               partitions: {
-                "+=": e.select(e.EPartition, (partition) => ({
+                '+=': e.select(e.EPartition, partition => ({
                   filter: e.op(
                     partition.id,
-                    "in",
-                    e.array_unpack(partitionIds)
+                    'in',
+                    e.array_unpack(partitionIds),
                   ),
                 })),
               },
             },
-          }))
+          })),
       );
       const removeQuery = e.params(
         {
@@ -2441,20 +2441,20 @@ export const toggleBudgetPartitions = withValidation(
           partitionIds: e.array(e.uuid),
         },
         ({ profileId, partitionIds }) =>
-          e.update(e.EBudgetProfile, (profile) => ({
-            filter_single: e.op(profile.id, "=", profileId),
+          e.update(e.EBudgetProfile, profile => ({
+            filter_single: e.op(profile.id, '=', profileId),
             set: {
               partitions: {
-                "-=": e.select(e.EPartition, (partition) => ({
+                '-=': e.select(e.EPartition, partition => ({
                   filter: e.op(
                     partition.id,
-                    "in",
-                    e.array_unpack(partitionIds)
+                    'in',
+                    e.array_unpack(partitionIds),
                   ),
                 })),
               },
             },
-          }))
+          })),
       );
       if (partitionIdsToAdd.length !== 0) {
         await addQuery.run(tx, { profileId, partitionIds: partitionIdsToAdd });
@@ -2466,5 +2466,5 @@ export const toggleBudgetPartitions = withValidation(
         });
       }
     });
-  }
+  },
 );

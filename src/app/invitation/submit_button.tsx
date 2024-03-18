@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { Button, Text } from "@radix-ui/themes";
-import { ReactNode } from "react";
-import { useFormStatus } from "react-dom";
+import { Button, Text } from '@radix-ui/themes';
+import { ReactNode } from 'react';
+import { useFormStatus } from 'react-dom';
 
 export const SubmitButton = (props: { children: ReactNode }) => {
   const { pending } = useFormStatus();

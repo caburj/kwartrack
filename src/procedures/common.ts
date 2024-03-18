@@ -1,4 +1,4 @@
-import e from "../../dbschema/edgeql-js";
+import e from '../../dbschema/edgeql-js';
 import {
   type Input,
   type BaseSchema,
@@ -7,13 +7,13 @@ import {
   optional,
   boolean,
   parse,
-} from "valibot";
-import { Transaction } from "edgedb/dist/transaction";
+} from 'valibot';
+import { Transaction } from 'edgedb/dist/transaction';
 
 export function withValidation<
   S extends BaseSchema,
   R extends any,
-  O extends any[]
+  O extends any[],
 >(paramSchema: S, fn: (param: Input<S>, ...otherParams: O) => R) {
   return (param: Input<S>, ...otherParams: O) => {
     const result = parse(paramSchema, param);
@@ -31,14 +31,14 @@ export const createInvitationSchema = object({
 export const _createInvitation = withValidation(
   createInvitationSchema,
   async ({ inviterEmail, email, code, dbId }, tx: Transaction) => {
-    const inviterQuery = e.select(e.masterdb.EUser, (user) => ({
-      filter_single: e.op(user.email, "=", inviterEmail),
+    const inviterQuery = e.select(e.masterdb.EUser, user => ({
+      filter_single: e.op(user.email, '=', inviterEmail),
     }));
-    const existingUserQuery = e.select(e.masterdb.EUser, (user) => ({
-      filter_single: e.op(user.email, "=", email),
+    const existingUserQuery = e.select(e.masterdb.EUser, user => ({
+      filter_single: e.op(user.email, '=', email),
     }));
-    const existingInvitationQuery = e.select(e.masterdb.EInvitation, (i) => ({
-      filter_single: e.op(i.email, "=", email),
+    const existingInvitationQuery = e.select(e.masterdb.EInvitation, i => ({
+      filter_single: e.op(i.email, '=', email),
       is_accepted: true,
     }));
     const createInvitationQuery = e.params(
@@ -50,38 +50,38 @@ export const _createInvitation = withValidation(
         e.insert(e.masterdb.EInvitation, {
           email,
           code,
-          inviter: e.select(e.masterdb.EUser, (user) => ({
-            filter_single: e.op(user.email, "=", inviterEmail),
+          inviter: e.select(e.masterdb.EUser, user => ({
+            filter_single: e.op(user.email, '=', inviterEmail),
           })),
           db: dbId
-            ? e.select(e.masterdb.EDatabase, (db) => ({
-                filter_single: e.op(db.id, "=", e.uuid(dbId)),
+            ? e.select(e.masterdb.EDatabase, db => ({
+                filter_single: e.op(db.id, '=', e.uuid(dbId)),
               }))
             : undefined,
-        })
+        }),
     );
     const inviter = await inviterQuery.run(tx);
     if (!inviter) {
-      return { error: "Inviter is unknown" };
+      return { error: 'Inviter is unknown' };
     }
     const existingUser = await existingUserQuery.run(tx);
     if (existingUser) {
-      return { error: "User with given email already exists" };
+      return { error: 'User with given email already exists' };
     }
     const existingInvitation = await existingInvitationQuery.run(tx);
     if (existingInvitation && !existingInvitation.is_accepted) {
-      return { error: "Invitation exists and is not yet accepted" };
+      return { error: 'Invitation exists and is not yet accepted' };
     }
 
     // ensure db exists if dbId is provided
     if (dbId) {
       const db = await e
-        .select(e.masterdb.EDatabase, (db) => ({
-          filter_single: e.op(db.id, "=", e.uuid(dbId)),
+        .select(e.masterdb.EDatabase, db => ({
+          filter_single: e.op(db.id, '=', e.uuid(dbId)),
         }))
         .run(tx);
       if (!db) {
-        return { error: "Database not found" };
+        return { error: 'Database not found' };
       }
     }
 
@@ -90,8 +90,8 @@ export const _createInvitation = withValidation(
       code,
     });
     return e
-      .select(e.masterdb.EInvitation, (i) => ({
-        filter_single: e.op(i.id, "=", e.uuid(invitationId)),
+      .select(e.masterdb.EInvitation, i => ({
+        filter_single: e.op(i.id, '=', e.uuid(invitationId)),
         id: true,
         code: true,
         email: true,
@@ -102,7 +102,7 @@ export const _createInvitation = withValidation(
         },
       }))
       .run(tx);
-  }
+  },
 );
 
 export const makeCreateCategoryQuery = () => {
@@ -119,50 +119,50 @@ export const makeCreateCategoryQuery = () => {
         name,
         kind,
         is_private,
-        owners: e.select(e.EUser, (user) => ({
-          filter: e.op(user.id, "=", user_id),
+        owners: e.select(e.EUser, user => ({
+          filter: e.op(user.id, '=', user_id),
         })),
-        default_partition: e.select(e.EPartition, (partition) => ({
+        default_partition: e.select(e.EPartition, partition => ({
           filter_single: e.op(
-            e.op(partition.id, "=", default_partition_id),
-            "and",
+            e.op(partition.id, '=', default_partition_id),
+            'and',
             e.op(
-              e.op(partition.is_owned, "and", partition.is_private),
-              "if",
+              e.op(partition.is_owned, 'and', partition.is_private),
+              'if',
               is_private,
-              "else",
-              true
-            )
+              'else',
+              true,
+            ),
           ),
         })),
-      })
+      }),
   );
 };
 
 export const createDefaultCategories = async (
   tx: Transaction,
-  userId: string
+  userId: string,
 ) => {
-  const incomeCategories = ["Initial Balance", "Salary", "Other Income"];
+  const incomeCategories = ['Initial Balance', 'Salary', 'Other Income'];
   const expenseCategories = [
-    "Grocery",
-    "Rent",
-    "Bills",
-    "Misc",
-    "Restaurants",
-    "Transportation",
-    "Travel",
-    "Health",
-    "Shopping",
+    'Grocery',
+    'Rent',
+    'Bills',
+    'Misc',
+    'Restaurants',
+    'Transportation',
+    'Travel',
+    'Health',
+    'Shopping',
   ];
-  const transferCategories = ["Transfer"];
+  const transferCategories = ['Transfer'];
 
   const createCategory = makeCreateCategoryQuery();
 
   for (const category of incomeCategories) {
     await createCategory.run(tx, {
       name: category,
-      kind: "Income",
+      kind: 'Income',
       user_id: userId,
       is_private: false,
     });
@@ -170,7 +170,7 @@ export const createDefaultCategories = async (
   for (const category of expenseCategories) {
     await createCategory.run(tx, {
       name: category,
-      kind: "Expense",
+      kind: 'Expense',
       user_id: userId,
       is_private: false,
     });
@@ -178,7 +178,7 @@ export const createDefaultCategories = async (
   for (const category of transferCategories) {
     await createCategory.run(tx, {
       name: category,
-      kind: "Transfer",
+      kind: 'Transfer',
       user_id: userId,
       is_private: false,
     });
@@ -205,7 +205,7 @@ export const _createPartition = withValidation(
       isSharedAccount,
       newAccountName,
     },
-    tx: Transaction
+    tx: Transaction,
   ) => {
     const newPartitionQuery = e.params(
       {
@@ -217,10 +217,10 @@ export const _createPartition = withValidation(
         e.insert(e.EPartition, {
           name,
           is_private: isPrivate,
-          account: e.select(e.EAccount, (account) => ({
-            filter_single: e.op(account.id, "=", accountId),
+          account: e.select(e.EAccount, account => ({
+            filter_single: e.op(account.id, '=', accountId),
           })),
-        })
+        }),
     );
 
     const newAccountQuery = e.params(
@@ -232,17 +232,17 @@ export const _createPartition = withValidation(
         e.insert(e.EAccount, {
           name,
           owners: !isSharedAccount
-            ? e.select(e.EUser, (user) => ({
-                filter: e.op(user.id, "=", userId),
+            ? e.select(e.EUser, user => ({
+                filter: e.op(user.id, '=', userId),
               }))
             : undefined,
-        })
+        }),
     );
 
     let accountId: string;
     if (forNewAccount) {
       if (!newAccountName) {
-        throw new Error("New account name is required.");
+        throw new Error('New account name is required.');
       }
       const { id } = await newAccountQuery.run(tx, {
         name: newAccountName,
@@ -259,7 +259,7 @@ export const _createPartition = withValidation(
     });
 
     return true;
-  }
+  },
 );
 
 // create user, default categories and partition
@@ -277,7 +277,7 @@ export const _createInitialData = withValidation(
           username,
           email,
           name,
-        })
+        }),
       )
       .run(tx, {
         email,
@@ -291,15 +291,15 @@ export const _createInitialData = withValidation(
         {
           forNewAccount: true,
           isPrivate: false,
-          name: "Main",
+          name: 'Main',
           userId: userId,
-          newAccountName: "Bank Account",
+          newAccountName: 'Bank Account',
           isSharedAccount: false,
           // TODO: Seems to be unused. Remove?
-          accountId: "for-new-account",
+          accountId: 'for-new-account',
         },
-        tx
+        tx,
       );
     }
-  }
+  },
 );

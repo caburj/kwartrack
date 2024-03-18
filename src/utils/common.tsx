@@ -1,23 +1,18 @@
-import { rpc } from "@/app/rpc_client";
-import { Badge, Flex, Grid, textPropDefs } from "@radix-ui/themes";
+import { rpc } from '@/app/rpc_client';
+import { Badge, Flex, Grid, textPropDefs } from '@radix-ui/themes';
 import {
   UseQueryResult,
   QueryClient,
   QueryKey,
   useQuery,
-} from "@tanstack/react-query";
-import {
-  ForwardedRef,
-  ReactHTML,
-  forwardRef,
-  useMemo,
-} from "react";
+} from '@tanstack/react-query';
+import { ForwardedRef, ReactHTML, forwardRef, useMemo } from 'react';
 
 export type Unpacked<T> = T extends (infer U)[] ? U : T;
 
 export function groupBy<T, K extends string>(
   items: T[],
-  key: (item: T) => K
+  key: (item: T) => K,
 ): Record<K, T[]> {
   const result = {} as Record<K, T[]>;
   for (const item of items) {
@@ -43,28 +38,28 @@ function createParser(locale: string) {
   ].reverse();
   const index = new Map(numerals.map((d, i) => [d, i]));
   const group = new RegExp(
-    `[${parts.find((d) => d.type === "group")!.value}]`,
-    "g"
+    `[${parts.find(d => d.type === 'group')!.value}]`,
+    'g',
   );
   const decimal = new RegExp(
-    `[${parts.find((d) => d.type === "decimal")!.value}]`
+    `[${parts.find(d => d.type === 'decimal')!.value}]`,
   );
-  const numeral = new RegExp(`[${numerals.join("")}]`, "g");
+  const numeral = new RegExp(`[${numerals.join('')}]`, 'g');
   const parse = (string: string) => {
     return (string = string
       .trim()
-      .replace(group, "")
-      .replace(decimal, ".")
-      .replace(numeral, (x) => index.get(x)!.toString()))
+      .replace(group, '')
+      .replace(decimal, '.')
+      .replace(numeral, x => index.get(x)!.toString()))
       ? +string
       : NaN;
   };
   return parse;
 }
 
-const sp = createParser("en-US");
+const sp = createParser('en-US');
 
-const nf = new Intl.NumberFormat("en-US", {
+const nf = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 2,
   minimumFractionDigits: 2,
 });
@@ -109,37 +104,37 @@ export type PartitionOption = Unpacked<NonNullable<Partitions>>;
 
 export function getPartitionType(
   p: PartitionOption,
-  userId: string
-): "owned" | "common" | "others" {
+  userId: string,
+): 'owned' | 'common' | 'others' {
   if (p.account.is_owned) {
     if (p.account.owners.length === 1) {
-      return "owned";
+      return 'owned';
     } else {
-      return "common";
+      return 'common';
     }
   } else {
-    return "others";
+    return 'others';
   }
 }
 
 export const CATEGORY_COLOR = {
-  Income: "green",
-  Expense: "red",
-  Transfer: "blue",
+  Income: 'green',
+  Expense: 'red',
+  Transfer: 'blue',
 } as const;
 
 export const PARTITION_COLOR = {
-  owned: "orange",
-  common: "indigo",
-  others: "gray",
+  owned: 'orange',
+  common: 'indigo',
+  others: 'gray',
 } as const;
 
 export type RadixColor =
-  | (typeof textPropDefs)["color"]["values"][number]
+  | (typeof textPropDefs)['color']['values'][number]
   | undefined;
 
 export type Categories = Awaited<ReturnType<typeof rpc.post.getUserCategories>>;
-export type Category = Unpacked<Categories["Expense"]>;
+export type Category = Unpacked<Categories['Expense']>;
 
 export const getCategoryOptionName = (category: Category) => {
   return category.name;
@@ -154,12 +149,12 @@ export function invalidateMany(client: QueryClient, keys: QueryKey[]) {
 export function useGroupedPartitions(
   partitions: Partitions,
   userId: string,
-  onlyOwned = false
+  onlyOwned = false,
 ) {
   const sortedPartitions = useMemo(() => {
     const partitionsByType = groupBy(
-      partitions.filter((p) => (onlyOwned ? p.account.is_owned : true)),
-      (p) => getPartitionType(p, userId)
+      partitions.filter(p => (onlyOwned ? p.account.is_owned : true)),
+      p => getPartitionType(p, userId),
     );
     return [
       ...(partitionsByType.owned || []),
@@ -169,14 +164,14 @@ export function useGroupedPartitions(
   }, [partitions, userId, onlyOwned]);
 
   const groupedPartitions = useMemo(() => {
-    return groupBy(sortedPartitions, (p) => p.account.id);
+    return groupBy(sortedPartitions, p => p.account.id);
   }, [sortedPartitions]);
 
   return groupedPartitions;
 }
 
 export function usePartitions(user: { id: string; dbname: string }) {
-  const partitions = useQuery(["partitions", user.id], () => {
+  const partitions = useQuery(['partitions', user.id], () => {
     return rpc.post.getPartitionOptions({
       userId: user.id,
       dbname: user.dbname,
@@ -212,7 +207,7 @@ export function Centered(props: { children: React.ReactNode }) {
 
 export function Positioned(props: {
   children: React.ReactNode;
-  position: "fixed" | "absolute";
+  position: 'fixed' | 'absolute';
   top?: string;
   left?: string;
   bottom?: string;
@@ -237,7 +232,7 @@ export function Positioned(props: {
 
 export function debounce<C extends (...args: any[]) => any>(
   callback: C,
-  delay: number
+  delay: number,
 ) {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   return (...args: Parameters<C>) => {
@@ -253,16 +248,16 @@ export function debounce<C extends (...args: any[]) => any>(
 
 export const DateInput = forwardRef(function DateInput(
   props: any,
-  ref: ForwardedRef<HTMLButtonElement>
+  ref: ForwardedRef<HTMLButtonElement>,
 ) {
   const { value, onClick, isPointer } = props;
   return (
     <Badge
       ref={ref}
       onClick={onClick}
-      style={{ cursor: isPointer ? "pointer" : "auto" }}
+      style={{ cursor: isPointer ? 'pointer' : 'auto' }}
     >
-      {value || "Today"}
+      {value || 'Today'}
     </Badge>
   );
 });

@@ -1,7 +1,7 @@
-import { getUserIdAndDbname } from "@/procedures/server_functions";
-import { currentUser } from "@clerk/nextjs";
-import { UserPage } from "./user_page";
-import { notFound } from "next/navigation";
+import { getUserIdAndDbname } from '@/procedures/server_functions';
+import { currentUser } from '@clerk/nextjs';
+import { UserPage } from './user_page';
+import { notFound } from 'next/navigation';
 
 export default async function Page({
   params: { username },
@@ -13,7 +13,7 @@ export default async function Page({
     return notFound();
   }
   const primaryEmail = user.emailAddresses.find(
-    (em) => em.id === user.primaryEmailAddressId
+    em => em.id === user.primaryEmailAddressId,
   );
   if (!primaryEmail) {
     return notFound();

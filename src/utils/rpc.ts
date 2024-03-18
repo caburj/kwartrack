@@ -1,15 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
 
 /**
  * Only expected to be used in the server.
  * This returns the handlers for the RPC endpoint.
  */
 export function createRPCHandler(
-  procedures: Record<string, (arg: any) => any>
+  procedures: Record<string, (arg: any) => any>,
 ) {
   const GET = async (
     req: Request,
-    { params }: { params: { name: string } }
+    { params }: { params: { name: string } },
   ) => {
     const procedureName = params.name;
     const { searchParams } = new URL(req.url);
@@ -22,7 +22,7 @@ export function createRPCHandler(
 
   const POST = async (
     req: Request,
-    { params }: { params: { name: string } }
+    { params }: { params: { name: string } },
   ) => {
     const procedureName = params.name;
     const procedure = procedures[procedureName];
@@ -51,7 +51,7 @@ export function createRPCClient<T extends any>(): { get: T; post: T } {
           return processResponse(response);
         };
       },
-    }
+    },
   );
 
   const post = new Proxy(
@@ -61,13 +61,13 @@ export function createRPCClient<T extends any>(): { get: T; post: T } {
         return async (params: any) => {
           const url = new URL(`/api/rpc/${name}`, window.location.href);
           const response = await fetch(url.toString(), {
-            method: "POST",
+            method: 'POST',
             body: JSON.stringify(params),
           });
           return processResponse(response);
         };
       },
-    }
+    },
   );
 
   return { get, post };
@@ -80,7 +80,7 @@ async function makeResponse(getResult: () => any) {
   } catch (error) {
     return NextResponse.json(
       { error: (error as Error).message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

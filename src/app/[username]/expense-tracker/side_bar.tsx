@@ -1,7 +1,5 @@
-"use client";
+'use client';
 
-import { rpc } from "../../rpc_client";
-import { css } from "../../../../styled-system/css";
 import {
   MouseEventHandler,
   useContext,
@@ -12,13 +10,13 @@ import {
   useMemo,
   forwardRef,
   ForwardedRef,
-} from "react";
+} from 'react';
 import {
   useQuery,
   useQueryClient,
   useMutation,
   QueryKey,
-} from "@tanstack/react-query";
+} from '@tanstack/react-query';
 import {
   boolean,
   minLength,
@@ -27,22 +25,7 @@ import {
   string,
   transform,
   parse,
-} from "valibot";
-import { UserPageStoreContext } from "./store";
-import {
-  CATEGORY_COLOR,
-  PARTITION_COLOR,
-  QueryResult,
-  RadixColor,
-  Unpacked,
-  formatValue,
-  getCategoryOptionName,
-  getPartitionType,
-  groupBy,
-  invalidateMany,
-  useGroupedPartitions,
-  usePartitions,
-} from "@/utils/common";
+} from 'valibot';
 import {
   Box,
   Flex,
@@ -58,19 +41,37 @@ import {
   ContextMenu,
   Badge,
   Tooltip,
-} from "@radix-ui/themes";
+} from '@radix-ui/themes';
 import {
   ChevronRightIcon,
   Cross2Icon,
   PlusIcon,
   InfoCircledIcon,
-} from "@radix-ui/react-icons";
-import * as Accordion from "@radix-ui/react-accordion";
-import { Combobox, ComboboxTrigger } from "./combobox";
-import { TwoColumnInput } from "@/utils/common";
-import Skeleton from "react-loading-skeleton";
-import { toast } from "sonner";
-import { AnimatedAccordionContent } from "./accordion";
+} from '@radix-ui/react-icons';
+import * as Accordion from '@radix-ui/react-accordion';
+import Skeleton from 'react-loading-skeleton';
+import { toast } from 'sonner';
+import {
+  CATEGORY_COLOR,
+  PARTITION_COLOR,
+  QueryResult,
+  RadixColor,
+  Unpacked,
+  formatValue,
+  getCategoryOptionName,
+  getPartitionType,
+  groupBy,
+  invalidateMany,
+  useGroupedPartitions,
+  usePartitions,
+  TwoColumnInput,
+} from '@/utils/common';
+
+import { rpc } from '../../rpc_client';
+import { css } from '../../../../styled-system/css';
+import { AnimatedAccordionContent } from './accordion';
+import { Combobox, ComboboxTrigger } from './combobox';
+import { UserPageStoreContext } from './store';
 
 type UserIDAndDBName = NonNullable<
   Unpacked<Awaited<ReturnType<typeof rpc.post.getUserIdAndDbname>>>
@@ -86,7 +87,7 @@ type Partition = Unpacked<
 
 type Category = Awaited<
   ReturnType<typeof rpc.post.getUserCategories>
->["Income"][number];
+>['Income'][number];
 
 const newPartitionSchema = object({
   name: string([minLength(1)]),
@@ -115,8 +116,8 @@ export const SideBarFoldable = (props: {
     <Accordion.Item
       value={props.value}
       className={css({
-        "&[data-state=open]": {
-          borderBottom: "1px solid var(--gray-a5)",
+        '&[data-state=open]': {
+          borderBottom: '1px solid var(--gray-a5)',
         },
       })}
     >
@@ -127,9 +128,9 @@ export const SideBarFoldable = (props: {
           py="1"
           px="4"
           className={css({
-            borderBottom: "1px solid var(--gray-a5)",
-            backgroundColor: "var(--gray-a3)",
-            cursor: "pointer",
+            borderBottom: '1px solid var(--gray-a5)',
+            backgroundColor: 'var(--gray-a3)',
+            cursor: 'pointer',
           })}
           onClick={() => {
             headerTextRef.current?.click();
@@ -140,7 +141,7 @@ export const SideBarFoldable = (props: {
               <Text
                 size="3"
                 weight="bold"
-                className={css({ cursor: "pointer" })}
+                className={css({ cursor: 'pointer' })}
                 ref={headerTextRef}
               >
                 {props.value}
@@ -149,7 +150,7 @@ export const SideBarFoldable = (props: {
                 <Tooltip content="Clear selections">
                   <Button
                     variant="ghost"
-                    onClick={(e) => {
+                    onClick={e => {
                       e.stopPropagation();
                       props.clearSelections?.();
                     }}
@@ -160,7 +161,7 @@ export const SideBarFoldable = (props: {
               )}
             </Flex>
           </Accordion.Trigger>
-          <Flex onClick={(e) => e.stopPropagation()}>{props.headerButton}</Flex>
+          <Flex onClick={e => e.stopPropagation()}>{props.headerButton}</Flex>
         </Flex>
       </Accordion.Header>
       <AnimatedAccordionContent>{props.children}</AnimatedAccordionContent>
@@ -168,7 +169,7 @@ export const SideBarFoldable = (props: {
   );
 };
 
-type CategoryKind = "Income" | "Expense" | "Transfer";
+type CategoryKind = 'Income' | 'Expense' | 'Transfer';
 
 export function SideBar({
   user,
@@ -180,7 +181,7 @@ export function SideBar({
   const queryClient = useQueryClient();
   const categoryFormRef = useRef<HTMLFormElement>(null);
   const partitionFormRef = useRef<HTMLFormElement>(null);
-  const ownedAccounts = useQuery(["accounts", user.id, true], () => {
+  const ownedAccounts = useQuery(['accounts', user.id, true], () => {
     return rpc.post.getAccounts({
       userId: user.id,
       dbname: user.dbname,
@@ -188,9 +189,9 @@ export function SideBar({
     });
   });
 
-  const [accountId, setAccountId] = useState("for-new-account");
+  const [accountId, setAccountId] = useState('for-new-account');
 
-  const [categoryKind, setCategoryKind] = useState<CategoryKind>("Income");
+  const [categoryKind, setCategoryKind] = useState<CategoryKind>('Income');
 
   const [categoryIsPrivate, setCategoryIsPrivate] = useState(false);
 
@@ -209,18 +210,18 @@ export function SideBar({
       bottom="0"
       style={{
         minWidth: `${width}px`,
-        borderRight: "1px solid var(--gray-a5)",
-        backgroundColor: "var(--gray-a2)",
+        borderRight: '1px solid var(--gray-a5)',
+        backgroundColor: 'var(--gray-a2)',
       }}
     >
       <Flex direction="column" height="100%">
         <ScrollArea scrollbars="vertical">
-          <Accordion.Root type="multiple" defaultValue={["Accounts"]}>
+          <Accordion.Root type="multiple" defaultValue={['Accounts']}>
             <SideBarFoldable
               value="Accounts"
               showClearSelections={store.partitionIds.length > 0}
               clearSelections={() => {
-                dispatch({ type: "CLEAR_ACCOUNT_SELECTION" });
+                dispatch({ type: 'CLEAR_ACCOUNT_SELECTION' });
               }}
               headerButton={
                 <Dialog.Root>
@@ -236,18 +237,18 @@ export function SideBar({
                       <form
                         id="partition-form"
                         ref={partitionFormRef}
-                        onSubmit={async (e) => {
+                        onSubmit={async e => {
                           e.preventDefault();
 
                           const formdata = new FormData(
-                            e.target as HTMLFormElement
+                            e.target as HTMLFormElement,
                           );
 
                           const parsedData = parse(newPartitionSchema, {
                             ...Object.fromEntries(formdata.entries()),
-                            isPrivate: formdata.get("isPrivate") === "on",
+                            isPrivate: formdata.get('isPrivate') === 'on',
                             isSharedAccount:
-                              formdata.get("isSharedAccount") === "on",
+                              formdata.get('isSharedAccount') === 'on',
                           });
 
                           const {
@@ -259,10 +260,10 @@ export function SideBar({
                           } = parsedData;
 
                           let forNewAccount = false;
-                          if (accountId === "for-new-account") {
+                          if (accountId === 'for-new-account') {
                             forNewAccount = true;
                             if (!accountName?.trim()) {
-                              throw new Error("Account name is required");
+                              throw new Error('Account name is required');
                             }
                           }
                           await rpc.post.createPartition({
@@ -276,8 +277,8 @@ export function SideBar({
                             newAccountName: accountName,
                           });
                           invalidateMany(queryClient, [
-                            ["accounts", user.id],
-                            ["partitions", user.id],
+                            ['accounts', user.id],
+                            ['partitions', user.id],
                           ]);
                         }}
                       >
@@ -305,7 +306,7 @@ export function SideBar({
                           <Select.Root
                             name="accountId"
                             value={accountId}
-                            onValueChange={(value) => {
+                            onValueChange={value => {
                               setAccountId(value);
                             }}
                           >
@@ -317,7 +318,7 @@ export function SideBar({
                               {ownedAccounts.data && (
                                 <Select.Group>
                                   <Select.Label>My Accounts</Select.Label>
-                                  {ownedAccounts.data.map((acc) => (
+                                  {ownedAccounts.data.map(acc => (
                                     <Select.Item value={acc.id} key={acc.id}>
                                       {acc.name}
                                     </Select.Item>
@@ -328,7 +329,7 @@ export function SideBar({
                           </Select.Root>
                         </TwoColumnInput>
 
-                        {accountId === "for-new-account" && (
+                        {accountId === 'for-new-account' && (
                           <>
                             <TwoColumnInput>
                               <Text as="div" size="2" mb="1" weight="bold">
@@ -375,7 +376,7 @@ export function SideBar({
               value="Categories"
               showClearSelections={store.categoryIds.length > 0}
               clearSelections={() => {
-                dispatch({ type: "CLEAR_CATEGORY_SELECTION" });
+                dispatch({ type: 'CLEAR_CATEGORY_SELECTION' });
               }}
               headerButton={
                 <Dialog.Root>
@@ -391,14 +392,14 @@ export function SideBar({
                       <form
                         id="category-form"
                         ref={categoryFormRef}
-                        onSubmit={async (e) => {
+                        onSubmit={async e => {
                           e.preventDefault();
                           const formdata = new FormData(
-                            e.target as HTMLFormElement
+                            e.target as HTMLFormElement,
                           );
                           const parsedData = parse(newCategorySchema, {
                             ...Object.fromEntries(formdata.entries()),
-                            isPrivate: formdata.get("isPrivate") === "on",
+                            isPrivate: formdata.get('isPrivate') === 'on',
                             defaultPartitionId: selectedDefaultPartition?.id,
                           });
                           const { name, kind, isPrivate, defaultPartitionId } =
@@ -412,7 +413,7 @@ export function SideBar({
                             defaultPartitionId,
                           });
                           queryClient.invalidateQueries({
-                            queryKey: ["categories", user.id],
+                            queryKey: ['categories', user.id],
                           });
                         }}
                       >
@@ -496,7 +497,7 @@ export function SideBar({
  * Shows the list of loans that are not yet fully-paid.
  */
 const ActiveLoans = ({ user }: { user: { id: string; dbname: string } }) => {
-  const partitionsWithLoans = useQuery(["partitionsWithLoans", user.id], () => {
+  const partitionsWithLoans = useQuery(['partitionsWithLoans', user.id], () => {
     return rpc.post.getPartitionsWithLoans({
       userId: user.id,
       dbname: user.dbname,
@@ -510,7 +511,7 @@ const ActiveLoans = ({ user }: { user: { id: string; dbname: string } }) => {
       value="Active Loans"
       showClearSelections={store.loanIds.length > 0}
       clearSelections={() => {
-        dispatch({ type: "CLEAR_LOAN_SELECTION" });
+        dispatch({ type: 'CLEAR_LOAN_SELECTION' });
       }}
     >
       <Flex direction="column" my="2">
@@ -518,20 +519,20 @@ const ActiveLoans = ({ user }: { user: { id: string; dbname: string } }) => {
           query={partitionsWithLoans}
           onUndefined={<>No loans found</>}
         >
-          {(partitions) => {
+          {partitions => {
             const partitionById = groupBy(
               partitions,
-              (partition) => partition.id
+              partition => partition.id,
             );
             return (
               <FoldableList
                 groupedItems={partitionById}
                 openValues={[]}
-                getHeaderLabel={(id) => {
+                getHeaderLabel={id => {
                   const partition = partitionById[id][0];
                   const _type = getPartitionType2(partition, user.id);
                   const color = PARTITION_COLOR[_type];
-                  const variant = partition.is_private ? "outline" : "soft";
+                  const variant = partition.is_private ? 'outline' : 'soft';
                   return (
                     <Badge color={color} variant={variant}>
                       {partition.label}
@@ -539,7 +540,7 @@ const ActiveLoans = ({ user }: { user: { id: string; dbname: string } }) => {
                   );
                 }}
               >
-                {(partition) => (
+                {partition => (
                   <PartitionLoans
                     partition={partition}
                     user={user}
@@ -565,7 +566,7 @@ const BudgetProfiles = ({ user }: { user: { id: string; dbname: string } }) => {
 
   const userPartitions = usePartitions(user);
 
-  const budgetProfiles = useQuery(["budgetProfiles", user.id], () => {
+  const budgetProfiles = useQuery(['budgetProfiles', user.id], () => {
     return rpc.post.getBudgetProfiles({
       userId: user.id,
       dbname: user.dbname,
@@ -573,7 +574,7 @@ const BudgetProfiles = ({ user }: { user: { id: string; dbname: string } }) => {
   });
 
   const selectedPartitions = useMemo(() => {
-    return userPartitions.filter((p) => store.partitionIds.includes(p.id));
+    return userPartitions.filter(p => store.partitionIds.includes(p.id));
   }, [userPartitions, store.partitionIds]);
 
   return (
@@ -594,7 +595,7 @@ const BudgetProfiles = ({ user }: { user: { id: string; dbname: string } }) => {
                 <form
                   id="budget-profile-form"
                   ref={budgetProfileFormRef}
-                  onSubmit={async (e) => {
+                  onSubmit={async e => {
                     e.preventDefault();
 
                     const formdata = new FormData(e.target as HTMLFormElement);
@@ -603,8 +604,8 @@ const BudgetProfiles = ({ user }: { user: { id: string; dbname: string } }) => {
                       object({ name: string(), isForAll: boolean() }),
                       {
                         ...Object.fromEntries(formdata.entries()),
-                        isForAll: formdata.get("isForAll") === "on",
-                      }
+                        isForAll: formdata.get('isForAll') === 'on',
+                      },
                     );
 
                     const { name, isForAll } = parsedData;
@@ -614,9 +615,9 @@ const BudgetProfiles = ({ user }: { user: { id: string; dbname: string } }) => {
                       dbname: user.dbname,
                       isForAll,
                       name,
-                      partitionIds: selectedPartitions.map((p) => p.id),
+                      partitionIds: selectedPartitions.map(p => p.id),
                     });
-                    invalidateMany(queryClient, [["budgetProfiles", user.id]]);
+                    invalidateMany(queryClient, [['budgetProfiles', user.id]]);
                   }}
                 >
                   <TwoColumnInput>
@@ -644,7 +645,7 @@ const BudgetProfiles = ({ user }: { user: { id: string; dbname: string } }) => {
                       <Tooltip
                         content={
                           <span>
-                            {"Corresponds to the selected partitions."}
+                            {'Corresponds to the selected partitions.'}
                           </span>
                         }
                       >
@@ -654,10 +655,10 @@ const BudgetProfiles = ({ user }: { user: { id: string; dbname: string } }) => {
                     <Flex
                       gap="2"
                       className={css({
-                        flexWrap: "wrap",
+                        flexWrap: 'wrap',
                       })}
                     >
-                      {selectedPartitions.map((p) => (
+                      {selectedPartitions.map(p => (
                         <Badge
                           key={p.id}
                         >{`${p.account.label} - ${p.name}`}</Badge>
@@ -683,23 +684,23 @@ const BudgetProfiles = ({ user }: { user: { id: string; dbname: string } }) => {
       }
     >
       <Flex direction="column" my="2" mx="4">
-        <Flex gap="2" className={css({ flexWrap: "wrap" })}>
-          {budgetProfiles.data?.map((profile) => (
+        <Flex gap="2" className={css({ flexWrap: 'wrap' })}>
+          {budgetProfiles.data?.map(profile => (
             <Badge
               key={profile.id}
               onClick={() => {
                 dispatch({
-                  type: "TOGGLE_BUDGET_PROFILE",
-                  payload: [profile.id, profile.partitions.map((p) => p.id)],
+                  type: 'TOGGLE_BUDGET_PROFILE',
+                  payload: [profile.id, profile.partitions.map(p => p.id)],
                 });
                 invalidateMany(queryClient, [
-                  ["budgetAmount"],
-                  ["transactions"],
-                  ["groupedTransactions"],
+                  ['budgetAmount'],
+                  ['transactions'],
+                  ['groupedTransactions'],
                 ]);
               }}
-              variant={store.budgetProfileId === profile.id ? "solid" : "soft"}
-              style={{ cursor: "pointer" }}
+              variant={store.budgetProfileId === profile.id ? 'solid' : 'soft'}
+              style={{ cursor: 'pointer' }}
             >
               {profile.name}
             </Badge>
@@ -730,20 +731,20 @@ const LoanItem = ({
   const borrower = loan.transaction.counterpart!.source_partition;
   const lenderName = `${lender.account.name} - ${lender.name}`;
   const borrowerColor = store.loanIds.includes(loan.id)
-    ? "cyan"
+    ? 'cyan'
     : PARTITION_COLOR[getPartitionType2(borrower, user.id)];
-  const borrowerVariant = borrower.is_private ? "outline" : "soft";
+  const borrowerVariant = borrower.is_private ? 'outline' : 'soft';
   const lenderColor = PARTITION_COLOR[getPartitionType2(lender, user.id)];
-  const lenderVariant = lender.is_private ? "outline" : "soft";
+  const lenderVariant = lender.is_private ? 'outline' : 'soft';
   const categoryColor = CATEGORY_COLOR[loan.transaction.category.kind];
   const categoryVariant = loan.transaction.category.is_private
-    ? "outline"
-    : "soft";
+    ? 'outline'
+    : 'soft';
   const paymentFormId = `payment-form-${loan.id}`;
   const rightClickItems = [
     {
-      label: "Pay",
-      onClick: (e) => {
+      label: 'Pay',
+      onClick: e => {
         hiddenDialogTriggerRef.current?.click();
       },
     } as RightClickItem,
@@ -753,7 +754,7 @@ const LoanItem = ({
     const form = document.getElementById(paymentFormId);
     const formdata = new FormData(form as HTMLFormElement);
     const schema = object({
-      amount: transform(string(), (v) => parseFloat(v)),
+      amount: transform(string(), v => parseFloat(v)),
       description: optional(string()),
     });
     const toParse = {
@@ -768,7 +769,7 @@ const LoanItem = ({
     });
 
     if (!result) {
-      throw new Error("Something went wrong");
+      throw new Error('Something went wrong');
     }
 
     const transaction = loan.transaction;
@@ -777,34 +778,34 @@ const LoanItem = ({
     const queryKeys: QueryKey[] = [];
 
     queryKeys.push(
-      ["transactions"],
-      ["groupedTransactions"],
-      ["categoryBalance", { categoryId: transaction.category.id }],
-      ["categoryCanBeDeleted", { categoryId: transaction.category.id }],
-      ["partitionBalance", { partitionId: transaction.source_partition.id }],
+      ['transactions'],
+      ['groupedTransactions'],
+      ['categoryBalance', { categoryId: transaction.category.id }],
+      ['categoryCanBeDeleted', { categoryId: transaction.category.id }],
+      ['partitionBalance', { partitionId: transaction.source_partition.id }],
       [
-        "accountCanBeDeleted",
+        'accountCanBeDeleted',
         { accountId: transaction.source_partition.account.id },
       ],
       [
-        "accountBalance",
+        'accountBalance',
         { accountId: transaction.source_partition.account.id },
       ],
-      ["categoryKindBalance", { kind: transaction.category.kind }],
-      ["unpaidLoans", user.id, lender.id],
-      ["partitionsWithLoans", user.id]
+      ['categoryKindBalance', { kind: transaction.category.kind }],
+      ['unpaidLoans', user.id, lender.id],
+      ['partitionsWithLoans', user.id],
     );
     if (counterpart) {
       queryKeys.push(
-        ["partitionBalance", { partitionId: counterpart.source_partition.id }],
+        ['partitionBalance', { partitionId: counterpart.source_partition.id }],
         [
-          "accountCanBeDeleted",
+          'accountCanBeDeleted',
           { accountId: counterpart.source_partition.account.id },
         ],
         [
-          "accountBalance",
+          'accountBalance',
           { accountId: counterpart.source_partition.account.id },
-        ]
+        ],
       );
     }
     invalidateMany(queryClient, queryKeys);
@@ -817,10 +818,10 @@ const LoanItem = ({
           <Badge
             color={borrowerColor}
             variant={borrowerVariant}
-            style={{ cursor: "pointer" }}
+            style={{ cursor: 'pointer' }}
             onClick={() => {
               return dispatch({
-                type: "TOGGLE_LOAN_IDS",
+                type: 'TOGGLE_LOAN_IDS',
                 payload: [loan.id],
               });
             }}
@@ -834,7 +835,7 @@ const LoanItem = ({
         <Box
           pl="1"
           className={css({
-            backgroundColor: "var(--gray-a5)",
+            backgroundColor: 'var(--gray-a5)',
           })}
         ></Box>
         <Flex direction="column" ml="3" grow="1">
@@ -859,7 +860,7 @@ const LoanItem = ({
           <Flex direction="column" gap="3" asChild>
             <form
               id={paymentFormId}
-              onSubmit={(e) => {
+              onSubmit={e => {
                 e.preventDefault();
                 makeAPayment();
               }}
@@ -936,7 +937,7 @@ const PartitionLoans = ({
   partition: PartitionWithLoans;
   user: { id: string; dbname: string };
 }) => {
-  const unpaidLoans = useQuery(["unpaidLoans", user.id, partition.id], () => {
+  const unpaidLoans = useQuery(['unpaidLoans', user.id, partition.id], () => {
     return rpc.post.getUnpaidLoans({
       userId: user.id,
       dbname: user.dbname,
@@ -951,14 +952,14 @@ const PartitionLoans = ({
           {[...Array(1)].map((_, i) => (
             <Flex direction="column" key={i} mx="2" my="1">
               <Flex justify="between">
-                <Skeleton style={{ minWidth: "150px" }} />
-                <Skeleton style={{ minWidth: "50px" }} />
+                <Skeleton style={{ minWidth: '150px' }} />
+                <Skeleton style={{ minWidth: '50px' }} />
               </Flex>
-              <Box className={css({ mb: "1" })}>
+              <Box className={css({ mb: '1' })}>
                 {[...Array(2)].map((_, i) => (
                   <Flex key={i} justify="between">
-                    <Skeleton style={{ minWidth: "100px" }} />
-                    <Skeleton style={{ minWidth: "50px" }} />
+                    <Skeleton style={{ minWidth: '100px' }} />
+                    <Skeleton style={{ minWidth: '50px' }} />
                   </Flex>
                 ))}
               </Box>
@@ -967,8 +968,8 @@ const PartitionLoans = ({
         </Flex>
       }
     >
-      {(loans) =>
-        loans.map((loan) => (
+      {loans =>
+        loans.map(loan => (
           <LoanItem key={loan.id} lender={partition} loan={loan} user={user} />
         ))
       }
@@ -988,14 +989,14 @@ function AccountLI({
   const editAccountTriggerRef = useRef<HTMLButtonElement>(null);
 
   const canBeDeleted = useQuery(
-    ["accountCanBeDeleted", { accountId: account.id }],
+    ['accountCanBeDeleted', { accountId: account.id }],
     () => {
       return rpc.get.accountCanBeDeleted({
         accountId: account.id,
         dbname: user.dbname,
         userId: user.id,
       });
-    }
+    },
   );
 
   const deleteAccount = useMutation(
@@ -1009,18 +1010,18 @@ function AccountLI({
     {
       onSuccess: () => {
         queryClient.invalidateQueries({
-          queryKey: ["accounts", user.id],
+          queryKey: ['accounts', user.id],
         });
       },
-    }
+    },
   );
 
   const rightClickItems = [
     ...(account.is_owned
       ? [
           {
-            label: "Edit",
-            onClick: (e) => {
+            label: 'Edit',
+            onClick: e => {
               e.stopPropagation();
               editAccountTriggerRef.current?.click();
             },
@@ -1030,9 +1031,9 @@ function AccountLI({
     ...(canBeDeleted.data
       ? [
           {
-            label: "Delete",
-            color: "red" as RadixColor,
-            onClick: (e) => {
+            label: 'Delete',
+            color: 'red' as RadixColor,
+            onClick: e => {
               e.stopPropagation();
               return deleteAccount.mutateAsync();
             },
@@ -1041,7 +1042,7 @@ function AccountLI({
       : []),
   ];
 
-  const partitions = useQuery(["partitions", user.id, account.id], () => {
+  const partitions = useQuery(['partitions', user.id, account.id], () => {
     return rpc.post.getPartitions({
       accountId: account.id,
       userId: user.id,
@@ -1052,7 +1053,7 @@ function AccountLI({
 
   const areAllPartitionsSelected = useMemo(() => {
     if (partitions?.data && partitions.data.length > 0) {
-      return partitions.data.every((p) => store.partitionIds.includes(p.id));
+      return partitions.data.every(p => store.partitionIds.includes(p.id));
     }
     return false;
   }, [partitions?.data, store.partitionIds]);
@@ -1064,29 +1065,29 @@ function AccountLI({
       query={partitions}
       onLoading={<FoldableListSkeleton nItems={1} />}
     >
-      {(partitions) => {
+      {partitions => {
         return (
           <>
             <FoldableList
               groupedItems={{ [account.id]: partitions }}
-              openValues={accountGroup !== "others" ? [account.id] : []}
+              openValues={accountGroup !== 'others' ? [account.id] : []}
               getHeaderLabel={() => {
                 return (
                   <WithRightClick rightClickItems={rightClickItems}>
                     <Text
-                      style={{ cursor: "pointer" }}
+                      style={{ cursor: 'pointer' }}
                       onClick={() => {
                         dispatch({
-                          type: "TOGGLE_ACCOUNT",
-                          payload: account.partitions.map((p) => p.id),
+                          type: 'TOGGLE_ACCOUNT',
+                          payload: account.partitions.map(p => p.id),
                         });
                         invalidateMany(queryClient, [
-                          ["categoryBalance"],
-                          ["categoryKindBalance"],
+                          ['categoryBalance'],
+                          ['categoryKindBalance'],
                         ]);
                       }}
                       weight="medium"
-                      color={areAllPartitionsSelected ? "cyan" : undefined}
+                      color={areAllPartitionsSelected ? 'cyan' : undefined}
                     >
                       {account.label}
                     </Text>
@@ -1097,7 +1098,7 @@ function AccountLI({
                 return (
                   <GenericLoadingValue
                     queryKey={[
-                      "accountBalance",
+                      'accountBalance',
                       {
                         accountId: account.id,
                         isOverall: store.showOverallBalance,
@@ -1116,9 +1117,9 @@ function AccountLI({
                       })
                     }
                   >
-                    {(value) => {
+                    {value => {
                       const parsedValue = parseFloat(value);
-                      const color = parsedValue >= 0 ? undefined : "red";
+                      const color = parsedValue >= 0 ? undefined : 'red';
                       return (
                         <Text color={color} weight="medium">
                           {isNaN(parsedValue)
@@ -1131,7 +1132,7 @@ function AccountLI({
                 );
               }}
             >
-              {(partition) => {
+              {partition => {
                 return (
                   <PartitionLI
                     partition={partition}
@@ -1158,7 +1159,7 @@ const EditAccountDialog = forwardRef(function EditAccountDialog(
     account: Account;
     user: { id: string; dbname: string };
   },
-  ref: ForwardedRef<HTMLButtonElement>
+  ref: ForwardedRef<HTMLButtonElement>,
 ) {
   const { account, user } = props;
   const formId = `edit-account-form-${account.id}`;
@@ -1177,12 +1178,12 @@ const EditAccountDialog = forwardRef(function EditAccountDialog(
     {
       onSuccess: () => {
         invalidateMany(queryClient, [
-          ["transactions"],
-          ["groupedTransactions"],
-          ["accounts", user.id],
+          ['transactions'],
+          ['groupedTransactions'],
+          ['accounts', user.id],
         ]);
       },
-    }
+    },
   );
   return (
     <Dialog.Root>
@@ -1195,7 +1196,7 @@ const EditAccountDialog = forwardRef(function EditAccountDialog(
         <Flex direction="column" gap="3" asChild>
           <form
             id={formId}
-            onSubmit={async (e) => {
+            onSubmit={async e => {
               e.preventDefault();
               const form = document.getElementById(formId);
               const formdata = new FormData(form as HTMLFormElement);
@@ -1204,7 +1205,7 @@ const EditAccountDialog = forwardRef(function EditAccountDialog(
               const parsedData = parse(schema, fdata);
               const result = await update.mutateAsync(parsedData);
               if (!result) {
-                throw new Error("Something went wrong");
+                throw new Error('Something went wrong');
               }
             }}
           >
@@ -1237,7 +1238,7 @@ const EditAccountDialog = forwardRef(function EditAccountDialog(
 });
 
 function Accounts({ user }: { user: { id: string; dbname: string } }) {
-  const accounts = useQuery(["accounts", user.id, false], () => {
+  const accounts = useQuery(['accounts', user.id, false], () => {
     return rpc.post.getAccounts({
       userId: user.id,
       dbname: user.dbname,
@@ -1254,8 +1255,8 @@ function Accounts({ user }: { user: { id: string; dbname: string } }) {
       }
       onUndefined={<>No accounts found</>}
     >
-      {(accounts) => {
-        const groupedAccounts = groupBy(accounts, (account) => {
+      {accounts => {
+        const groupedAccounts = groupBy(accounts, account => {
           return getAccountGroup(account, user.id);
         });
         const sortedAccounts = [
@@ -1265,7 +1266,7 @@ function Accounts({ user }: { user: { id: string; dbname: string } }) {
         ];
         return (
           <Flex direction="column" mb="2">
-            {sortedAccounts.map((account) => (
+            {sortedAccounts.map(account => (
               <AccountLI account={account} user={user} key={account.id} />
             ))}
           </Flex>
@@ -1278,16 +1279,16 @@ function Accounts({ user }: { user: { id: string; dbname: string } }) {
 // TODO: Refactor this. This is just the same as getPartitionType from common.
 export function getPartitionType2(
   p: Partition,
-  userId: string
-): "owned" | "common" | "others" {
+  userId: string,
+): 'owned' | 'common' | 'others' {
   if (p.is_owned) {
     if (p.owners.length === 1) {
-      return "owned";
+      return 'owned';
     } else {
-      return "common";
+      return 'common';
     }
   } else {
-    return "others";
+    return 'others';
   }
 }
 
@@ -1304,12 +1305,12 @@ function PartitionLI({
   const hiddenDialogTriggerRef = useRef<HTMLButtonElement>(null);
   const editPartitionTriggerRef = useRef<HTMLButtonElement>(null);
 
-  const [selectedDestinationId, setSelectedDestinationId] = useState("");
-  const [loanCategoryId, setLoanCategoryId] = useState("");
+  const [selectedDestinationId, setSelectedDestinationId] = useState('');
+  const [loanCategoryId, setLoanCategoryId] = useState('');
 
   const partitions = usePartitions(user);
 
-  const categories = useQuery(["categories", user.id], () => {
+  const categories = useQuery(['categories', user.id], () => {
     return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
   });
 
@@ -1325,21 +1326,21 @@ function PartitionLI({
     {
       onSuccess: () => {
         invalidateMany(queryClient, [
-          ["transactions"],
-          ["groupedTransactions"],
-          ["partitions", user.id],
-          ["accountCanBeDeleted", { accountId: partition.account.id }],
+          ['transactions'],
+          ['groupedTransactions'],
+          ['partitions', user.id],
+          ['accountCanBeDeleted', { accountId: partition.account.id }],
         ]);
       },
-    }
+    },
   );
 
   const rightClickItems = [
     ...(categories.data
       ? [
           {
-            label: "Borrow",
-            onClick: (e) => {
+            label: 'Borrow',
+            onClick: e => {
               e.stopPropagation();
               hiddenDialogTriggerRef.current?.click();
             },
@@ -1349,16 +1350,16 @@ function PartitionLI({
     ...(partition.is_owned
       ? [
           {
-            label: "Edit",
-            onClick: (e) => {
+            label: 'Edit',
+            onClick: e => {
               e.stopPropagation();
               editPartitionTriggerRef.current?.click();
             },
           } as RightClickItem,
           {
-            label: "Delete",
-            color: "red" as RadixColor,
-            onClick: async (e) => {
+            label: 'Delete',
+            color: 'red' as RadixColor,
+            onClick: async e => {
               e.stopPropagation();
               const isDeleted = await deletePartition.mutateAsync(false);
               if (!isDeleted) {
@@ -1366,18 +1367,18 @@ function PartitionLI({
                   `There are transactions linked to '${partition.name}', are you sure you want to delete it?`,
                   {
                     action: {
-                      label: "Yes",
+                      label: 'Yes',
                       onClick: async () => {
                         const isArchived = await deletePartition.mutateAsync(
-                          true
+                          true,
                         );
                         if (!isArchived) {
-                          toast.error("Failed to delete partition.");
+                          toast.error('Failed to delete partition.');
                         }
                       },
                     },
-                    cancel: { label: "No", onClick: () => {} },
-                  }
+                    cancel: { label: 'No', onClick: () => {} },
+                  },
                 );
               }
             },
@@ -1387,56 +1388,54 @@ function PartitionLI({
   ];
   const isSelected = store.partitionIds.includes(partition.id);
   const variant = isSelected
-    ? "solid"
+    ? 'solid'
     : partition.is_private
-    ? "outline"
-    : "soft";
+    ? 'outline'
+    : 'soft';
   const _type = getPartitionType2(partition, user.id);
-  const color = isSelected ? "cyan" : PARTITION_COLOR[_type];
+  const color = isSelected ? 'cyan' : PARTITION_COLOR[_type];
 
   const loanFormId = `make-a-loan-form-${partition.id}`;
   const groupedPartitions = useGroupedPartitions(partitions, user.id);
 
   const selectedDestination = useMemo(() => {
-    return partitions.find((p) => p.id === selectedDestinationId);
+    return partitions.find(p => p.id === selectedDestinationId);
   }, [selectedDestinationId, partitions]);
 
-  const destinationName = selectedDestination?.name || "Select destination";
+  const destinationName = selectedDestination?.name || 'Select destination';
 
   const destinationVariant =
-    selectedDestination && selectedDestination.is_private ? "outline" : "soft";
+    selectedDestination && selectedDestination.is_private ? 'outline' : 'soft';
 
   const destinationType =
     selectedDestination && getPartitionType(selectedDestination, user.id);
 
   const destinationColor =
-    (destinationType && PARTITION_COLOR[destinationType]) || "gray";
+    (destinationType && PARTITION_COLOR[destinationType]) || 'gray';
 
   const loanCategory = useMemo(() => {
-    return (categories.data?.Transfer || []).find(
-      (c) => c.id === loanCategoryId
-    );
+    return (categories.data?.Transfer || []).find(c => c.id === loanCategoryId);
   }, [loanCategoryId, categories.data]);
 
   const loanCategoryName = loanCategory
     ? getCategoryOptionName(loanCategory)
-    : "Select Category";
+    : 'Select Category';
 
   const loanCategoryColor = loanCategory && CATEGORY_COLOR[loanCategory.kind];
-  const loanCategoryVariant = loanCategory?.is_private ? "outline" : "soft";
+  const loanCategoryVariant = loanCategory?.is_private ? 'outline' : 'soft';
 
   const makeALoan = useCallback(async () => {
     const form = document.getElementById(loanFormId);
     const formdata = new FormData(form as HTMLFormElement);
     const schema = object({
-      amount: transform(string(), (v) => parseFloat(v)),
+      amount: transform(string(), v => parseFloat(v)),
       description: optional(string()),
-      toPay: transform(string(), (v) => parseFloat(v)),
+      toPay: transform(string(), v => parseFloat(v)),
       destinationPartitionId: string([minLength(1)]),
       categoryId: string([minLength(1)]),
     });
     const toParse = {
-      toPay: "",
+      toPay: '',
       ...Object.fromEntries(formdata.entries()),
       destinationPartitionId: selectedDestinationId,
       categoryId: loanCategoryId,
@@ -1453,7 +1452,7 @@ function PartitionLI({
     });
 
     if (!result) {
-      throw new Error("Something went wrong");
+      throw new Error('Something went wrong');
     }
     const { transaction } = result;
     const counterpart = transaction.counterpart;
@@ -1461,33 +1460,33 @@ function PartitionLI({
     const queryKeys: QueryKey[] = [];
 
     queryKeys.push(
-      ["transactions"],
-      ["groupedTransactions"],
-      ["categoryBalance", { categoryId: loanCategoryId }],
-      ["categoryCanBeDeleted", { categoryId: loanCategoryId }],
-      ["partitionBalance", { partitionId: partition.id }],
+      ['transactions'],
+      ['groupedTransactions'],
+      ['categoryBalance', { categoryId: loanCategoryId }],
+      ['categoryCanBeDeleted', { categoryId: loanCategoryId }],
+      ['partitionBalance', { partitionId: partition.id }],
       [
-        "accountCanBeDeleted",
+        'accountCanBeDeleted',
         { accountId: transaction.source_partition.account.id },
       ],
       [
-        "accountBalance",
+        'accountBalance',
         { accountId: transaction.source_partition.account.id },
       ],
-      ["categoryKindBalance", { kind: transaction.category.kind }],
-      ["partitionsWithLoans", user.id]
+      ['categoryKindBalance', { kind: transaction.category.kind }],
+      ['partitionsWithLoans', user.id],
     );
     if (counterpart) {
       queryKeys.push(
-        ["partitionBalance", { partitionId: selectedDestinationId }],
+        ['partitionBalance', { partitionId: selectedDestinationId }],
         [
-          "accountCanBeDeleted",
+          'accountCanBeDeleted',
           { accountId: counterpart.source_partition.account.id },
         ],
         [
-          "accountBalance",
+          'accountBalance',
           { accountId: counterpart.source_partition.account.id },
-        ]
+        ],
       );
     }
     invalidateMany(queryClient, queryKeys);
@@ -1506,10 +1505,10 @@ function PartitionLI({
         <Badge
           color={color}
           variant={variant}
-          style={{ cursor: "pointer" }}
-          onClick={(e) => {
+          style={{ cursor: 'pointer' }}
+          onClick={e => {
             e.stopPropagation();
-            dispatch({ type: "TOGGLE_PARTITIONS", payload: [partition.id] });
+            dispatch({ type: 'TOGGLE_PARTITIONS', payload: [partition.id] });
             if (!store.showOverallBalance && store.budgetProfileId) {
               // If the user selected a budget profile, toggling a partition will
               // include/exclude it from the budget profile.
@@ -1521,8 +1520,8 @@ function PartitionLI({
               });
             }
             invalidateMany(queryClient, [
-              ["categoryBalance"],
-              ["categoryKindBalance"],
+              ['categoryBalance'],
+              ['categoryKindBalance'],
             ]);
           }}
         >
@@ -1532,7 +1531,7 @@ function PartitionLI({
       <QueryResult
         query={useQuery(
           [
-            "partitionBalance",
+            'partitionBalance',
             {
               partitionId: partition.id,
               showOverallBalance: store.showOverallBalance,
@@ -1548,13 +1547,13 @@ function PartitionLI({
               isOverall: store.showOverallBalance,
               tssDate: store.tssDate?.toISOString(),
               tseDate: store.tseDate?.toISOString(),
-            })
+            }),
         )}
-        onLoading={<Skeleton style={{ minWidth: "50px" }} />}
+        onLoading={<Skeleton style={{ minWidth: '50px' }} />}
       >
-        {(value) => {
+        {value => {
           const parsedValue = parseFloat(value);
-          const color = parsedValue >= 0 ? undefined : "red";
+          const color = parsedValue >= 0 ? undefined : 'red';
           return (
             <Text color={color}>
               {isNaN(parsedValue) ? value : formatValue(Math.abs(parsedValue))}
@@ -1572,7 +1571,7 @@ function PartitionLI({
           <Flex direction="column" gap="3" asChild>
             <form
               id={loanFormId}
-              onSubmit={(e) => {
+              onSubmit={e => {
                 e.preventDefault();
                 makeALoan();
               }}
@@ -1594,20 +1593,20 @@ function PartitionLI({
                 <Combobox
                   groupedItems={groupedPartitions}
                   getGroupHeading={(key, items) => items[0].account.label}
-                  getItemColor={(item) => {
+                  getItemColor={item => {
                     const _type = getPartitionType(item, user.id);
                     return PARTITION_COLOR[_type];
                   }}
-                  isItemIncluded={(p) =>
+                  isItemIncluded={p =>
                     p.account.is_owned && p.id !== partition.id
                   }
-                  getItemValue={(p) =>
+                  getItemValue={p =>
                     `${getPartitionType(p, user.id)} ${p.account.label} ${
                       p.name
                     }`
                   }
-                  getItemDisplay={(p) => p.name}
-                  onSelectItem={(p) => setSelectedDestinationId(p.id)}
+                  getItemDisplay={p => p.name}
+                  onSelectItem={p => setSelectedDestinationId(p.id)}
                 >
                   <Flex>
                     <ComboboxTrigger
@@ -1625,13 +1624,13 @@ function PartitionLI({
                 </Text>
                 <Combobox
                   groupedItems={{ Transfer: categories.data?.Transfer || [] }}
-                  getGroupHeading={(key) => key}
+                  getGroupHeading={key => key}
                   getItemColor={(item, key) => {
                     return CATEGORY_COLOR[key];
                   }}
                   getItemValue={(c, k) => `${k} ${getCategoryOptionName(c)}`}
-                  getItemDisplay={(c) => getCategoryOptionName(c)}
-                  onSelectItem={(c) => {
+                  getItemDisplay={c => getCategoryOptionName(c)}
+                  onSelectItem={c => {
                     setLoanCategoryId(c.id);
                   }}
                 >
@@ -1703,7 +1702,7 @@ const EditPartitionDialog = forwardRef(function EditPartitionDialog(
     partition: Partition;
     user: { id: string; dbname: string };
   },
-  ref: ForwardedRef<HTMLButtonElement>
+  ref: ForwardedRef<HTMLButtonElement>,
 ) {
   const { partition, user } = props;
   const editPartitionFormId = `edit-partition-form-${partition.id}`;
@@ -1723,14 +1722,14 @@ const EditPartitionDialog = forwardRef(function EditPartitionDialog(
     {
       onSuccess: () => {
         invalidateMany(queryClient, [
-          ["partitions", user.id, partition.account.id],
-          ["transactions"],
-          ["groupedTransactions"],
-          ["unpaidLoans", user.id, partition.id],
-          ["partitionsWithLoans", user.id],
+          ['partitions', user.id, partition.account.id],
+          ['transactions'],
+          ['groupedTransactions'],
+          ['unpaidLoans', user.id, partition.id],
+          ['partitionsWithLoans', user.id],
         ]);
       },
-    }
+    },
   );
   return (
     <Dialog.Root>
@@ -1743,7 +1742,7 @@ const EditPartitionDialog = forwardRef(function EditPartitionDialog(
         <Flex direction="column" gap="3" asChild>
           <form
             id={editPartitionFormId}
-            onSubmit={async (e) => {
+            onSubmit={async e => {
               e.preventDefault();
               const form = document.getElementById(editPartitionFormId);
               const formdata = new FormData(form as HTMLFormElement);
@@ -1754,11 +1753,11 @@ const EditPartitionDialog = forwardRef(function EditPartitionDialog(
               const fdata = Object.fromEntries(formdata.entries());
               const parsedData = parse(schema, {
                 name: fdata.name,
-                isPrivate: fdata.isPrivate === "on",
+                isPrivate: fdata.isPrivate === 'on',
               });
               const result = await updatePartition.mutateAsync(parsedData);
               if (!result) {
-                throw new Error("Something went wrong");
+                throw new Error('Something went wrong');
               }
             }}
           >
@@ -1796,9 +1795,9 @@ const EditPartitionDialog = forwardRef(function EditPartitionDialog(
   );
 });
 
-function CategoryValue(props: { value: string; weight: "medium" | "regular" }) {
+function CategoryValue(props: { value: string; weight: 'medium' | 'regular' }) {
   const parsedValue = parseFloat(props.value);
-  const color: RadixColor = parsedValue >= 0 ? undefined : "red";
+  const color: RadixColor = parsedValue >= 0 ? undefined : 'red';
   return (
     <Text color={color} weight={props.weight}>
       {isNaN(parsedValue) ? props.value : formatValue(Math.abs(parsedValue))}
@@ -1807,30 +1806,30 @@ function CategoryValue(props: { value: string; weight: "medium" | "regular" }) {
 }
 
 function Categories({ user }: { user: { id: string; dbname: string } }) {
-  const categories = useQuery(["categories", user.id], () => {
+  const categories = useQuery(['categories', user.id], () => {
     return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
   });
   const [store, dispatch] = useContext(UserPageStoreContext);
   const selectCategories = (kind: string) => {
-    if (kind === "Income") {
+    if (kind === 'Income') {
       if (categories?.data?.Income) {
         dispatch({
-          type: "TOGGLE_CATEGORY_KIND",
-          payload: categories.data.Income.map((c) => c.id),
+          type: 'TOGGLE_CATEGORY_KIND',
+          payload: categories.data.Income.map(c => c.id),
         });
       }
-    } else if (kind === "Expense") {
+    } else if (kind === 'Expense') {
       if (categories?.data?.Expense) {
         dispatch({
-          type: "TOGGLE_CATEGORY_KIND",
-          payload: categories.data.Expense.map((c) => c.id),
+          type: 'TOGGLE_CATEGORY_KIND',
+          payload: categories.data.Expense.map(c => c.id),
         });
       }
-    } else if (kind === "Transfer") {
+    } else if (kind === 'Transfer') {
       if (categories?.data?.Transfer) {
         dispatch({
-          type: "TOGGLE_CATEGORY_KIND",
-          payload: categories.data.Transfer.map((c) => c.id),
+          type: 'TOGGLE_CATEGORY_KIND',
+          payload: categories.data.Transfer.map(c => c.id),
         });
       }
     }
@@ -1838,28 +1837,28 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
 
   const areAllCategoriesSelected = useCallback(
     (kind: string) => {
-      if (kind === "Income") {
+      if (kind === 'Income') {
         if (categories?.data?.Income) {
-          return categories.data.Income.every((c) =>
-            store.categoryIds.includes(c.id)
+          return categories.data.Income.every(c =>
+            store.categoryIds.includes(c.id),
           );
         }
-      } else if (kind === "Expense") {
+      } else if (kind === 'Expense') {
         if (categories?.data?.Expense) {
-          return categories.data.Expense.every((c) =>
-            store.categoryIds.includes(c.id)
+          return categories.data.Expense.every(c =>
+            store.categoryIds.includes(c.id),
           );
         }
-      } else if (kind === "Transfer") {
+      } else if (kind === 'Transfer') {
         if (categories?.data?.Transfer) {
-          return categories.data.Transfer.every((c) =>
-            store.categoryIds.includes(c.id)
+          return categories.data.Transfer.every(c =>
+            store.categoryIds.includes(c.id),
           );
         }
       }
       return false;
     },
-    [categories?.data, store.categoryIds]
+    [categories?.data, store.categoryIds],
   );
 
   return (
@@ -1869,14 +1868,14 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
         onLoading={<FoldableListSkeleton />}
         onUndefined={<>No categories found</>}
       >
-        {(categories) => (
+        {categories => (
           <FoldableList
             groupedItems={categories}
-            openValues={["Income", "Expense", "Transfer"]}
-            getHeaderExtraContent={(kind) => (
+            openValues={['Income', 'Expense', 'Transfer']}
+            getHeaderExtraContent={kind => (
               <GenericLoadingValue
                 queryKey={[
-                  "categoryKindBalance",
+                  'categoryKindBalance',
                   {
                     kind,
                     isOverall: store.showOverallBalance,
@@ -1897,24 +1896,24 @@ function Categories({ user }: { user: { id: string; dbname: string } }) {
                   })
                 }
               >
-                {(value) => <CategoryValue value={value} weight="medium" />}
+                {value => <CategoryValue value={value} weight="medium" />}
               </GenericLoadingValue>
             )}
-            getHeaderLabel={(kind) => (
+            getHeaderLabel={kind => (
               <Text
                 weight="medium"
-                color={areAllCategoriesSelected(kind) ? "cyan" : undefined}
-                onClick={(e) => {
+                color={areAllCategoriesSelected(kind) ? 'cyan' : undefined}
+                onClick={e => {
                   e.stopPropagation();
                   selectCategories(kind);
                 }}
-                className={css({ cursor: "pointer " })}
+                className={css({ cursor: 'pointer ' })}
               >
                 {kind}
               </Text>
             )}
           >
-            {(category) => (
+            {category => (
               <CategoryLI key={category.id} category={category} user={user} />
             )}
           </FoldableList>
@@ -1941,19 +1940,19 @@ function FoldableList<X extends { name: string }>(props: {
                 <Flex gap="1">
                   <Accordion.Trigger
                     className={css({
-                      "& svg": {
-                        transition: "transform 200ms ease",
+                      '& svg': {
+                        transition: 'transform 200ms ease',
                       },
-                      "&[data-state=open]": {
-                        "& svg": {
-                          transform: "rotate(90deg)",
+                      '&[data-state=open]': {
+                        '& svg': {
+                          transform: 'rotate(90deg)',
                         },
                       },
                     })}
                   >
                     <ChevronRightIcon
                       className={css({
-                        cursor: "pointer",
+                        cursor: 'pointer',
                       })}
                     />
                   </Accordion.Trigger>
@@ -1966,9 +1965,9 @@ function FoldableList<X extends { name: string }>(props: {
             <AnimatedAccordionContent>
               <Box
                 className={css({
-                  my: "1",
-                  border: "1px solid var(--gray-a5)",
-                  borderRadius: "var(--radius-3)",
+                  my: '1',
+                  border: '1px solid var(--gray-a5)',
+                  borderRadius: 'var(--radius-3)',
                 })}
               >
                 {items.map(props.children)}
@@ -1995,7 +1994,7 @@ function RightClick(props: {
     <ContextMenu.Root>
       <ContextMenu.Trigger>{props.children}</ContextMenu.Trigger>
       <ContextMenu.Content>
-        {props.items.map((item) => (
+        {props.items.map(item => (
           <ContextMenu.Item
             key={item.label}
             color={item.color}
@@ -2035,14 +2034,14 @@ function CategoryLI({
   const editCategoryTriggerRef = useRef<HTMLButtonElement>(null);
 
   const canBeDeleted = useQuery(
-    ["categoryCanBeDeleted", { categoryId: category.id }],
+    ['categoryCanBeDeleted', { categoryId: category.id }],
     () => {
       return rpc.get.categoryCanBeDeleted({
         categoryId: category.id,
         dbname: user.dbname,
         userId: user.id,
       });
-    }
+    },
   );
   const deleteCategory = useMutation(
     () => {
@@ -2054,9 +2053,9 @@ function CategoryLI({
     },
     {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["categories", user.id] });
+        queryClient.invalidateQueries({ queryKey: ['categories', user.id] });
       },
-    }
+    },
   );
   const isSelected = store.categoryIds.includes(category.id);
   const canBeRemoved = canBeDeleted.data;
@@ -2064,8 +2063,8 @@ function CategoryLI({
     ...(category.is_owned
       ? [
           {
-            label: "Edit",
-            onClick: (e) => {
+            label: 'Edit',
+            onClick: e => {
               e.stopPropagation();
               editCategoryTriggerRef.current?.click();
             },
@@ -2075,9 +2074,9 @@ function CategoryLI({
     ...(canBeRemoved
       ? [
           {
-            label: "Delete",
-            color: "red" as RadixColor,
-            onClick: (e) => {
+            label: 'Delete',
+            color: 'red' as RadixColor,
+            onClick: e => {
               e.stopPropagation();
               deleteCategory.mutateAsync();
             },
@@ -2085,12 +2084,12 @@ function CategoryLI({
         ]
       : []),
   ];
-  const color = isSelected ? "cyan" : CATEGORY_COLOR[category.kind];
+  const color = isSelected ? 'cyan' : CATEGORY_COLOR[category.kind];
   const variant = isSelected
-    ? "solid"
+    ? 'solid'
     : category.is_private
-    ? "outline"
-    : "soft";
+    ? 'outline'
+    : 'soft';
   return (
     <Flex justify="between" m="2">
       <Flex gap="2">
@@ -2098,10 +2097,10 @@ function CategoryLI({
           <Badge
             color={color}
             variant={variant}
-            style={{ cursor: "pointer" }}
-            onClick={(e) => {
+            style={{ cursor: 'pointer' }}
+            onClick={e => {
               e.stopPropagation();
-              dispatch({ type: "TOGGLE_CATEGORIES", payload: [category.id] });
+              dispatch({ type: 'TOGGLE_CATEGORIES', payload: [category.id] });
             }}
           >
             {category.name}
@@ -2117,7 +2116,7 @@ function CategoryLI({
       </Flex>
       <GenericLoadingValue
         queryKey={[
-          "categoryBalance",
+          'categoryBalance',
           {
             categoryId: category.id,
             partitionIds: store.partitionIds,
@@ -2138,7 +2137,7 @@ function CategoryLI({
           })
         }
       >
-        {(value) => <CategoryValue value={value} weight="regular" />}
+        {value => <CategoryValue value={value} weight="regular" />}
       </GenericLoadingValue>
       <EditCategoryDialog
         category={category}
@@ -2159,7 +2158,7 @@ function Budget({
   user: { id: string; dbname: string };
 }) {
   const query = useQuery(
-    ["budgetAmount", [category.id, budgetProfileId]],
+    ['budgetAmount', [category.id, budgetProfileId]],
     async () => {
       return rpc.post.getBudget({
         userId: user.id,
@@ -2167,23 +2166,23 @@ function Budget({
         categoryId: category.id,
         profileId: budgetProfileId,
       });
-    }
+    },
   );
   return (
     <QueryResult
       query={query}
-      onLoading={<Skeleton style={{ minWidth: "50px" }} />}
+      onLoading={<Skeleton style={{ minWidth: '50px' }} />}
       onUndefined={
         <BudgetTextAmount
-          budgetId={""}
+          budgetId={''}
           user={user}
-          initAmount={"0"}
+          initAmount={'0'}
           categoryId={category.id}
           profileId={budgetProfileId}
         />
       }
     >
-      {(budget) => (
+      {budget => (
         <BudgetTextAmount
           budgetId={budget.id}
           user={user}
@@ -2226,10 +2225,10 @@ function BudgetTextAmount({
     {
       onSuccess: () => {
         invalidateMany(queryClient, [
-          ["budgetAmount", [categoryId, profileId]],
+          ['budgetAmount', [categoryId, profileId]],
         ]);
       },
-    }
+    },
   );
 
   return (
@@ -2239,16 +2238,16 @@ function BudgetTextAmount({
         type="numeric"
         size="1"
         style={{
-          maxWidth: "75px",
-          textAlign: "right",
-          padding: "0 4px",
+          maxWidth: '75px',
+          textAlign: 'right',
+          padding: '0 4px',
         }}
         value={amount}
-        onInput={(event) => {
+        onInput={event => {
           setAmount(event.currentTarget.value);
         }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
+        onKeyDown={e => {
+          if (e.key === 'Enter') {
             updateBudgetAmount.mutate();
           }
         }}
@@ -2266,13 +2265,13 @@ const EditCategoryDialog = forwardRef(function EditCategoryDialog(
     category: Category;
     user: { id: string; dbname: string };
   },
-  ref: ForwardedRef<HTMLButtonElement>
+  ref: ForwardedRef<HTMLButtonElement>,
 ) {
   const { category, user } = props;
   const queryClient = useQueryClient();
 
   const [categoryIsPrivate, setCategoryIsPrivate] = useState(
-    category.is_private
+    category.is_private,
   );
 
   const { selectedDefaultPartition, inputEl } = useDefaultPartitionInput({
@@ -2299,12 +2298,12 @@ const EditCategoryDialog = forwardRef(function EditCategoryDialog(
     {
       onSuccess: () => {
         invalidateMany(queryClient, [
-          ["categories", user.id],
-          ["transactions"],
-          ["groupedTransactions"],
+          ['categories', user.id],
+          ['transactions'],
+          ['groupedTransactions'],
         ]);
       },
-    }
+    },
   );
   const formId = `edit-category-form-${category.id}`;
   return (
@@ -2318,7 +2317,7 @@ const EditCategoryDialog = forwardRef(function EditCategoryDialog(
         <Flex direction="column" gap="3" asChild>
           <form
             id={formId}
-            onSubmit={async (e) => {
+            onSubmit={async e => {
               e.preventDefault();
               const form = document.getElementById(formId);
               const formdata = new FormData(form as HTMLFormElement);
@@ -2330,12 +2329,12 @@ const EditCategoryDialog = forwardRef(function EditCategoryDialog(
               const fdata = Object.fromEntries(formdata.entries());
               const parsedData = parse(schema, {
                 name: fdata.name,
-                isPrivate: fdata.isPrivate === "on",
+                isPrivate: fdata.isPrivate === 'on',
                 defaultCategoryId: selectedDefaultPartition?.id,
               });
               const result = await update.mutateAsync(parsedData);
               if (!result) {
-                throw new Error("Something went wrong");
+                throw new Error('Something went wrong');
               }
             }}
           >
@@ -2388,7 +2387,7 @@ function GenericLoadingValue(props: {
   return (
     <QueryResult
       query={useQuery(props.queryKey, props.valueLoader)}
-      onLoading={<Skeleton style={{ minWidth: "50px" }} />}
+      onLoading={<Skeleton style={{ minWidth: '50px' }} />}
     >
       {props.children}
     </QueryResult>
@@ -2397,16 +2396,16 @@ function GenericLoadingValue(props: {
 
 function getAccountGroup(
   account: Account,
-  userId: string
-): "owned" | "common" | "others" {
+  userId: string,
+): 'owned' | 'common' | 'others' {
   if (account.is_owned) {
     if (account.owners.length === 1) {
-      return "owned";
+      return 'owned';
     } else {
-      return "common";
+      return 'common';
     }
   } else {
-    return "others";
+    return 'others';
   }
 }
 
@@ -2417,16 +2416,16 @@ function FoldableListSkeleton({ nItems = 3 }: { nItems?: number }) {
         <Flex direction="column" px="4" key={i}>
           <Flex py="1" pr="2" justify="between">
             <Flex gap="1">
-              <Skeleton style={{ minWidth: "100px" }} />
+              <Skeleton style={{ minWidth: '100px' }} />
             </Flex>
-            <Skeleton style={{ minWidth: "50px" }} />
+            <Skeleton style={{ minWidth: '50px' }} />
           </Flex>
           <Box
             className={css({
-              my: "1",
-              py: "1",
-              border: "1px solid var(--gray-a5)",
-              borderRadius: "var(--radius-3)",
+              my: '1',
+              py: '1',
+              border: '1px solid var(--gray-a5)',
+              borderRadius: 'var(--radius-3)',
             })}
           >
             {[...Array(2)].map((_, i) => (
@@ -2457,7 +2456,7 @@ const useDefaultPartitionInput = ({
   const groupedPartitions = useGroupedPartitions(partitions, user.id);
 
   const initialDefaultPartition = partitions.find(
-    (p) => p.id === defaultPartitionId
+    p => p.id === defaultPartitionId,
   );
 
   const [selectedDefaultPartition, setSelectedDefaultPartition] = useState<
@@ -2465,18 +2464,18 @@ const useDefaultPartitionInput = ({
   >(initialDefaultPartition);
 
   const defaultPartitionVariant = selectedDefaultPartition?.is_private
-    ? "outline"
-    : "soft";
+    ? 'outline'
+    : 'soft';
 
   const type = selectedDefaultPartition
     ? getPartitionType(selectedDefaultPartition, user.id)
-    : "others";
+    : 'others';
 
   const defaultPartitionColor = PARTITION_COLOR[type];
 
   const defaultPartitionLabel = selectedDefaultPartition
     ? `${selectedDefaultPartition.account.label} - ${selectedDefaultPartition.name}`
-    : "None";
+    : 'None';
 
   const inputEl = (
     <TwoColumnInput>
@@ -2486,16 +2485,16 @@ const useDefaultPartitionInput = ({
       <Combobox
         groupedItems={groupedPartitions}
         getGroupHeading={(_key, items) => items[0].account.label}
-        getItemColor={(item) => {
+        getItemColor={item => {
           const type = getPartitionType(item, user.id);
           return PARTITION_COLOR[type];
         }}
-        isItemIncluded={(p) => (categoryIsPrivate ? p.is_private : true)}
-        getItemValue={(p) =>
+        isItemIncluded={p => (categoryIsPrivate ? p.is_private : true)}
+        getItemValue={p =>
           `${getPartitionType(p, user.id)} ${p.account.label} ${p.name}`
         }
-        getItemDisplay={(p) => p.name}
-        onSelectItem={(p) => {
+        getItemDisplay={p => p.name}
+        onSelectItem={p => {
           setSelectedDefaultPartition(p);
         }}
       >
@@ -2507,11 +2506,11 @@ const useDefaultPartitionInput = ({
             {defaultPartitionLabel}
           </ComboboxTrigger>
           <Box
-            onClick={(e) => {
+            onClick={e => {
               setSelectedDefaultPartition(undefined);
               e.preventDefault();
             }}
-            className={css({ cursor: "pointer" })}
+            className={css({ cursor: 'pointer' })}
           >
             <Text color="gray">
               <Cross2Icon width="18" height="18" />

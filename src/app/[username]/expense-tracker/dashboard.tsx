@@ -1,23 +1,23 @@
-import { center } from "../../../../styled-system/patterns";
-import { UserPageStoreContext } from "./store";
-import { Box, Flex, Grid, Text } from "@radix-ui/themes";
-import { useContext, useState } from "react";
-import { Doughnut, Chart } from "react-chartjs-2";
-import { useQuery } from "@tanstack/react-query";
-import { rpc } from "@/app/rpc_client";
-import { QueryResult, formatValue } from "@/utils/common";
-import { GroupedTransactionsReturns } from "../../../../dbschema/queries/grouped-transactions.query";
-import { GroupedTransactionsByDateReturns } from "../../../../dbschema/queries/grouped-transactions-by-date.query";
+import { center } from '../../../../styled-system/patterns';
+import { UserPageStoreContext } from './store';
+import { Box, Flex, Grid, Text } from '@radix-ui/themes';
+import { useContext, useState } from 'react';
+import { Doughnut, Chart } from 'react-chartjs-2';
+import { useQuery } from '@tanstack/react-query';
+import { rpc } from '@/app/rpc_client';
+import { QueryResult, formatValue } from '@/utils/common';
+import { GroupedTransactionsReturns } from '../../../../dbschema/queries/grouped-transactions.query';
+import { GroupedTransactionsByDateReturns } from '../../../../dbschema/queries/grouped-transactions-by-date.query';
 
-type Summary = "income" | "expense" | "balance";
+type Summary = 'income' | 'expense' | 'balance';
 
 export function Dashboard(props: { user: { id: string; dbname: string } }) {
   const [store] = useContext(UserPageStoreContext);
-  const [isExpense, setIsExpense] = useState<Summary>("expense");
+  const [isExpense, setIsExpense] = useState<Summary>('expense');
 
   const groupedTransactions = useQuery(
     [
-      "groupedTransactions",
+      'groupedTransactions',
       store.loanIds,
       store.categoryIds,
       store.partitionIds,
@@ -36,10 +36,10 @@ export function Dashboard(props: { user: { id: string; dbname: string } }) {
         dbname: props.user.dbname,
         isOverall: store.showOverallBalance,
       });
-    }
+    },
   );
 
-  const totalPerDate = useQuery(["totalPerDate", store], async () => {
+  const totalPerDate = useQuery(['totalPerDate', store], async () => {
     return rpc.post.getTotalPerDate({
       partitionIds: store.partitionIds,
       categoryIds: store.categoryIds,
@@ -57,11 +57,11 @@ export function Dashboard(props: { user: { id: string; dbname: string } }) {
         const pieChartData = getPieChartData(gp, isExpense);
 
         const negativeTotal = gp
-          .filter((x) => !x.key.is_positive)
+          .filter(x => !x.key.is_positive)
           .reduce((t, gt) => t + parseFloat(gt.total), 0);
 
         const positiveTotal = gp
-          .filter((x) => x.key.is_positive)
+          .filter(x => x.key.is_positive)
           .reduce((t, gt) => t + parseFloat(gt.total), 0);
 
         const total = positiveTotal + negativeTotal;
@@ -85,28 +85,28 @@ export function Dashboard(props: { user: { id: string; dbname: string } }) {
         return (
           <Flex direction="column" m="4">
             <Grid columns="3" gap="3" width="auto">
-              <CursoredBox onClick={() => setIsExpense("income")}>
+              <CursoredBox onClick={() => setIsExpense('income')}>
                 <CategoryKindCard
                   title="TOTAL INCOME"
                   total={positiveTotal}
                   color="green"
-                  isActive={isExpense == "income"}
+                  isActive={isExpense == 'income'}
                 />
               </CursoredBox>
-              <CursoredBox onClick={() => setIsExpense("expense")}>
+              <CursoredBox onClick={() => setIsExpense('expense')}>
                 <CategoryKindCard
                   title="TOTAL EXPENSE"
                   total={Math.abs(negativeTotal)}
                   color="red"
-                  isActive={isExpense == "expense"}
+                  isActive={isExpense == 'expense'}
                 />
               </CursoredBox>
-              <CursoredBox onClick={() => setIsExpense("balance")}>
+              <CursoredBox onClick={() => setIsExpense('balance')}>
                 <CategoryKindCard
                   title="BALANCE"
                   total={total}
                   color="blue"
-                  isActive={isExpense == "balance"}
+                  isActive={isExpense == 'balance'}
                 />
               </CursoredBox>
             </Grid>
@@ -117,12 +117,12 @@ export function Dashboard(props: { user: { id: string; dbname: string } }) {
                     plugins: {
                       legend: { display: true },
                       autocolors: {
-                        mode: "data",
+                        mode: 'data',
                         offset: 15,
                       },
                     },
                     spacing: 1,
-                    radius: "90%",
+                    radius: '90%',
                   }}
                   data={pieChartData}
                 />
@@ -140,21 +140,21 @@ export function Dashboard(props: { user: { id: string; dbname: string } }) {
                       },
                       y: {
                         stacked: true,
-                        position: "left",
+                        position: 'left',
                         title: {
                           display: true,
-                          text: "Expense/Income"
-                        }
+                          text: 'Expense/Income',
+                        },
                       },
-                      ...(isExpense == "balance"
+                      ...(isExpense == 'balance'
                         ? ({
                             y1: {
-                              type: "linear",
+                              type: 'linear',
                               display: true,
-                              position: "right",
+                              position: 'right',
                               title: {
                                 display: true,
-                                text: "Balance"
+                                text: 'Balance',
                               },
                               // grid line settings
                               grid: {
@@ -186,12 +186,12 @@ function CategoryKindCard(props: {
     <Flex
       direction="column"
       p="2"
-      className={center({ h: "full" })}
+      className={center({ h: 'full' })}
       style={{
         border: `solid 1px var(--${props.color}-7)`,
-        borderRadius: "8px",
-        backgroundColor: `var(--${props.color}-${props.isActive ? "9" : "2"})`,
-        color: `var(--${props.color}-${props.isActive ? "1" : "9"})`,
+        borderRadius: '8px',
+        backgroundColor: `var(--${props.color}-${props.isActive ? '9' : '2'})`,
+        color: `var(--${props.color}-${props.isActive ? '1' : '9'})`,
       }}
     >
       <Text size="2" my="2">
@@ -208,51 +208,51 @@ function CursoredBox(props: {
   onClick: () => void;
   children: React.ReactNode;
 }) {
-  return <Box style={{ cursor: "pointer" }} {...props} />;
+  return <Box style={{ cursor: 'pointer' }} {...props} />;
 }
 
 function getPieChartData(
   groupedTransactions: GroupedTransactionsReturns,
-  summary: Summary
+  summary: Summary,
 ) {
-  const incomeVals = groupedTransactions.filter((x) => x.key.is_positive);
-  const expenseVals = groupedTransactions.filter((x) => !x.key.is_positive);
+  const incomeVals = groupedTransactions.filter(x => x.key.is_positive);
+  const expenseVals = groupedTransactions.filter(x => !x.key.is_positive);
 
   incomeVals.sort((a, b) => parseFloat(b.total) - parseFloat(a.total));
   expenseVals.sort((a, b) => parseFloat(a.total) - parseFloat(b.total));
 
   const positiveTotal = incomeVals.reduce(
     (acc, cur) => acc + parseFloat(cur.total),
-    0
+    0,
   );
 
   const negativeTotal = expenseVals.reduce(
     (acc, cur) => acc + parseFloat(cur.total),
-    0
+    0,
   );
 
   switch (summary) {
-    case "income":
+    case 'income':
       return {
-        labels: incomeVals.map((x) => x.key.category.name),
+        labels: incomeVals.map(x => x.key.category.name),
         datasets: [
           {
-            data: incomeVals.map((x) => parseFloat(x.total)),
+            data: incomeVals.map(x => parseFloat(x.total)),
           },
         ],
       };
-    case "expense":
+    case 'expense':
       return {
-        labels: expenseVals.map((x) => x.key.category.name),
+        labels: expenseVals.map(x => x.key.category.name),
         datasets: [
           {
-            data: expenseVals.map((x) => Math.abs(parseFloat(x.total))),
+            data: expenseVals.map(x => Math.abs(parseFloat(x.total))),
           },
         ],
       };
-    case "balance":
+    case 'balance':
       return {
-        labels: ["Income", "Expense"],
+        labels: ['Income', 'Expense'],
         datasets: [
           {
             data: [positiveTotal, negativeTotal],
@@ -265,25 +265,23 @@ function getPieChartData(
 function getBarChartData(
   gpByDate: GroupedTransactionsByDateReturns,
   summary: Summary,
-  accumulatedTotal?: { date_str: string; total: number }[]
+  accumulatedTotal?: { date_str: string; total: number }[],
 ) {
   const style = getComputedStyle(document.body);
-  const red3 = style.getPropertyValue("--red-3");
-  const green3 = style.getPropertyValue("--green-3");
-  const red7 = style.getPropertyValue("--red-7");
-  const green7 = style.getPropertyValue("--green-7");
-  const red9 = style.getPropertyValue("--red-9");
-  const green9 = style.getPropertyValue("--green-9");
-  const blue9 = style.getPropertyValue("--blue-9");
-  const blue3 = style.getPropertyValue("--blue-3");
+  const red3 = style.getPropertyValue('--red-3');
+  const green3 = style.getPropertyValue('--green-3');
+  const red7 = style.getPropertyValue('--red-7');
+  const green7 = style.getPropertyValue('--green-7');
+  const red9 = style.getPropertyValue('--red-9');
+  const green9 = style.getPropertyValue('--green-9');
+  const blue9 = style.getPropertyValue('--blue-9');
+  const blue3 = style.getPropertyValue('--blue-3');
 
-  const dates = [...new Set(gpByDate.map((x) => x.key.date_str))].sort(
-    (a, b) => {
-      const aDate = new Date(a);
-      const bDate = new Date(b);
-      return aDate.getTime() - bDate.getTime();
-    }
-  );
+  const dates = [...new Set(gpByDate.map(x => x.key.date_str))].sort((a, b) => {
+    const aDate = new Date(a);
+    const bDate = new Date(b);
+    return aDate.getTime() - bDate.getTime();
+  });
   const incomeMap = new Map<string, number>();
   const expenseMap = new Map<string, number>();
   for (const gt of gpByDate) {
@@ -293,23 +291,23 @@ function getBarChartData(
       expenseMap.set(gt.key.date_str, parseFloat(gt.total));
     }
   }
-  const incomeVals = dates.map((date) => incomeMap.get(date) ?? 0);
-  const expenseVals = dates.map((date) => expenseMap.get(date) ?? 0);
+  const incomeVals = dates.map(date => incomeMap.get(date) ?? 0);
+  const expenseVals = dates.map(date => expenseMap.get(date) ?? 0);
 
   const balanceLine =
-    accumulatedTotal && summary == "balance"
+    accumulatedTotal && summary == 'balance'
       ? [
           {
-            type: "line" as const,
-            label: "Balance",
-            data: accumulatedTotal.map((x) => x.total),
+            type: 'line' as const,
+            label: 'Balance',
+            data: accumulatedTotal.map(x => x.total),
             borderColor: blue9,
             borderWidth: 2,
             fill: false,
             pointRadius: 4,
             pointBorderColor: blue9,
             pointBackgroundColor: blue3,
-            yAxisID: "y1",
+            yAxisID: 'y1',
           },
         ]
       : [];
@@ -319,25 +317,25 @@ function getBarChartData(
     datasets: [
       ...balanceLine,
       {
-        type: "bar" as const,
-        label: "Income",
+        type: 'bar' as const,
+        label: 'Income',
         data: incomeVals,
         backgroundColor:
-          summary == "expense"
+          summary == 'expense'
             ? green3
-            : summary == "balance"
+            : summary == 'balance'
             ? green7
             : green9,
-        borderColor: summary == "expense" ? green7 : green9,
+        borderColor: summary == 'expense' ? green7 : green9,
         borderWidth: 1,
       },
       {
-        type: "bar" as const,
-        label: "Expense",
+        type: 'bar' as const,
+        label: 'Expense',
         data: expenseVals,
         backgroundColor:
-          summary == "income" ? red3 : summary == "balance" ? red7 : red9,
-        borderColor: summary == "income" ? red7 : red9,
+          summary == 'income' ? red3 : summary == 'balance' ? red7 : red9,
+        borderColor: summary == 'income' ? red7 : red9,
         borderWidth: 1,
       },
     ],

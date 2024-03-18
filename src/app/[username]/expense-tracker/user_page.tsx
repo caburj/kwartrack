@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { UserPageStoreContext, UserPageStoreProvider } from "./store";
+import { UserPageStoreContext, UserPageStoreProvider } from './store';
 import {
   Box,
   Button,
@@ -11,24 +11,24 @@ import {
   Switch,
   Tabs,
   Text,
-} from "@radix-ui/themes";
-import { TransactionsTable } from "./transactions_table";
-import { SideBar } from "./side_bar";
+} from '@radix-ui/themes';
+import { TransactionsTable } from './transactions_table';
+import { SideBar } from './side_bar';
 import {
   ForwardedRef,
   forwardRef,
   useContext,
   useEffect,
   useState,
-} from "react";
-import { css } from "../../../../styled-system/css";
-import "react-datepicker/dist/react-datepicker.css";
-import "react-loading-skeleton/dist/skeleton.css";
+} from 'react';
+import { css } from '../../../../styled-system/css';
+import 'react-datepicker/dist/react-datepicker.css';
+import 'react-loading-skeleton/dist/skeleton.css';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   TriangleRightIcon,
-} from "@radix-ui/react-icons";
+} from '@radix-ui/react-icons';
 
 import {
   Chart as ChartJS,
@@ -44,14 +44,14 @@ import {
   LineElement,
   LineController,
   BarController,
-} from "chart.js";
-import { useQueryClient } from "@tanstack/react-query";
-import { invalidateMany } from "@/utils/common";
-import autocolors from "chartjs-plugin-autocolors";
-import DatePicker from "react-datepicker";
+} from 'chart.js';
+import { useQueryClient } from '@tanstack/react-query';
+import { invalidateMany } from '@/utils/common';
+import autocolors from 'chartjs-plugin-autocolors';
+import DatePicker from 'react-datepicker';
 
-import { useTransactions } from "./use_transactions";
-import { Dashboard } from "./dashboard";
+import { useTransactions } from './use_transactions';
+import { Dashboard } from './dashboard';
 
 ChartJS.register(
   ArcElement,
@@ -66,14 +66,14 @@ ChartJS.register(
   LineElement,
   LineController,
   BarController,
-  autocolors
+  autocolors,
 );
 
 ChartJS.defaults.plugins.legend.display = false;
 
 const CustomDatePickerButton = forwardRef(function CustomInput(
   { value, onClick }: any,
-  ref: ForwardedRef<HTMLButtonElement>
+  ref: ForwardedRef<HTMLButtonElement>,
 ) {
   return (
     <Button onClick={onClick} ref={ref} variant="outline">
@@ -93,14 +93,14 @@ const TableControls = (props: {
   const currentPage = store.currentPage;
 
   const incrementPage = () => {
-    dispatch({ type: "SET_CURRENT_PAGE", payload: currentPage + 1 });
+    dispatch({ type: 'SET_CURRENT_PAGE', payload: currentPage + 1 });
   };
 
   const decrementPage = () => {
-    dispatch({ type: "SET_CURRENT_PAGE", payload: currentPage - 1 });
+    dispatch({ type: 'SET_CURRENT_PAGE', payload: currentPage - 1 });
   };
 
-  const balanceLabel = store.showOverallBalance ? "Overall" : "Selected Date";
+  const balanceLabel = store.showOverallBalance ? 'Overall' : 'Selected Date';
 
   return (
     <Flex justify="between" m="2">
@@ -111,26 +111,26 @@ const TableControls = (props: {
           <IconButton
             mr="2"
             variant="surface"
-            onClick={(event) => {
+            onClick={event => {
               event.preventDefault();
               event.stopPropagation();
-              dispatch({ type: "SET_PREV_MONTH" });
+              dispatch({ type: 'SET_PREV_MONTH' });
             }}
           >
             <ChevronLeftIcon />
           </IconButton>
           <DatePicker
             selected={store.tssDate}
-            onChange={(date) => {
+            onChange={date => {
               dispatch({
-                type: "SET_TSS_DATE",
+                type: 'SET_TSS_DATE',
                 payload: date,
               });
               if (!store.showOverallBalance) {
                 invalidateMany(queryClient, [
-                  ["partitionBalance"],
-                  ["categoryBalance"],
-                  ["categoryKindBalance"],
+                  ['partitionBalance'],
+                  ['categoryBalance'],
+                  ['categoryKindBalance'],
                 ]);
               }
             }}
@@ -139,16 +139,16 @@ const TableControls = (props: {
           <TriangleRightIcon />
           <DatePicker
             selected={store.tseDate}
-            onChange={(date) => {
+            onChange={date => {
               dispatch({
-                type: "SET_TSE_DATE",
+                type: 'SET_TSE_DATE',
                 payload: date,
               });
               if (!store.showOverallBalance) {
                 invalidateMany(queryClient, [
-                  ["partitionBalance"],
-                  ["categoryBalance"],
-                  ["categoryKindBalance"],
+                  ['partitionBalance'],
+                  ['categoryBalance'],
+                  ['categoryKindBalance'],
                 ]);
               }
             }}
@@ -157,20 +157,20 @@ const TableControls = (props: {
           <IconButton
             ml="2"
             variant="surface"
-            onClick={(event) => {
+            onClick={event => {
               event.preventDefault();
               event.stopPropagation();
-              dispatch({ type: "SET_NEXT_MONTH" });
+              dispatch({ type: 'SET_NEXT_MONTH' });
             }}
           >
             <ChevronRightIcon />
           </IconButton>
           <Link
             ml="2"
-            onClick={(event) => {
+            onClick={event => {
               event.preventDefault();
               event.stopPropagation();
-              dispatch({ type: "SET_THIS_MONTH" });
+              dispatch({ type: 'SET_THIS_MONTH' });
             }}
           >
             This Month
@@ -184,13 +184,13 @@ const TableControls = (props: {
             <Switch
               checked={store.showOverallBalance}
               onClick={() => {
-                dispatch({ type: "TOGGLE_BALANCE_TO_DISPLAY" });
+                dispatch({ type: 'TOGGLE_BALANCE_TO_DISPLAY' });
                 invalidateMany(queryClient, [
-                  ["transactions"],
-                  ["groupedTransactions"],
-                  ["partitionBalance"],
-                  ["categoryBalance"],
-                  ["categoryKindBalance"],
+                  ['transactions'],
+                  ['groupedTransactions'],
+                  ['partitionBalance'],
+                  ['categoryBalance'],
+                  ['categoryKindBalance'],
                 ]);
               }}
             />
@@ -231,11 +231,11 @@ export function UserPage(props: { id: string; dbname: string }) {
       const onMouseUp = () => {
         setIsDragging(false);
       };
-      window.addEventListener("mousemove", onMouseMove);
-      window.addEventListener("mouseup", onMouseUp);
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
       return () => {
-        window.removeEventListener("mousemove", onMouseMove);
-        window.removeEventListener("mouseup", onMouseUp);
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
       };
     }
   }, [isDragging]);
@@ -246,26 +246,26 @@ export function UserPage(props: { id: string; dbname: string }) {
         <SideBar user={props} width={width} />
         <div
           className={css({
-            position: "fixed",
-            top: "0",
-            bottom: "0",
-            width: "4px",
-            backgroundColor: isDragging ? "var(--accent-a9)" : undefined,
-            transition: "background-color 0.3s ease",
-            "&:hover": {
-              cursor: "col-resize",
-              backgroundColor: "var(--accent-a9)",
+            position: 'fixed',
+            top: '0',
+            bottom: '0',
+            width: '4px',
+            backgroundColor: isDragging ? 'var(--accent-a9)' : undefined,
+            transition: 'background-color 0.3s ease',
+            '&:hover': {
+              cursor: 'col-resize',
+              backgroundColor: 'var(--accent-a9)',
             },
             zIndex: 100,
           })}
           style={{
             left: `${width - 2}px`,
           }}
-          onMouseDown={(e) => {
+          onMouseDown={e => {
             e.preventDefault();
             setIsDragging(true);
           }}
-          onMouseUp={(e) => {
+          onMouseUp={e => {
             e.preventDefault();
             setIsDragging(false);
           }}
@@ -286,7 +286,7 @@ export function UserPage(props: { id: string; dbname: string }) {
               hasNextPage={transactions.data?.[1] ?? false}
             />
             <Tabs.Root defaultValue="transactions" asChild>
-              <Flex direction="column" grow="1" style={{ overflow: "hidden" }}>
+              <Flex direction="column" grow="1" style={{ overflow: 'hidden' }}>
                 <Tabs.List>
                   <Tabs.Trigger value="transactions">Transactions</Tabs.Trigger>
                   <Tabs.Trigger value="charts">Charts</Tabs.Trigger>

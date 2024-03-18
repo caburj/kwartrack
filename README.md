@@ -62,23 +62,25 @@ Use this app to track your expenses based on partitions and categories.
 1. Fork this repo and clone the fork in your computer.
 1. Make sure edgedb is installed and have a clerk account.
 1. Create a `.env` file with the following values filled from edgedb and clerk.
-  ```conf
-  # edgedb cloud (db) requirements
-  # If blank during development, local db is used.
-  EDGEDB_INSTANCE=
-  EDGEDB_SECRET_KEY=
 
-  # clerk (auth) requirements
-  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-  CLERK_SECRET_KEY=
-  NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-  NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-  NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
-  NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/
+```conf
+# edgedb cloud (db) requirements
+# If blank during development, local db is used.
+EDGEDB_INSTANCE=
+EDGEDB_SECRET_KEY=
 
-  # should point to the base url of the deployed app
-  NEXT_PUBLIC_HOST=
-  ```
+# clerk (auth) requirements
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/
+
+# should point to the base url of the deployed app
+NEXT_PUBLIC_HOST=
+```
+
 1. Initialize edgedb project with `edgedb project init`.
    - Only done once during initial setup.
 1. Run the script: `create-first-user` to create your first account.
@@ -96,7 +98,9 @@ and is backed with EdgeDB. We also use Clerk for authentication.
 
 - So to deploy, you need an [edgedb cloud](cloud.edgedb.com),
   [clerk](clerk.com) and [vercel](vercel.com) accounts.
+
   - Complete the env variables below. Values come from edgedb, clerk and vercel.
+
   ```conf
   # edgedb cloud (db) requirements
   EDGEDB_INSTANCE=
@@ -113,6 +117,7 @@ and is backed with EdgeDB. We also use Clerk for authentication.
   # should point to the base url of the deployed app
   NEXT_PUBLIC_HOST=
   ```
+
   - Deploy your to vercel.
     - Vercel will ask for the env variables which you'll provide from above.
   - From your computer, make sure you have edgedb installed.

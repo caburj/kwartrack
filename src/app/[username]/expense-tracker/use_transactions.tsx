@@ -1,13 +1,13 @@
-import { useContext } from "react";
-import { UserPageStoreContext } from "./store";
-import { useQuery } from "@tanstack/react-query";
-import { rpc } from "@/app/rpc_client";
+import { useContext } from 'react';
+import { UserPageStoreContext } from './store';
+import { useQuery } from '@tanstack/react-query';
+import { rpc } from '@/app/rpc_client';
 
 export const useTransactions = (user: { id: string; dbname: string }) => {
   const [store] = useContext(UserPageStoreContext);
   const transactions = useQuery(
     [
-      "transactions",
+      'transactions',
       store.currentPage,
       store.categoryIds,
       store.partitionIds,
@@ -30,7 +30,7 @@ export const useTransactions = (user: { id: string; dbname: string }) => {
         tssDate: store.tssDate?.toISOString(),
         tseDate: store.tseDate?.toISOString(),
       });
-    }
+    },
   );
   return transactions;
 };

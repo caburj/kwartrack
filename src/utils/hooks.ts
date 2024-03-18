@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef } from "react";
-import { debounce } from "./common";
+import { useEffect, useMemo, useRef } from 'react';
+import { debounce } from './common';
 
 export const useDebounce = <X extends (...args: any[]) => any>(
   callback: X,
-  ms: number
+  ms: number,
 ) => {
   const ref = useRef<X>();
 

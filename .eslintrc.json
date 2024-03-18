@@ -1,3 +1,10 @@
 {
-  "extends": "next/core-web-vitals"
+  "extends": "next/core-web-vitals",
+  "node/no-unsupported-features/es-builtins": [
+    "error",
+    {
+      "version": ">=8.0.0",
+      "ignores": []
+    }
+  ]
 }

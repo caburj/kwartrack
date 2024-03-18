@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { Centered } from "@/utils/common";
-import { Card, Text } from "@radix-ui/themes";
+import { Centered } from '@/utils/common';
+import { Card, Text } from '@radix-ui/themes';
 
 export default function ErrorPage({ error }: { error: Error }) {
   return (
