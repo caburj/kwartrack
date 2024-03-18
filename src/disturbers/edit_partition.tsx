@@ -1,21 +1,22 @@
-import { createDisturber } from 'disturb';
 import {
   Button,
   Dialog,
   Flex,
   Separator,
+  Switch,
   Text,
   TextField,
 } from '@radix-ui/themes';
-import { minLength, object, parse, string } from 'valibot';
-import { Account } from '@/utils/derived_types';
+import { createDisturber } from 'disturb';
+import { boolean, minLength, object, parse, string } from 'valibot';
+import { Partition } from '@/utils/derived_types';
 import { TwoColumnInput } from '@/utils/common';
 
-export const editAccount = createDisturber<
-  { name: string },
-  { account: Account }
->(function EditAccountDialog({ account, confirmWith, cancel, open }) {
-  const formId = `edit-account-form-${account.id}`;
+export const editPartition = createDisturber<
+  { name: string; isPrivate: boolean },
+  { partition: Partition }
+>(function EditPartitionDialog({ partition, confirmWith, cancel, open }) {
+  const editPartitionFormId = `edit-partition-form-${partition.id}`;
   return (
     <Dialog.Root
       open={open}
@@ -26,18 +27,24 @@ export const editAccount = createDisturber<
       }}
     >
       <Dialog.Content style={{ maxWidth: 500 }}>
-        <Dialog.Title>Edit account</Dialog.Title>
+        <Dialog.Title>Edit partition</Dialog.Title>
         <Separator size="4" mb="4" />
         <Flex direction="column" gap="3" asChild>
           <form
-            id={formId}
+            id={editPartitionFormId}
             onSubmit={async e => {
               e.preventDefault();
-              const form = document.getElementById(formId);
+              const form = document.getElementById(editPartitionFormId);
               const formdata = new FormData(form as HTMLFormElement);
-              const schema = object({ name: string([minLength(1)]) });
+              const schema = object({
+                name: string([minLength(1)]),
+                isPrivate: boolean(),
+              });
               const fdata = Object.fromEntries(formdata.entries());
-              const parsedData = parse(schema, fdata);
+              const parsedData = parse(schema, {
+                name: fdata.name,
+                isPrivate: fdata.isPrivate === 'on',
+              });
               confirmWith(parsedData);
             }}
           >
@@ -47,15 +54,21 @@ export const editAccount = createDisturber<
               </Text>
               <TextField.Input
                 name="name"
-                placeholder="Enter account name"
-                defaultValue={account.name}
+                placeholder="Enter partition name"
+                defaultValue={partition.name}
               />
+            </TwoColumnInput>
+            <TwoColumnInput>
+              <Text as="div" size="2" mb="1" weight="bold">
+                Private
+              </Text>
+              <Switch name="isPrivate" defaultChecked={partition.is_private} />
             </TwoColumnInput>
           </form>
         </Flex>
         <Separator size="4" mt="4" />
         <Flex gap="3" mt="4" justify="start" direction="row-reverse">
-          <Button type="submit" form={formId}>
+          <Button type="submit" form={editPartitionFormId}>
             Save
           </Button>
           <Button variant="soft" color="gray" onClick={cancel}>
