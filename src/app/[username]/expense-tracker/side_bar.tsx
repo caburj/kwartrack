@@ -15,15 +15,7 @@ import {
   useMutation,
   QueryKey,
 } from '@tanstack/react-query';
-import {
-  boolean,
-  minLength,
-  object,
-  optional,
-  string,
-  transform,
-  parse,
-} from 'valibot';
+import { boolean, minLength, object, optional, string, parse } from 'valibot';
 import {
   Box,
   Flex,
@@ -55,11 +47,8 @@ import {
   QueryResult,
   RadixColor,
   formatValue,
-  getCategoryOptionName,
-  getPartitionType,
   groupBy,
   invalidateMany,
-  useGroupedPartitions,
   usePartitions,
   TwoColumnInput,
   useDefaultPartitionInput,
@@ -75,10 +64,10 @@ import { editAccount } from '@/disturbers/edit_account';
 import { editPartition } from '@/disturbers/edit_partition';
 import { editCategory } from '@/disturbers/edit_category';
 import { getPaymentInput } from '@/disturbers/get_payment_input';
+import { getLoanInput } from '@/disturbers/get_loan_input';
 import { rpc } from '../../rpc_client';
 import { css } from '../../../../styled-system/css';
 import { AnimatedAccordionContent } from './accordion';
-import { Combobox, ComboboxTrigger } from './combobox';
 import { UserPageStoreContext } from './store';
 
 const newPartitionSchema = object({
@@ -735,6 +724,7 @@ const LoanItem = ({
     {
       label: 'Pay',
       onClick: async () => {
+        // TODO: Reduce args to loan and lender.
         const resp = await getPaymentInput({
           loanId: loan.id,
           defaultAmount: loan.remaining_amount,
@@ -1162,8 +1152,6 @@ function PartitionLI({
   const queryClient = useQueryClient();
   const [store, dispatch] = useContext(UserPageStoreContext);
 
-  const hiddenDialogTriggerRef = useRef<HTMLButtonElement>(null);
-
   const updatePartition = useMutation(
     async ({ name, isPrivate }: { name: string; isPrivate: boolean }) => {
       return rpc.post.updatePartition({
@@ -1186,11 +1174,6 @@ function PartitionLI({
       },
     },
   );
-
-  const [selectedDestinationId, setSelectedDestinationId] = useState('');
-  const [loanCategoryId, setLoanCategoryId] = useState('');
-
-  const partitions = usePartitions(user);
 
   const categories = useQuery(['categories', user.id], () => {
     return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
@@ -1222,9 +1205,12 @@ function PartitionLI({
       ? [
           {
             label: 'Borrow',
-            onClick: e => {
+            onClick: async e => {
               e.stopPropagation();
-              hiddenDialogTriggerRef.current?.click();
+              const resp = await getLoanInput({ partition, user });
+              if (resp) {
+                await makeALoan(resp);
+              }
             },
           } as RightClickItem,
         ]
@@ -1281,110 +1267,63 @@ function PartitionLI({
   const _type = getPartitionType2(partition);
   const color = isSelected ? 'cyan' : PARTITION_COLOR[_type];
 
-  const loanFormId = `make-a-loan-form-${partition.id}`;
-  const groupedPartitions = useGroupedPartitions(partitions);
+  const makeALoan = useCallback(
+    async (data: {
+      amount: number;
+      categoryId: string;
+      destinationPartitionId: string;
+      description?: string;
+      toPay?: number;
+    }) => {
+      const result = await rpc.post.makeALoan({
+        ...data,
+        userId: user.id,
+        dbname: user.dbname,
+        sourcePartitionId: partition.id,
+      });
 
-  const selectedDestination = useMemo(() => {
-    return partitions.find(p => p.id === selectedDestinationId);
-  }, [selectedDestinationId, partitions]);
+      if (!result) {
+        throw new Error('Something went wrong');
+      }
+      const { transaction } = result;
+      const { counterpart } = transaction;
 
-  const destinationName = selectedDestination?.name || 'Select destination';
+      const queryKeys: QueryKey[] = [];
 
-  const destinationVariant = selectedDestination?.is_private
-    ? 'outline'
-    : 'soft';
-
-  const destinationType =
-    selectedDestination && getPartitionType(selectedDestination);
-
-  const destinationColor =
-    (destinationType && PARTITION_COLOR[destinationType]) || 'gray';
-
-  const loanCategory = useMemo(() => {
-    return (categories.data?.Transfer || []).find(c => c.id === loanCategoryId);
-  }, [loanCategoryId, categories.data]);
-
-  const loanCategoryName = loanCategory
-    ? getCategoryOptionName(loanCategory)
-    : 'Select Category';
-
-  const loanCategoryColor = loanCategory && CATEGORY_COLOR[loanCategory.kind];
-  const loanCategoryVariant = loanCategory?.is_private ? 'outline' : 'soft';
-
-  const makeALoan = useCallback(async () => {
-    const form = document.getElementById(loanFormId);
-    const formdata = new FormData(form as HTMLFormElement);
-    const schema = object({
-      amount: transform(string(), v => parseFloat(v)),
-      description: optional(string()),
-      toPay: transform(string(), v => parseFloat(v)),
-      destinationPartitionId: string([minLength(1)]),
-      categoryId: string([minLength(1)]),
-    });
-    const toParse = {
-      toPay: '',
-      ...Object.fromEntries(formdata.entries()),
-      destinationPartitionId: selectedDestinationId,
-      categoryId: loanCategoryId,
-    };
-    const parsedData = parse(schema, toParse);
-    if (isNaN(parsedData.toPay)) {
-      parsedData.toPay = parsedData.amount;
-    }
-    const result = await rpc.post.makeALoan({
-      ...parsedData,
-      userId: user.id,
-      dbname: user.dbname,
-      sourcePartitionId: partition.id,
-    });
-
-    if (!result) {
-      throw new Error('Something went wrong');
-    }
-    const { transaction } = result;
-    const { counterpart } = transaction;
-
-    const queryKeys: QueryKey[] = [];
-
-    queryKeys.push(
-      ['transactions'],
-      ['groupedTransactions'],
-      ['categoryBalance', { categoryId: loanCategoryId }],
-      ['categoryCanBeDeleted', { categoryId: loanCategoryId }],
-      ['partitionBalance', { partitionId: partition.id }],
-      [
-        'accountCanBeDeleted',
-        { accountId: transaction.source_partition.account.id },
-      ],
-      [
-        'accountBalance',
-        { accountId: transaction.source_partition.account.id },
-      ],
-      ['categoryKindBalance', { kind: transaction.category.kind }],
-      ['partitionsWithLoans', user.id],
-    );
-    if (counterpart) {
       queryKeys.push(
-        ['partitionBalance', { partitionId: selectedDestinationId }],
+        ['transactions'],
+        ['groupedTransactions'],
+        ['categoryBalance', { categoryId: data.categoryId }],
+        ['categoryCanBeDeleted', { categoryId: data.categoryId }],
+        ['partitionBalance', { partitionId: partition.id }],
         [
           'accountCanBeDeleted',
-          { accountId: counterpart.source_partition.account.id },
+          { accountId: transaction.source_partition.account.id },
         ],
         [
           'accountBalance',
-          { accountId: counterpart.source_partition.account.id },
+          { accountId: transaction.source_partition.account.id },
         ],
+        ['categoryKindBalance', { kind: transaction.category.kind }],
+        ['partitionsWithLoans', user.id],
       );
-    }
-    invalidateMany(queryClient, queryKeys);
-  }, [
-    loanFormId,
-    partition.id,
-    selectedDestinationId,
-    user,
-    loanCategoryId,
-    queryClient,
-  ]);
+      if (counterpart) {
+        queryKeys.push(
+          ['partitionBalance', { partitionId: data.destinationPartitionId }],
+          [
+            'accountCanBeDeleted',
+            { accountId: counterpart.source_partition.account.id },
+          ],
+          [
+            'accountBalance',
+            { accountId: counterpart.source_partition.account.id },
+          ],
+        );
+      }
+      invalidateMany(queryClient, queryKeys);
+    },
+    [partition.id, user, queryClient],
+  );
 
   return (
     <Flex justify="between" m="2">
@@ -1448,131 +1387,6 @@ function PartitionLI({
           );
         }}
       </QueryResult>
-      <Dialog.Root>
-        <Dialog.Trigger>
-          <button ref={hiddenDialogTriggerRef} hidden></button>
-        </Dialog.Trigger>
-        <Dialog.Content style={{ maxWidth: 500 }}>
-          <Dialog.Title>Make a Loan</Dialog.Title>
-          <Separator size="4" mb="4" />
-          <Flex direction="column" gap="3" asChild>
-            <form
-              id={loanFormId}
-              onSubmit={e => {
-                e.preventDefault();
-                makeALoan();
-              }}
-            >
-              <TwoColumnInput>
-                <Text as="div" size="2" mb="1" weight="bold">
-                  Source
-                </Text>
-                <Flex>
-                  <Badge variant={variant} color={color}>
-                    <Text>{partition.name}</Text>
-                  </Badge>
-                </Flex>
-              </TwoColumnInput>
-              <TwoColumnInput>
-                <Text as="div" size="2" mb="1" weight="bold">
-                  Destination
-                </Text>
-                <Combobox
-                  groupedItems={groupedPartitions}
-                  getGroupHeading={(key, items) => items[0].account.label}
-                  getItemColor={item => {
-                    const _type = getPartitionType(item);
-                    return PARTITION_COLOR[_type];
-                  }}
-                  isItemIncluded={p =>
-                    p.account.is_owned && p.id !== partition.id
-                  }
-                  getItemValue={p =>
-                    `${getPartitionType(p)} ${p.account.label} ${p.name}`
-                  }
-                  getItemDisplay={p => p.name}
-                  onSelectItem={p => setSelectedDestinationId(p.id)}
-                >
-                  <Flex>
-                    <ComboboxTrigger
-                      color={destinationColor}
-                      variant={destinationVariant}
-                    >
-                      {destinationName}
-                    </ComboboxTrigger>
-                  </Flex>
-                </Combobox>
-              </TwoColumnInput>
-              <TwoColumnInput>
-                <Text as="div" size="2" mb="1" weight="bold">
-                  Category
-                </Text>
-                <Combobox
-                  groupedItems={{ Transfer: categories.data?.Transfer || [] }}
-                  getGroupHeading={key => key}
-                  getItemColor={(item, key) => {
-                    return CATEGORY_COLOR[key];
-                  }}
-                  getItemValue={(c, k) => `${k} ${getCategoryOptionName(c)}`}
-                  getItemDisplay={c => getCategoryOptionName(c)}
-                  onSelectItem={c => {
-                    setLoanCategoryId(c.id);
-                  }}
-                >
-                  <Flex>
-                    <ComboboxTrigger
-                      color={loanCategoryColor}
-                      variant={loanCategoryVariant}
-                    >
-                      {loanCategoryName}
-                    </ComboboxTrigger>
-                  </Flex>
-                </Combobox>
-              </TwoColumnInput>
-              <TwoColumnInput>
-                <Text as="div" size="2" mb="1" weight="bold">
-                  Amount
-                </Text>
-                <TextField.Input
-                  name="amount"
-                  placeholder="Amount to borrow"
-                  type="numeric"
-                />
-              </TwoColumnInput>
-              <TwoColumnInput>
-                <Text as="div" size="2" mb="1" weight="bold">
-                  Description
-                </Text>
-                <TextField.Input
-                  name="description"
-                  placeholder="Enter description"
-                />
-              </TwoColumnInput>
-              <TwoColumnInput>
-                <Text as="div" size="2" mb="1" weight="bold">
-                  To pay
-                </Text>
-                <TextField.Input
-                  name="toPay"
-                  placeholder="Amount to pay"
-                  type="numeric"
-                />
-              </TwoColumnInput>
-            </form>
-          </Flex>
-          <Separator size="4" mt="4" />
-          <Flex gap="3" mt="4" justify="start" direction="row-reverse">
-            <Dialog.Close type="submit" form={loanFormId}>
-              <Button>Save</Button>
-            </Dialog.Close>
-            <Dialog.Close>
-              <Button variant="soft" color="gray">
-                Discard
-              </Button>
-            </Dialog.Close>
-          </Flex>
-        </Dialog.Content>
-      </Dialog.Root>
     </Flex>
   );
 }
