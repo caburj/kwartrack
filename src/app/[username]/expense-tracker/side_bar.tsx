@@ -15,28 +15,19 @@ import {
   useMutation,
   QueryKey,
 } from '@tanstack/react-query';
-import { boolean, object, string, parse } from 'valibot';
 import {
   Box,
   Flex,
   IconButton,
   ScrollArea,
   Text,
-  Separator,
-  Dialog,
   TextField,
   Button,
-  Switch,
   ContextMenu,
   Badge,
   Tooltip,
 } from '@radix-ui/themes';
-import {
-  ChevronRightIcon,
-  Cross2Icon,
-  PlusIcon,
-  InfoCircledIcon,
-} from '@radix-ui/react-icons';
+import { ChevronRightIcon, Cross2Icon, PlusIcon } from '@radix-ui/react-icons';
 import * as Accordion from '@radix-ui/react-accordion';
 import Skeleton from 'react-loading-skeleton';
 import { toast } from 'sonner';
@@ -48,8 +39,6 @@ import {
   formatValue,
   groupBy,
   invalidateMany,
-  usePartitions,
-  TwoColumnInput,
 } from '@/utils/common';
 
 import {
@@ -65,6 +54,7 @@ import { getPaymentInput } from '@/disturbers/get_payment_input';
 import { getLoanInput } from '@/disturbers/get_loan_input';
 import { newPartition } from '@/disturbers/new_partition';
 import { newCategory } from '@/disturbers/new_category';
+import { newBudgetProfile } from '@/disturbers/new_budget_profile';
 import { rpc } from '../../rpc_client';
 import { css } from '../../../../styled-system/css';
 import { AnimatedAccordionContent } from './accordion';
@@ -275,124 +265,26 @@ const ActiveLoans = ({ user }: { user: { id: string; dbname: string } }) => {
 const BudgetProfiles = ({ user }: { user: { id: string; dbname: string } }) => {
   const [store, dispatch] = useContext(UserPageStoreContext);
   const queryClient = useQueryClient();
-  const budgetProfileFormRef = useRef<HTMLFormElement>(null);
-
-  const userPartitions = usePartitions(user);
-
   const budgetProfiles = useQuery(['budgetProfiles', user.id], () => {
     return rpc.post.getBudgetProfiles({
       userId: user.id,
       dbname: user.dbname,
     });
   });
-
-  const selectedPartitions = useMemo(() => {
-    return userPartitions.filter(p => store.partitionIds.includes(p.id));
-  }, [userPartitions, store.partitionIds]);
-
   return (
     <SideBarFoldable
       value="Budget Profiles"
       headerButton={
         !store.budgetProfileId && (
-          <Dialog.Root>
-            <Dialog.Trigger>
-              <IconButton radius="full" variant="ghost">
-                <PlusIcon width="18" height="18" />
-              </IconButton>
-            </Dialog.Trigger>
-            <Dialog.Content style={{ maxWidth: 500 }}>
-              <Dialog.Title>New Budget Profile</Dialog.Title>
-              <Separator size="4" mb="4" />
-              <Flex direction="column" gap="3" asChild>
-                <form
-                  id="budget-profile-form"
-                  ref={budgetProfileFormRef}
-                  onSubmit={async e => {
-                    e.preventDefault();
-
-                    const formdata = new FormData(e.target as HTMLFormElement);
-
-                    const parsedData = parse(
-                      object({ name: string(), isForAll: boolean() }),
-                      {
-                        ...Object.fromEntries(formdata.entries()),
-                        isForAll: formdata.get('isForAll') === 'on',
-                      },
-                    );
-
-                    const { name, isForAll } = parsedData;
-
-                    await rpc.post.createBudgetProfile({
-                      userId: user.id,
-                      dbname: user.dbname,
-                      isForAll,
-                      name,
-                      partitionIds: selectedPartitions.map(p => p.id),
-                    });
-                    invalidateMany(queryClient, [['budgetProfiles', user.id]]);
-                  }}
-                >
-                  <TwoColumnInput>
-                    <Text as="div" size="2" mb="1" weight="bold">
-                      Name
-                    </Text>
-                    <TextField.Input
-                      name="name"
-                      placeholder="Enter partition name"
-                    />
-                  </TwoColumnInput>
-
-                  <TwoColumnInput>
-                    <Text as="div" size="2" mb="1" weight="bold">
-                      Is for all?
-                    </Text>
-                    <Switch name="isForAll" defaultChecked={true} />
-                  </TwoColumnInput>
-
-                  <TwoColumnInput>
-                    <Flex align="center" gap="1">
-                      <Text size="2" mb="1" weight="bold">
-                        Partitions
-                      </Text>
-                      <Tooltip
-                        content={
-                          <span>
-                            {'Corresponds to the selected partitions.'}
-                          </span>
-                        }
-                      >
-                        <InfoCircledIcon />
-                      </Tooltip>
-                    </Flex>
-                    <Flex
-                      gap="2"
-                      className={css({
-                        flexWrap: 'wrap',
-                      })}
-                    >
-                      {selectedPartitions.map(p => (
-                        <Badge
-                          key={p.id}
-                        >{`${p.account.label} - ${p.name}`}</Badge>
-                      ))}
-                    </Flex>
-                  </TwoColumnInput>
-                </form>
-              </Flex>
-              <Separator size="4" mt="4" />
-              <Flex gap="3" mt="4" justify="start" direction="row-reverse">
-                <Dialog.Close type="submit" form="budget-profile-form">
-                  <Button>Save</Button>
-                </Dialog.Close>
-                <Dialog.Close>
-                  <Button variant="soft" color="gray">
-                    Cancel
-                  </Button>
-                </Dialog.Close>
-              </Flex>
-            </Dialog.Content>
-          </Dialog.Root>
+          <IconButton
+            radius="full"
+            variant="ghost"
+            onClick={() =>
+              newBudgetProfile({ user, partitionIds: store.partitionIds })
+            }
+          >
+            <PlusIcon width="18" height="18" />
+          </IconButton>
         )
       }
     >
