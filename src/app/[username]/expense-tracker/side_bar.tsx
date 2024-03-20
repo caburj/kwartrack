@@ -65,18 +65,11 @@ import { editPartition } from '@/disturbers/edit_partition';
 import { editCategory } from '@/disturbers/edit_category';
 import { getPaymentInput } from '@/disturbers/get_payment_input';
 import { getLoanInput } from '@/disturbers/get_loan_input';
+import { newPartition } from '@/disturbers/new_partition';
 import { rpc } from '../../rpc_client';
 import { css } from '../../../../styled-system/css';
 import { AnimatedAccordionContent } from './accordion';
 import { UserPageStoreContext } from './store';
-
-const newPartitionSchema = object({
-  name: string([minLength(1)]),
-  isPrivate: boolean(),
-  accountId: string(),
-  accountName: optional(string()),
-  isSharedAccount: boolean(),
-});
 
 const newCategorySchema = object({
   name: string([minLength(1)]),
@@ -161,16 +154,6 @@ export function SideBar({
 }) {
   const queryClient = useQueryClient();
   const categoryFormRef = useRef<HTMLFormElement>(null);
-  const partitionFormRef = useRef<HTMLFormElement>(null);
-  const ownedAccounts = useQuery(['accounts', user.id, true], () => {
-    return rpc.post.getAccounts({
-      userId: user.id,
-      dbname: user.dbname,
-      owned: true,
-    });
-  });
-
-  const [accountId, setAccountId] = useState('for-new-account');
 
   const [categoryKind, setCategoryKind] = useState<CategoryKind>('Income');
 
@@ -205,150 +188,15 @@ export function SideBar({
                 dispatch({ type: 'CLEAR_ACCOUNT_SELECTION' });
               }}
               headerButton={
-                <Dialog.Root>
-                  <Dialog.Trigger>
-                    <IconButton radius="full" variant="ghost">
-                      <PlusIcon width="18" height="18" />
-                    </IconButton>
-                  </Dialog.Trigger>
-                  <Dialog.Content style={{ maxWidth: 500 }}>
-                    <Dialog.Title>New Partition</Dialog.Title>
-                    <Separator size="4" mb="4" />
-                    <Flex direction="column" gap="3" asChild>
-                      <form
-                        id="partition-form"
-                        ref={partitionFormRef}
-                        onSubmit={async e => {
-                          e.preventDefault();
-
-                          const formdata = new FormData(
-                            e.target as HTMLFormElement,
-                          );
-
-                          const parsedData = parse(newPartitionSchema, {
-                            ...Object.fromEntries(formdata.entries()),
-                            isPrivate: formdata.get('isPrivate') === 'on',
-                            isSharedAccount:
-                              formdata.get('isSharedAccount') === 'on',
-                          });
-
-                          const {
-                            name,
-                            isPrivate,
-                            accountId,
-                            accountName,
-                            isSharedAccount,
-                          } = parsedData;
-
-                          let forNewAccount = false;
-                          if (accountId === 'for-new-account') {
-                            forNewAccount = true;
-                            if (!accountName?.trim()) {
-                              throw new Error('Account name is required');
-                            }
-                          }
-                          await rpc.post.createPartition({
-                            userId: user.id,
-                            dbname: user.dbname,
-                            name,
-                            isPrivate,
-                            forNewAccount,
-                            accountId,
-                            isSharedAccount,
-                            newAccountName: accountName,
-                          });
-                          invalidateMany(queryClient, [
-                            ['accounts', user.id],
-                            ['partitions', user.id],
-                          ]);
-                        }}
-                      >
-                        <TwoColumnInput>
-                          <Text as="div" size="2" mb="1" weight="bold">
-                            Name
-                          </Text>
-                          <TextField.Input
-                            name="name"
-                            placeholder="Enter partition name"
-                          />
-                        </TwoColumnInput>
-
-                        <TwoColumnInput>
-                          <Text as="div" size="2" mb="1" weight="bold">
-                            Private
-                          </Text>
-                          <Switch name="isPrivate" />
-                        </TwoColumnInput>
-
-                        <TwoColumnInput>
-                          <Text as="div" size="2" mb="1" weight="bold">
-                            Account
-                          </Text>
-                          <Select.Root
-                            name="accountId"
-                            value={accountId}
-                            onValueChange={value => {
-                              setAccountId(value);
-                            }}
-                          >
-                            <Select.Trigger variant="surface" />
-                            <Select.Content>
-                              <Select.Item value="for-new-account">
-                                Create New Account
-                              </Select.Item>
-                              {ownedAccounts.data && (
-                                <Select.Group>
-                                  <Select.Label>My Accounts</Select.Label>
-                                  {ownedAccounts.data.map(acc => (
-                                    <Select.Item value={acc.id} key={acc.id}>
-                                      {acc.name}
-                                    </Select.Item>
-                                  ))}
-                                </Select.Group>
-                              )}
-                            </Select.Content>
-                          </Select.Root>
-                        </TwoColumnInput>
-
-                        {accountId === 'for-new-account' && (
-                          <>
-                            <TwoColumnInput>
-                              <Text as="div" size="2" mb="1" weight="bold">
-                                Account Name
-                              </Text>
-                              <TextField.Input
-                                name="accountName"
-                                placeholder="E.g. InterBank"
-                              />
-                            </TwoColumnInput>
-                            <TwoColumnInput>
-                              <Text as="div" size="2" mb="1" weight="bold">
-                                Shared?
-                              </Text>
-                              <Switch name="isSharedAccount" />
-                            </TwoColumnInput>
-                          </>
-                        )}
-                      </form>
-                    </Flex>
-                    <Separator size="4" mt="4" />
-                    <Flex
-                      gap="3"
-                      mt="4"
-                      justify="start"
-                      direction="row-reverse"
-                    >
-                      <Dialog.Close type="submit" form="partition-form">
-                        <Button>Save</Button>
-                      </Dialog.Close>
-                      <Dialog.Close>
-                        <Button variant="soft" color="gray">
-                          Cancel
-                        </Button>
-                      </Dialog.Close>
-                    </Flex>
-                  </Dialog.Content>
-                </Dialog.Root>
+                <IconButton
+                  radius="full"
+                  variant="ghost"
+                  onClick={() => {
+                    return newPartition({ user });
+                  }}
+                >
+                  <PlusIcon width="18" height="18" />
+                </IconButton>
               }
             >
               <Accounts user={user} />
