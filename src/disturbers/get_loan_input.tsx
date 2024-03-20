@@ -10,7 +10,7 @@ import {
 import { createDisturber } from 'disturb';
 import { minLength, object, optional, parse, string, transform } from 'valibot';
 import { useQuery } from '@tanstack/react-query';
-import { useContext, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   CATEGORY_COLOR,
   PARTITION_COLOR,
@@ -25,7 +25,6 @@ import {
   Combobox,
   ComboboxTrigger,
 } from '@/app/[username]/expense-tracker/combobox';
-import { UserPageStoreContext } from '@/app/[username]/expense-tracker/store';
 import { getPartitionType2 } from '@/app/[username]/expense-tracker/side_bar';
 import { rpc } from '@/app/rpc_client';
 
@@ -40,21 +39,25 @@ export const getLoanInput = createDisturber<
   {
     partition: Partition;
     user: { id: string; dbname: string };
+    partitionIds: string[];
   }
->(function GetLoanInputDialog({ confirmWith, cancel, open, partition, user }) {
+>(function GetLoanInputDialog({
+  confirmWith,
+  cancel,
+  open,
+  partition,
+  user,
+  partitionIds,
+}) {
   const formId = `form-${partition.id}`;
-
-  const [store] = useContext(UserPageStoreContext);
   const partitions = usePartitions(user);
   const categories = useQuery(['categories', user.id], () => {
     return rpc.post.getUserCategories({ userId: user.id, dbname: user.dbname });
   });
   const groupedPartitions = useGroupedPartitions(partitions);
-
   const [selectedDestinationId, setSelectedDestinationId] = useState('');
   const [loanCategoryId, setLoanCategoryId] = useState('');
-
-  const isSelected = store.partitionIds.includes(partition.id);
+  const isSelected = partitionIds.includes(partition.id);
   const variant = isSelected
     ? 'solid'
     : partition.is_private

@@ -831,7 +831,11 @@ function PartitionLI({
             label: 'Borrow',
             onClick: async e => {
               e.stopPropagation();
-              const resp = await getLoanInput({ partition, user });
+              const resp = await getLoanInput({
+                partition,
+                user,
+                partitionIds: store.partitionIds,
+              });
               if (resp) {
                 await makeALoan(resp);
               }
