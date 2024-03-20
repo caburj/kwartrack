@@ -15,7 +15,7 @@ import {
   useMutation,
   QueryKey,
 } from '@tanstack/react-query';
-import { boolean, minLength, object, optional, string, parse } from 'valibot';
+import { boolean, object, string, parse } from 'valibot';
 import {
   Box,
   Flex,
@@ -26,7 +26,6 @@ import {
   Dialog,
   TextField,
   Button,
-  Select,
   Switch,
   ContextMenu,
   Badge,
@@ -51,7 +50,6 @@ import {
   invalidateMany,
   usePartitions,
   TwoColumnInput,
-  useDefaultPartitionInput,
 } from '@/utils/common';
 
 import {
@@ -66,17 +64,11 @@ import { editCategory } from '@/disturbers/edit_category';
 import { getPaymentInput } from '@/disturbers/get_payment_input';
 import { getLoanInput } from '@/disturbers/get_loan_input';
 import { newPartition } from '@/disturbers/new_partition';
+import { newCategory } from '@/disturbers/new_category';
 import { rpc } from '../../rpc_client';
 import { css } from '../../../../styled-system/css';
 import { AnimatedAccordionContent } from './accordion';
 import { UserPageStoreContext } from './store';
-
-const newCategorySchema = object({
-  name: string([minLength(1)]),
-  kind: string(),
-  isPrivate: boolean(),
-  defaultPartitionId: optional(string()),
-});
 
 export const SideBarFoldable = (props: {
   value: string;
@@ -143,8 +135,6 @@ export const SideBarFoldable = (props: {
   );
 };
 
-type CategoryKind = 'Income' | 'Expense' | 'Transfer';
-
 export function SideBar({
   user,
   width,
@@ -152,18 +142,6 @@ export function SideBar({
   user: UserIDAndDBName;
   width: number;
 }) {
-  const queryClient = useQueryClient();
-  const categoryFormRef = useRef<HTMLFormElement>(null);
-
-  const [categoryKind, setCategoryKind] = useState<CategoryKind>('Income');
-
-  const [categoryIsPrivate, setCategoryIsPrivate] = useState(false);
-
-  const { selectedDefaultPartition, inputEl } = useDefaultPartitionInput({
-    user,
-    categoryIsPrivate,
-  });
-
   const [store, dispatch] = useContext(UserPageStoreContext);
 
   return (
@@ -208,107 +186,13 @@ export function SideBar({
                 dispatch({ type: 'CLEAR_CATEGORY_SELECTION' });
               }}
               headerButton={
-                <Dialog.Root>
-                  <Dialog.Trigger>
-                    <IconButton radius="full" variant="ghost">
-                      <PlusIcon width="18" height="18" />
-                    </IconButton>
-                  </Dialog.Trigger>
-                  <Dialog.Content style={{ maxWidth: 500 }}>
-                    <Dialog.Title>New Category</Dialog.Title>
-                    <Separator size="4" mb="4" />
-                    <Flex direction="column" gap="3" asChild>
-                      <form
-                        id="category-form"
-                        ref={categoryFormRef}
-                        onSubmit={async e => {
-                          e.preventDefault();
-                          const formdata = new FormData(
-                            e.target as HTMLFormElement,
-                          );
-                          const parsedData = parse(newCategorySchema, {
-                            ...Object.fromEntries(formdata.entries()),
-                            isPrivate: formdata.get('isPrivate') === 'on',
-                            defaultPartitionId: selectedDefaultPartition?.id,
-                          });
-                          const { name, kind, isPrivate, defaultPartitionId } =
-                            parsedData;
-                          await rpc.post.createCategory({
-                            userId: user.id,
-                            dbname: user.dbname,
-                            name,
-                            kind,
-                            isPrivate,
-                            defaultPartitionId,
-                          });
-                          queryClient.invalidateQueries({
-                            queryKey: ['categories', user.id],
-                          });
-                        }}
-                      >
-                        <TwoColumnInput>
-                          <Text as="div" size="2" weight="bold">
-                            Name
-                          </Text>
-                          <TextField.Input
-                            name="name"
-                            placeholder="Enter category name"
-                          />
-                        </TwoColumnInput>
-                        <TwoColumnInput>
-                          <Text as="div" size="2" weight="bold">
-                            Kind
-                          </Text>
-                          <Select.Root
-                            value={categoryKind}
-                            name="kind"
-                            onValueChange={(val: CategoryKind) => {
-                              setCategoryKind(val);
-                            }}
-                          >
-                            <Select.Trigger variant="surface" />
-                            <Select.Content>
-                              <Select.Item value="Income">Income</Select.Item>
-                              <Select.Item value="Expense">Expense</Select.Item>
-                              <Select.Item value="Transfer">
-                                Transfer
-                              </Select.Item>
-                            </Select.Content>
-                          </Select.Root>
-                        </TwoColumnInput>
-                        <TwoColumnInput>
-                          <Text as="div" size="2" weight="bold">
-                            Private
-                          </Text>
-                          <Switch
-                            name="isPrivate"
-                            checked={categoryIsPrivate}
-                            onClick={() => {
-                              setCategoryIsPrivate(!categoryIsPrivate);
-                            }}
-                          />
-                        </TwoColumnInput>
-                        {inputEl}
-                      </form>
-                    </Flex>
-                    <Separator size="4" mt="4" />
-                    <Flex
-                      gap="3"
-                      mt="4"
-                      justify="start"
-                      direction="row-reverse"
-                    >
-                      <Dialog.Close type="submit" form="category-form">
-                        <Button>Save</Button>
-                      </Dialog.Close>
-                      <Dialog.Close>
-                        <Button variant="soft" color="gray">
-                          Cancel
-                        </Button>
-                      </Dialog.Close>
-                    </Flex>
-                  </Dialog.Content>
-                </Dialog.Root>
+                <IconButton
+                  radius="full"
+                  variant="ghost"
+                  onClick={() => newCategory({ user })}
+                >
+                  <PlusIcon width="18" height="18" />
+                </IconButton>
               }
             >
               <Categories user={user} />
